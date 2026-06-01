@@ -1,7 +1,7 @@
 import Foundation
 
 enum IO {
-    static func read(from path: String) -> [String] {
+    static func read(_ path: String) -> [String] {
         guard let content = try? String(contentsOfFile: path, encoding: .utf8) else { return [] }
         var lines = content.components(separatedBy: "\n")
         if lines.last == "" { lines.removeLast() }

@@ -51,6 +51,16 @@ enum Todo {
 		lines.insert(newLine, at: insertIndex)
 		return lines
 	}
+	
+	@discardableResult
+	static func remove(_ line_number: Int, from lines: [String]) throws(WrongLineNumber) -> (lines: [String], removed: String?) {
+		guard line_number >= 1 && line_number <= lines.count else {
+			throw WrongLineNumber()
+		}
+		var copy = lines
+		let removed = copy.remove(at: line_number - 1).trimmingCharacters(in: .whitespaces)
+		return (copy, removed)
+	}
 }
 
 private extension String {
