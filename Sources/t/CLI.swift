@@ -7,26 +7,15 @@ import ArgumentParser
 @main
 struct CLI: ParsableCommand {
     
-    @Flag(name: .customShort("g"), help: "Use global tasks file if invoked in a local repo")
-    var g: Bool = false
-    
-    @Option(name: .customShort("r"), help: "Remove a task by line number.")
-    var r: Int?
-    
-    @Option(name: .customShort("f"), help: "Finalize and commit a task by line number.")
-    var f: Int?
-    
-    @Option(name: .customShort("a"), help: "Add a nested task after the specified line.")
-    var a: Int?
-    
-    @Flag(name: .customShort("e"), help: "Edit commit message before commiting.")
-    var e: Bool = false
+	  @Option(name: .customShort(.r), help: .r=>help) var r: Int?
+	  @Option(name: .customShort(.f), help: .f=>help) var f: Int?
+	  @Option(name: .customShort(.a), help: .a=>help) var a: Int?
+	  @Option(name: .customShort(.l), help: .l=>help) var l: Int?
 	
-		@Option(name: .customShort("l"), help: "Lists the child task of a given line")
-		var l: Int?
-    
-    @Argument(help: "Task text contents.")
-    var args: [String] = []
+		@Flag(name: .customShort(.g), help: .g=>help) var g: Bool = false
+	  @Flag(name: .customShort(.e), help: .e=>help) var e: Bool = false
+
+    @Argument(help: "Task text contents.") var args: [String] = []
     
     func run() throws {
         let repo       = g ? nil : VCS.get()
@@ -102,7 +91,7 @@ func add_nested(_ text: String, after line: Int, fpath: String) throws {
 }
 
 @discardableResult
-func remove(_ line: Int, from path: String) throws-> String? {
+func remove(_ line: Int, from path: String) throws -> String? {
     do {
         let (lines, removed) = try Todo.remove(line, from: IO.read(path))
         try IO.write(lines, to: path)
@@ -177,3 +166,27 @@ func complete_todo(
     }
 }
 
+
+// MARK: - Commands
+
+private extension Character {
+	static let g: Character = "g"
+	static let r: Character = "r"
+	static let f: Character = "f"
+	static let a: Character = "a"
+	static let e: Character = "e"
+	static let l: Character = "l"
+}
+
+
+private let help: @Sendable (Character) -> ArgumentHelp = {
+		switch $0 {
+		case "g": return "Use global tasks file if invoked in a local repo"
+		case "r": return "Remove a task by line number."
+		case "f": return "Finalize and commit a task by line number."
+		case "a": return "Add a nested task after the specified line."
+		case "e": return "Edit commit message before commiting."
+		case "l": return "Lists the child task of a given line"
+		default: return "Unhandled"
+		}
+}

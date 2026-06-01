@@ -57,9 +57,24 @@ enum Todo {
 	@discardableResult
 	static func remove(_ line: Int, from lines: [String]) throws(WrongLineNumber) -> (lines: [String], removed: String?) {
 		guard line >= 1 && line <= lines.count else { throw WrongLineNumber() }
-		var copy = lines
-		let removed = copy.remove(at: line - 1).trimmingCharacters(in: .whitespaces)
-		return (copy, removed)
+
+		let parent_idx    = line - 1
+		let parent_indent = lines[parent_idx].prefix(while: { $0 == "\t" }).count
+		let removed       = lines[parent_idx].trimmingCharacters(in: .whitespaces)
+
+		var to_remove = [parent_idx]
+		var i = parent_idx + 1
+		while i < lines.count {
+			let current = lines[i]
+			if current.trimmingCharacters(in: .whitespaces).isEmpty { i += 1; continue }
+			if current.prefix(while: { $0 == "\t" }).count <= parent_indent { break }
+			to_remove.append(i)
+			i += 1
+		}
+
+		let index_set = Set(to_remove)
+		let updated   = lines.enumerated().compactMap { index_set.contains($0.offset) ? nil : $0.element }
+		return (updated, removed)
 	}
 }
 
