@@ -19,7 +19,6 @@ func doneFilePath(repoRoot: String? = nil) -> String {
   return global.done
 }
 
-
 // MARK: Actions
 
 func listTodos(taskPath: String) {
@@ -259,7 +258,7 @@ func runTests() {
         assertEqual(done[0].hasSuffix("  first"), true)
     }
 
-    test("findRepoRoot detects fossil") {
+    test("VCS.root() detects fossil") {
         let fm = FileManager.default
         let repoDir = fm.temporaryDirectory.appendingPathComponent("t-vcs-detection").path
         try? fm.removeItem(atPath: repoDir)
@@ -269,7 +268,7 @@ func runTests() {
         Runner.run("fossil init repo.fossil", inDirectory: repoDir)
         Runner.run("fossil open repo.fossil", inDirectory: repoDir)
 
-        let result = findRepoRoot(from: repoDir)
+        let result = VCS.root(from: repoDir)
         assertEqual(result?.root, repoDir)
         assertEqual(result?.vcs, "fossil")
     }
@@ -312,7 +311,7 @@ if args.contains("--test") {
     exit(0)
 }
 
-let repo     = args.contains("-g") ? nil : currentVCS()
+let repo     = args.contains("-g") ? nil : VCS.get()
 let taskPath = args.contains("-g") ? global.tasks : taskFilePath(repoRoot: repo?.root)
 let donePath = args.contains("-g") ? global.done  : doneFilePath(repoRoot: repo?.root)
 
