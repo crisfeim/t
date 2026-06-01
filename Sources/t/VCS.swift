@@ -1,6 +1,7 @@
 import Foundation
 
 enum VCS {
+    
     static func root(from path: String) -> (root: String, vcs: String)? {
         let fm = FileManager.default
         var current = path

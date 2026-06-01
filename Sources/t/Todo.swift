@@ -2,7 +2,7 @@ import Foundation
 
 enum Todo {
 	
-	struct t {
+    struct t: Equatable {
 		let line_number: Int
 		let text: String
 		let indent: Int

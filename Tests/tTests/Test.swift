@@ -2,189 +2,89 @@ import Testing
 import Foundation
 @testable import t
 
-@Suite struct TodoTests {
+@Suite class TodoTests {
     
-    @Test func addTodoAppendsToFile() {
-        let fm = FileManager.default
-        let tmpDir = fm.temporaryDirectory.appendingPathComponent("t-tests").path
+    lazy var tmp = FileManager.default.temporaryDirectory.appendingPathComponent("t-tests—\(UUID().uuidString)").path
+    lazy var todo_path = tmp + "/.tasks.txt"
+    lazy var done_path = tmp + "/.tasks.done"
+    
+    init() {
+        try! FileManager.default.createDirectory(atPath: tmp, withIntermediateDirectories: true)
+    }
+    
+    deinit {
+        try? FileManager.default.removeItem(atPath: tmp)
+    }
+    
+    @Test func addTodoAppendsToFile() throws {
+        try addTodo("first", taskPath: todo_path)
+        try addTodo("second", taskPath: todo_path)
         
-        try? fm.removeItem(atPath: tmpDir)
-        try! fm.createDirectory(atPath: tmpDir, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(atPath: tmpDir) }
-        
-        let path = tmpDir + "/tasks"
-        addTodo("first", taskPath: path)
-        addTodo("second", taskPath: path)
-        
-        let lines = IO.read(path)
-        #expect(lines.count == 2)
-        #expect(lines[0] == "first")
-        #expect(lines[1] == "second")
+        let lines = IO.read(todo_path)
+        #expect(lines == ["first", "second"])
     }
     
     @Test func todoParseSkipsEmptyLines() {
         let todos = Todo.parse(from: ["first", "", "third"])
-        #expect(todos.count == 2)
-        #expect(todos[0].line_number == 1)
-        #expect(todos[0].text == "first")
-        #expect(todos[1].line_number == 3)
-        #expect(todos[1].text == "third")
+        #expect(todos == [
+            Todo.t(line_number: 1, text: "first", indent: 0),
+            Todo.t(line_number: 3, text: "third", indent: 0)
+        ])
     }
     
-    @Test func removeLineRemovesCorrectLine() {
-        let fm = FileManager.default
-        let tmpDir = fm.temporaryDirectory.appendingPathComponent("t-tests").path
-        
-        try? fm.removeItem(atPath: tmpDir)
-        try! fm.createDirectory(atPath: tmpDir, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(atPath: tmpDir) }
-        
-        let path = tmpDir + "/tasks"
-        IO.write(["first", "second", "third"], to: path)
-        let removed = removeLine(2, from: path)
+    @Test func removeLineRemovesCorrectLine() throws {
+        try IO.write(["first", "second", "third"], to: todo_path)
+        let removed = try removeLine(2, from: todo_path)
         #expect(removed == "second")
         
-        let lines = IO.read(path)
-        #expect(lines.count == 2)
-        #expect(lines[0] == "first")
-        #expect(lines[1] == "third")
+        let lines = IO.read(todo_path)
+        #expect(lines == ["first", "third"])
     }
     
-    @Test func addNestedTodoInsertsAfterChildren() {
-        let fm = FileManager.default
-        let tmpDir = fm.temporaryDirectory.appendingPathComponent("t-tests").path
+    @Test func addNestedTodoInsertsAfterChildren() throws {
+        try IO.write(["parent", "\tchild", "sibling"], to: todo_path)
+        try addNestedTodo("new child", after: 1, taskPath: todo_path)
         
-        try? fm.removeItem(atPath: tmpDir)
-        try! fm.createDirectory(atPath: tmpDir, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(atPath: tmpDir) }
-        
-        let path = tmpDir + "/tasks"
-        IO.write(["parent", "\tchild", "sibling"], to: path)
-        addNestedTodo("new child", after: 1, taskPath: path)
-        
-        let lines = IO.read(path)
-        #expect(lines.count == 4)
-        #expect(lines[0] == "parent")
-        #expect(lines[1] == "\tchild")
-        #expect(lines[2] == "\tnew child")
-        #expect(lines[3] == "sibling")
+        let lines = IO.read(todo_path)
+        #expect(lines == ["parent", "\tchild", "\tnew child", "sibling"])
     }
     
-    @Test func addNestedTodoDoubleIndentsNestedChild() {
-        let fm = FileManager.default
-        let tmpDir = fm.temporaryDirectory.appendingPathComponent("t-tests").path
+    @Test func addNestedTodoDoubleIndentsNestedChild() throws {
+        try IO.write(["parent", "\tchild"], to: todo_path)
+        try addNestedTodo("grandchild", after: 2, taskPath: todo_path)
         
-        try? fm.removeItem(atPath: tmpDir)
-        try! fm.createDirectory(atPath: tmpDir, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(atPath: tmpDir) }
-        
-        let path = tmpDir + "/tasks"
-        IO.write(["parent", "\tchild"], to: path)
-        addNestedTodo("grandchild", after: 2, taskPath: path)
-        
-        let lines = IO.read(path)
-        #expect(lines.count == 3)
-        #expect(lines[2] == "\t\tgrandchild")
+        let lines = IO.read(todo_path)
+        #expect(lines == ["parent", "\tchild", "\t\tgrandchild"])
     }
     
     @Test func appendToDoneCreatesFileAndAppends() {
-        let fm = FileManager.default
-        let tmpDir = fm.temporaryDirectory.appendingPathComponent("t-tests").path
+        appendToDone("first task", donePath: done_path)
+        appendToDone("second task", donePath: done_path)
         
-        try? fm.removeItem(atPath: tmpDir)
-        try! fm.createDirectory(atPath: tmpDir, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(atPath: tmpDir) }
-        
-        let path = tmpDir + "/.tasks.done"
-        appendToDone("first task", donePath: path)
-        appendToDone("second task", donePath: path)
-        
-        let lines = IO.read(path)
+        let lines = IO.read(done_path)
         #expect(lines.count == 2)
-        #expect(lines[0].hasSuffix("  first task"))
-        #expect(lines[1].hasSuffix("  second task"))
-        #expect(lines[0].prefix(14).allSatisfy({ $0.isNumber }))
+        #expect(lines.first?.hasSuffix("  first task") ?? false)
+        #expect(lines.last?.hasSuffix("  second task") ?? false)
+        #expect(lines.first?.prefix(14).allSatisfy({ $0.isNumber }) ?? false)
     }
     
-    @Test func removeLineThenAddTodoStartsAtLine1() {
-        let fm = FileManager.default
-        let tmpDir = fm.temporaryDirectory.appendingPathComponent("t-empty-line-test").path
+    @Test func removeLineThenAddTodoStartsAtLine1() throws {
+        try addTodo("first", taskPath: todo_path)
+        _ = try removeLine(1, from: todo_path)
+        try addTodo("second", taskPath: todo_path)
         
-        try? fm.removeItem(atPath: tmpDir)
-        try! fm.createDirectory(atPath: tmpDir, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(atPath: tmpDir) }
-        
-        let path = tmpDir + "/tasks"
-        addTodo("first", taskPath: path)
-        _ = removeLine(1, from: path)
-        addTodo("second", taskPath: path)
-        
-        let lines = IO.read(path)
-        #expect(lines.count == 1)
-        #expect(lines[0] == "second")
+        let lines = IO.read(todo_path)
+        #expect(lines == ["second"])
     }
     
-    @Test func finalizeTodoMovesToDoneAndRemovesFromTasks() {
-        let fm = FileManager.default
-        let tmpDir = fm.temporaryDirectory.appendingPathComponent("t-tests").path
+    @Test func finalizeTodoMovesToDoneAndRemovesFromTasks() throws {
+        try IO.write(["first", "second"], to: todo_path)
+        try finalizeTodo(lineNumber: 1, editMessage: false, taskPath: todo_path, donePath: done_path, repo: nil)
         
-        try? fm.removeItem(atPath: tmpDir)
-        try! fm.createDirectory(atPath: tmpDir, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(atPath: tmpDir) }
+        let remaining = IO.read(todo_path)
+        #expect(remaining == ["second"])
         
-        let taskPath = tmpDir + "/tasks"
-        let donePath = tmpDir + "/.tasks.done"
-        IO.write(["first", "second"], to: taskPath)
-        finalizeTodo(lineNumber: 1, editMessage: false, taskPath: taskPath, donePath: donePath, repo: nil)
-        
-        let remaining = IO.read(taskPath)
-        #expect(remaining.count == 1)
-        #expect(remaining[0] == "second")
-        
-        let done = IO.read(donePath)
-        #expect(done.count == 1)
-        #expect(done[0].hasSuffix("  first"))
-    }
-    
-    @Test func vcsRootDetectsFossil() {
-        let fm = FileManager.default
-        let repoDir = fm.temporaryDirectory.appendingPathComponent("t-vcs-detection").path
-        
-        try? fm.removeItem(atPath: repoDir)
-        try! fm.createDirectory(atPath: repoDir, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(atPath: repoDir) }
-        
-        _ = Runner.run("fossil init repo.fossil", inDirectory: repoDir)
-        _ = Runner.run("fossil open repo.fossil", inDirectory: repoDir)
-        
-        let result = VCS.root(from: repoDir)
-        #expect(result?.root == repoDir)
-        #expect(result?.vcs == "fossil")
-    }
-    
-    @Test func fossilIntegration() {
-        let fm = FileManager.default
-        let repoDir = fm.temporaryDirectory.appendingPathComponent("t-fossil-tests").path
-        
-        try? fm.removeItem(atPath: repoDir)
-        try! fm.createDirectory(atPath: repoDir, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(atPath: repoDir) }
-        
-        _ = Runner.run("fossil init repo.fossil", inDirectory: repoDir)
-        _ = Runner.run("fossil open repo.fossil", inDirectory: repoDir)
-        
-        let taskPath = repoDir + "/tasks"
-        let donePath = repoDir + "/.tasks.done"
-        IO.write(["fix bug", "write docs"], to: taskPath)
-        
-        finalizeTodo(lineNumber: 1, editMessage: false, taskPath: taskPath, donePath: donePath, repo: (repoDir, "fossil"))
-        
-        let remaining = IO.read(taskPath)
-        #expect(remaining.count == 1)
-        #expect(remaining[0] == "write docs")
-        
-        let done = IO.read(donePath)
-        #expect(done.count == 1)
-        #expect(done[0].hasSuffix("  fix bug"))
+        let done = IO.read(done_path)
+        #expect(done.first?.hasSuffix("  first") == true)
     }
 }

@@ -8,8 +8,8 @@ enum IO {
         return lines
     }
     
-    static func write(_ lines: [String], to path: String) {
+    static func write(_ lines: [String], to path: String) throws {
         let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
-        try? content.write(toFile: path, atomically: true, encoding: .utf8)
+        try content.write(toFile: path, atomically: true, encoding: .utf8)
     }
 }

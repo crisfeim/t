@@ -4,6 +4,7 @@ enum Runner {
 	@discardableResult
 	static func run(_ command: String, inDirectory directory: String? = nil) -> String {
 		let process = Process()
+        process.environment = ProcessInfo.processInfo.environment
 		process.executableURL = URL(fileURLWithPath: "/bin/zsh")
 		process.arguments = ["-c", command]
 		if let dir = directory { process.currentDirectoryURL = URL(fileURLWithPath: dir) }
