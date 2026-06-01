@@ -1,0 +1,1 @@
+swiftc main.swift -o bin.o ; ./bin.o --test
