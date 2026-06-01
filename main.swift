@@ -20,7 +20,7 @@ func findRepoRoot(from path: String) -> (root: String, vcs: String)? {
     var gitRoot: String? = nil
     
     while true {
-        if fossilRoot == nil && (fm.fileExists(atPath: current + "/fslckout") || fm.fileExists(atPath: current + "/_FOSSIL_")) {
+        if fossilRoot == nil && fm.fileExists(atPath: current + "/.fslckout") {
             fossilRoot = current
         }
         if gitRoot == nil && fm.fileExists(atPath: current + "/.git") {
@@ -50,14 +50,14 @@ func currentVCS() -> (root: String, vcs: String)? {
 // MARK: File Paths
 
 func taskFilePath(repoRoot: String? = nil) -> String {
-    if let root = repoRoot ?? currentVCS()?.root {
+    if let root = repoRoot {
         return root + "/tasks"
     }
     return NSHomeDirectory() + "/.tasks"
 }
 
 func doneFilePath(repoRoot: String? = nil) -> String {
-    if let root = repoRoot ?? currentVCS()?.root {
+    if let root = repoRoot {
         return root + "/.tasks.done"
     }
     return NSHomeDirectory() + "/.tasks.done"
@@ -104,6 +104,7 @@ func addTodo(_ text: String, taskPath: String) {
     var lines = readLines(from: taskPath)
     lines.append(text)
     writeLines(lines, to: taskPath)
+    print(lines.count, " \(text)")
 }
 
 func addNestedTodo(_ text: String, after lineNumber: Int, taskPath: String) {
@@ -379,8 +380,8 @@ if args.contains("--test") {
 }
 
 let repo = currentVCS()
-let taskPath = taskFilePath()
-let donePath = doneFilePath()
+let taskPath = taskFilePath(repoRoot: repo?.root)
+let donePath = doneFilePath(repoRoot: repo?.root)
 
 if args.count == 1 {
     listTodos(taskPath: taskPath)
