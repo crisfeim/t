@@ -27,8 +27,8 @@ import Foundation
     @Test func todoParseSkipsEmptyLines() {
         let todos = Todo.parse(from: ["first", "", "third"])
         #expect(todos == [
-            Todo.t(line: 1, text: "first", indent: 0),
-            Todo.t(line: 3, text: "third", indent: 0)
+            Todo.t(line: 1, text: "first", indent: 0, has_children: false),
+            Todo.t(line: 3, text: "third", indent: 0, has_children: false)
         ])
     }
     
@@ -87,4 +87,25 @@ import Foundation
         let done = IO.read(done_path)
         #expect(done.first?.hasSuffix("  first") == true)
     }
+}
+
+
+@Suite struct TodoTests_2 {
+	@Test func list_skips_childs() {
+		let list = Todo.list(from: [
+			"First todo",
+			"\tChild 1",
+			"\tChild 2",
+			"Second todo",
+			"\tChild 1",
+			"\tChild 2",
+			"Third todo"
+		])
+	
+		#expect(list == [
+			"1* First todo",
+			"4* Second todo",
+			"7 Third todo"
+		])
+	}
 }
