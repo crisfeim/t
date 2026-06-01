@@ -73,7 +73,7 @@ func readLines(from path: String) -> [String] {
 }
 
 func writeLines(_ lines: [String], to path: String) {
-    let content = lines.joined(separator: "\n") + "\n"
+    let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
     try? content.write(toFile: path, atomically: true, encoding: .utf8)
 }
 
@@ -305,6 +305,23 @@ func runTests() {
         assertEqual(lines[1].hasSuffix("  second task"), true)
         assertEqual(lines[0].prefix(14).allSatisfy({ $0.isNumber }), true)
     }
+    
+    test("removeLine then addTodo starts at line 1") {
+        let fm = FileManager.default
+        let tmpDir = fm.temporaryDirectory.appendingPathComponent("t-empty-line-test").path
+        try? fm.removeItem(atPath: tmpDir)
+        try! fm.createDirectory(atPath: tmpDir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(atPath: tmpDir) }
+        
+        let path = tmpDir + "/tasks"
+        addTodo("first", taskPath: path)
+        removeLine(1, from: path)
+        addTodo("second", taskPath: path)
+        
+        let lines = readLines(from: path)
+        assertEqual(lines.count, 1, "Expected 1 line, got \(lines.count)")
+        assertEqual(lines[0], "second")
+    }
 
     test("finalizeTodo moves to done and removes from tasks") {
         try? fm.removeItem(atPath: tmpDir)
@@ -324,7 +341,7 @@ func runTests() {
         assertEqual(done.count, 1)
         assertEqual(done[0].hasSuffix("  first"), true)
     }
-
+    
     test("fossil integration") {
         let fm = FileManager.default
         let repoDir = fm.temporaryDirectory.appendingPathComponent("t-fossil-tests").path
@@ -349,6 +366,7 @@ func runTests() {
         assertEqual(done.count, 1)
         assertEqual(done[0].hasSuffix("  fix bug"), true)
     }
+    
 }
 
 // MARK: Command
@@ -424,6 +442,7 @@ func renderError(
     print("\(file):\(line): \(message)", to: &stderr)
 }
 
+var test: String = ""
 func assertEqual<Type: Equatable>(
     _ a: Type,
     _ b: Type,
@@ -432,14 +451,11 @@ func assertEqual<Type: Equatable>(
     line: UInt = #line
 ) {
     if a != b {
-        renderError(
-            file: file,
-            line: line,
-            message: message ?? "assert equal failed",
-            to: &stderr
-        )
+        
+        print("❌ " + line.description + " " + test)
+        print(message ?? "assert equal failed")
     } else {
-        print("✅ " + line.description)
+        print("✅ " + line.description + " " + test)
     }
 }
 
@@ -452,7 +468,9 @@ func fail(_ message: String, file: StaticString = #file, line: UInt = #line) {
     )
 }
 
+
 func test(_ name: String, file: StaticString = #file, line: UInt = #line, action: () throws -> Void) {
+    test = name
     do {
         try action()
     } catch {
