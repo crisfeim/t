@@ -342,6 +342,21 @@ func runTests() {
         assertEqual(done[0].hasSuffix("  first"), true)
     }
     
+    test("findRepoRoot detects fossil") {
+        let fm = FileManager.default
+        let repoDir = fm.temporaryDirectory.appendingPathComponent("t-vcs-detection").path
+        try? fm.removeItem(atPath: repoDir)
+        try! fm.createDirectory(atPath: repoDir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(atPath: repoDir) }
+        
+        runCommand("fossil init repo.fossil", inDirectory: repoDir)
+        runCommand("fossil open repo.fossil", inDirectory: repoDir)
+        
+        let result = findRepoRoot(from: repoDir)
+        assertEqual(result?.root, repoDir)
+        assertEqual(result?.vcs, "fossil")
+    }
+    
     test("fossil integration") {
         let fm = FileManager.default
         let repoDir = fm.temporaryDirectory.appendingPathComponent("t-fossil-tests").path
