@@ -1,71 +1,58 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 
+import Foundation
+import ArgumentParser
+
 @main
-struct t {
-    static func main() {
+struct CLI: ParsableCommand {
+    
+    @Flag(name: .customShort("g"), help: "Use global tasks file if invoked in a local repo")
+    var g: Bool = false
+    
+    @Option(name: .customShort("r"), help: "Remove a task by line number.")
+    var r: Int?
+    
+    @Option(name: .customShort("f"), help: "Finalize and commit a task by line number.")
+    var f: Int?
+    
+    @Option(name: .customShort("a"), help: "Add a nested task after the specified line.")
+    var a: Int?
+    
+    @Flag(name: .customShort("e"), help: "Edit commit message before commiting.")
+    var e: Bool = false
+    
+    @Argument(help: "Task text contents.")
+    var args: [String] = []
+    
+    func run() throws {
+        let repo     = g ? nil : VCS.get()
+        let taskPath = g ? global.tasks : taskFilePath(repoRoot: repo?.root)
+        let donePath = g ? global.done  : doneFilePath(repoRoot: repo?.root)
         
-        let args = CommandLine.arguments
-        let defaults = UserDefaults.standard
-        let editMessage = args.contains("-e")
-        
-        let repo     = args.contains("-g") ? nil : VCS.get()
-        let taskPath = args.contains("-g") ? global.tasks : taskFilePath(repoRoot: repo?.root)
-        let donePath = args.contains("-g") ? global.done  : doneFilePath(repoRoot: repo?.root)
-        
-        if args.count == 1 {
-            Todo.list(from: IO.read(taskPath)).forEach(put)
-        } else if let line = defaults.string(forKey: "r").flatMap(Int.init) {
-            do {
-                try removeLine(line, from: taskPath)
-            } catch {
-                print("error: line \(line) does not exist\n", to:&stderr)
-                exit(1)
-            }
-        } else if let line = defaults.string(forKey: "f").flatMap(Int.init) {
-            do {
-                try finalizeTodo(
-                    lineNumber: line,
-                    editMessage: editMessage,
-                    taskPath: taskPath,
-                    donePath: donePath,
-                    repo: repo
-                )
-            } catch {
-                print("error: line \(line) does not exist\n", to:&stderr)
-                exit(1)
-            }
-        } else if let line = defaults.string(forKey: "a").flatMap(Int.init) {
-            let text = args.dropFirst().filter { !$0.hasPrefix("-") && Int($0) == nil }.joined(separator: " ")
-            if text.isEmpty {
-                print("error: no text provided\n", to:&stderr)
-                exit(1)
-            }
-            do {
-                try addNestedTodo(text, after: line, taskPath: taskPath)
-            } catch {
-                print("error: line \(line) does not exist\n", to:&stderr)
-                exit(1)
-            }
-        } else {
-            let text = args.dropFirst().filter { !$0.hasPrefix("-") }.joined(separator: " ")
-            if !text.isEmpty {
-                do {
-                    print(try addTodo(text, taskPath: taskPath))
-                } catch {
-                    print("error: adding failed", to: &stderr)
-                    exit(1)
-                }
-            } else {
-                Todo.list(from: IO.read(taskPath)).forEach(put)
-            }
+        if let r { try removeLine(r, from: taskPath) }
+        if let f {
+            try finalizeTodo(
+                lineNumber: f,
+                editMessage: e,
+                taskPath: taskPath,
+                donePath: donePath,
+                repo: repo
+            )
         }
+        if let a {
+            let text = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
+            if text.isEmpty { throw ValidationError("no text provided") }
+            try addNestedTodo(text, after: a, taskPath: taskPath)
+        }
+        
+        let text = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
+        if !text.isEmpty { print(try addTodo(text, taskPath: taskPath)) }
     }
 }
 
 import Foundation
 import Darwin
-
 
 // MARK: File Paths
 
@@ -86,21 +73,33 @@ func doneFilePath(repoRoot: String? = nil) -> String {
 
 @discardableResult
 func addTodo(_ text: String, taskPath: String) throws -> String {
-    let lines = IO.read(taskPath) + [text]
-    try IO.write(lines, to: taskPath)
-    return "\(lines.count) \(text)"
+    do {
+        let lines = IO.read(taskPath) + [text]
+        try IO.write(lines, to: taskPath)
+        return "\(lines.count) \(text)"
+    } catch {
+        throw CleanExit.message("error: adding failed")
+    }
 }
 
 func addNestedTodo(_ text: String, after lineNumber: Int, taskPath: String) throws {
-    let updated = try Todo.add(text, to: IO.read(taskPath), after: lineNumber)
-    try IO.write(updated, to: taskPath)
+    do {
+        let updated = try Todo.add(text, to: IO.read(taskPath), after: lineNumber)
+        try IO.write(updated, to: taskPath)
+    } catch {
+        throw ValidationError("line \(lineNumber) does not exist")
+    }
 }
 
 @discardableResult
-func removeLine(_ lineNumber: Int, from path: String) throws -> String? {
-    let (lines, removed) = try Todo.remove(lineNumber, from: IO.read(path))
-    try IO.write(lines, to: path)
-    return removed
+func removeLine(_ lineNumber: Int, from path: String) throws-> String? {
+    do {
+        let (lines, removed) = try Todo.remove(lineNumber, from: IO.read(path))
+        try IO.write(lines, to: path)
+        return removed
+    } catch {
+        throw ValidationError("line \(lineNumber) does not exist")
+    }
 }
 
 func appendToDone(_ text: String, donePath: String) {
