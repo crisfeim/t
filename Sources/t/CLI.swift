@@ -50,8 +50,7 @@ struct CLI: ParsableCommand {
         }
 			
 				if let l {
-					let todos = Todo.list(from: IO.read(todo_fpath))
-					return print(Todo.list_childs(of: l, todos: todos))
+					return Todo.list_childs(of: l, todos: IO.read(todo_fpath)).forEach(put)
 				}
 			
         let todo = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
