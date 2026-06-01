@@ -412,9 +412,10 @@ if args.contains("--test") {
     exit(0)
 }
 
-let repo = currentVCS()
-let taskPath = taskFilePath(repoRoot: repo?.root)
-let donePath = doneFilePath(repoRoot: repo?.root)
+let forceGlobal = args.contains("-g")
+let repo = forceGlobal ? nil : currentVCS()
+let taskPath = forceGlobal ? NSHomeDirectory() + "/.tasks" : taskFilePath(repoRoot: repo?.root)
+let donePath = forceGlobal ? NSHomeDirectory() + "/.tasks.done" : doneFilePath(repoRoot: repo?.root)
 
 if args.count == 1 {
     listTodos(taskPath: taskPath)
