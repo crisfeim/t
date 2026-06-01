@@ -99,9 +99,9 @@ extension Todo {
 }
 
 private let printed_child: @Sendable (Todo.r) -> String = { $0.line.description + " " + $0.content }
-private let is_child: @Sendable (String) -> Bool = { $0.contains("\t") }
-private let drop_first: @Sendable (String) -> String = { String($0.dropFirst()) }
-private let dedent_one: @Sendable (String) -> String = { $0.hasPrefix("\t") ? $0=>drop_first : $0 }
+private let is_child     : @Sendable (String) -> Bool   = { $0.contains("\t") }
+private let drop_first   : @Sendable (String) -> String = { String($0.dropFirst()) }
+private let dedent_one   : @Sendable (String) -> String = { $0.hasPrefix("\t") ? $0=>drop_first : $0 }
 
 // Partial application
 infix operator =>: MultiplicationPrecedence
