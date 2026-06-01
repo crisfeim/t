@@ -7,7 +7,7 @@ extension String {
     }
 }
 
-var put: (String) -> Void = { print($0) }
+let put: @Sendable (String) -> Void = { print($0) }
 
 infix operator *: MultiplicationPrecedence
 @discardableResult

@@ -6,7 +6,7 @@ struct StandardError: TextOutputStream, Sendable {
     }
 }
 
-var stderr = StandardError()
+nonisolated(unsafe) var stderr = StandardError()
 
 func renderError(
     file: StaticString,
@@ -17,7 +17,7 @@ func renderError(
     print("\(file):\(line): \(message)", to: &stderr)
 }
 
-var test: String = ""
+nonisolated(unsafe) var test: String = ""
 func assertEqual<Type: Equatable>(
     _ a: Type,
     _ b: Type,
