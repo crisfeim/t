@@ -30,9 +30,9 @@ struct CLI: ParsableCommand {
         let todo_fpath = g ? global.todo : todo_fpath(repo_dir: repo?.dir)
         let done_fpath = g ? global.done : done_fpath(repo_dir: repo?.dir)
         
-        if let r { try remove(r, from: todo_fpath) }
+        if let r { try remove(r, from: todo_fpath) ; return }
         if let f {
-            try complete_todo(
+            return try complete_todo(
                 line: f,
                 launch_editor: e,
                 todo_fpath: todo_fpath,
@@ -43,7 +43,7 @@ struct CLI: ParsableCommand {
         if let a {
             let todo = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
             if todo.isEmpty { throw ValidationError("no text provided") }
-            try add_nested(todo, after: a, fpath: todo_fpath)
+            return try add_nested(todo, after: a, fpath: todo_fpath)
         }
         
         let todo = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
