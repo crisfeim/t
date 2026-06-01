@@ -19,12 +19,6 @@ func doneFilePath(repoRoot: String? = nil) -> String {
   return global.done
 }
 
-// MARK: Actions
-
-func listTodos(taskPath: String) {
-  Todo.list(from: IO.read(from: taskPath)).forEach(put)
-}
-
 func addTodo(_ text: String, taskPath: String) {
 	var lines = IO.read(from: taskPath)
 	lines.append(text)
@@ -316,7 +310,7 @@ let taskPath = args.contains("-g") ? global.tasks : taskFilePath(repoRoot: repo?
 let donePath = args.contains("-g") ? global.done  : doneFilePath(repoRoot: repo?.root)
 
 if args.count == 1 {
-    listTodos(taskPath: taskPath)
+    Todo.list(from: IO.read(from: taskPath)).forEach(put)
 } else if let line = defaults.string(forKey: "r").flatMap(Int.init) {
     removeLine(line, from: taskPath)
 } else if let line = defaults.string(forKey: "f").flatMap(Int.init) {
@@ -333,7 +327,7 @@ if args.count == 1 {
     if !text.isEmpty {
         addTodo(text, taskPath: taskPath)
     } else {
-        listTodos(taskPath: taskPath)
+        Todo.list(from: IO.read(from: taskPath)).forEach(put)
     }
 }
 
