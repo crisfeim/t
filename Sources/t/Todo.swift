@@ -63,6 +63,50 @@ enum Todo {
 	}
 }
 
+
+// MARK: - Child listing
+extension Todo {
+	struct r {
+		let line: Int
+		let content: String
+		var childs: [r]
+	}
+	
+	static func parse(_ todos: [String]) -> [r] {
+		
+		var model = [r]()
+		
+		todos.enumerated().forEach { i, todo in
+			if todo=>is_child {
+				add_child_to_last(&model, .init(line: i + 1, content: todo, childs: []))
+			} else {
+				model.append(.init(line: i + 1, content: todo, childs: []))
+			}
+		}
+		
+		return model
+	}
+	
+	static func list_childs(of parent: Int, todos: [String]) -> [String] {
+		parse(todos).filter { $0.line == parent }.flatMap(\.childs).map(\.content)
+	}
+	
+	static
+	private func add_child_to_last(_ model: inout [Todo.r], _ child: Todo.r) {
+		guard !model.isEmpty else { return model.append(child) }
+		model[model.count - 1].childs.append(child)
+	}
+}
+
+private let is_child: @Sendable (String) -> Bool = { $0.contains("\t") }
+
+// Partial application
+infix operator =>: MultiplicationPrecedence
+func =><A, B>(lhs: A, rhs: (A) -> B) -> B {
+	rhs(lhs)
+}
+
+
 private extension String {
 	func left_padded(_ width: Int) -> String {
 		let pad = width - self.count
