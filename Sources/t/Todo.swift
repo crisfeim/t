@@ -78,7 +78,7 @@ extension Todo {
 		
 		todos.enumerated().forEach { i, todo in
 			if todo=>is_child {
-				add_child_to_last(&model, .init(line: i + 1, content: todo, childs: []))
+				add_child_to_last(&model, .init(line: i + 1, content: todo=>dedent_one, childs: []))
 			} else {
 				model.append(.init(line: i + 1, content: todo, childs: []))
 			}
@@ -88,7 +88,7 @@ extension Todo {
 	}
 	
 	static func list_childs(of parent: Int, todos: [String]) -> [String] {
-		parse(todos).filter { $0.line == parent }.flatMap(\.childs).map(\.content).map(dedent_one)
+		parse(todos).filter { $0.line == parent }.flatMap(\.childs).map(printed_child)
 	}
 	
 	static
@@ -98,6 +98,7 @@ extension Todo {
 	}
 }
 
+private let printed_child: @Sendable (Todo.r) -> String = { $0.line.description + " " + $0.content }
 private let is_child: @Sendable (String) -> Bool = { $0.contains("\t") }
 private let drop_first: @Sendable (String) -> String = { String($0.dropFirst()) }
 private let dedent_one: @Sendable (String) -> String = { $0.hasPrefix("\t") ? $0=>drop_first : $0 }
