@@ -5,11 +5,18 @@ import PackageDescription
 
 let package = Package(
     name: "t",
+    platforms: [.macOS(.v15)],
+    products: [
+        .executable(name: "t", targets: ["t"])
+    ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .executableTarget(
-            name: "t"
+            name: "t",
+            dependencies: []
         ),
+        .testTarget(
+            name: "tTests",
+            dependencies: ["t"]
+        )
     ]
 )
