@@ -14,7 +14,7 @@ struct Todo {
 // MARK: File Paths
 
 func taskFilePath(repoRoot: String? = nil) -> String {
-  if let root = repoRoot { return root + "/tasks" }
+  if let root = repoRoot { return root + "/.tasks" }
   return NSHomeDirectory() + "/.tasks"
 }
 
