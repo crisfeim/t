@@ -137,3 +137,113 @@ import Foundation
 		#expect(childs_3.isEmpty)
 	}
 }
+
+// MARK: - remove / complete -f / remove -r
+@Suite class TodoTests_remove {
+
+	lazy var tmp       = FileManager.default.temporaryDirectory.appendingPathComponent("t-tests-rwc—\(UUID().uuidString)").path
+	lazy var todo_path = tmp + "/.tasks.txt"
+	lazy var done_path = tmp + "/.tasks.done"
+
+	init() { try! FileManager.default.createDirectory(atPath: tmp, withIntermediateDirectories: true) }
+	deinit { try? FileManager.default.removeItem(atPath: tmp) }
+
+	// MARK: Unit – Todo.remove
+
+	@Test("remove removes parent and its direct children")
+	func remove_removesParentAndDirectChildren() throws {
+		let lines  = ["parent", "\tchild1", "\tchild2", "sibling"]
+		let (result, removed) = try Todo.remove(1, from: lines)
+		#expect(removed == "parent")
+		#expect(result  == ["sibling"])
+	}
+
+	@Test("remove removes parent and deeply nested descendants")
+	func remove_removesDeepDescendants() throws {
+		let lines  = ["parent", "\tchild", "\t\tgrandchild", "sibling"]
+		let (result, removed) = try Todo.remove(1, from: lines)
+		#expect(removed == "parent")
+		#expect(result  == ["sibling"])
+	}
+
+	@Test("remove on a leaf removes only that line")
+	func remove_leafRemovesOnlyItself() throws {
+		let lines  = ["parent", "\tchild1", "\tchild2"]
+		let (result, removed) = try Todo.remove(2, from: lines)
+		#expect(removed == "child1")
+		#expect(result  == ["parent", "\tchild2"])
+	}
+
+	@Test("remove on a node without children behaves like plain remove")
+	func remove_noChildren_sameAsRemove() throws {
+		let lines = ["first", "second", "third"]
+		let (result, removed) = try Todo.remove(2, from: lines)
+		#expect(removed == "second")
+		#expect(result  == ["first", "third"])
+	}
+
+	@Test("remove with invalid line throws")
+	func remove_invalidLine_throws() throws {
+		let lines = ["only line"]
+		#expect(throws: Todo.WrongLineNumber.self) {
+			try Todo.remove(99, from: lines)
+		}
+	}
+
+	// MARK: Integration – remove -r strips children from file
+
+	@Test("remove -r strips parent and all children from the tasks file")
+	func remove_r_stripsParentAndChildren() throws {
+		try IO.write(["parent", "\tchild1", "\tchild2", "sibling"], to: todo_path)
+		let removed = try remove(1, from: todo_path)
+		#expect(removed == "parent")
+		#expect(IO.read(todo_path) == ["sibling"])
+	}
+
+	@Test("remove -r on a node with no children removes only that node")
+	func remove_r_noChildren_removesOnlyThatNode() throws {
+		try IO.write(["first", "second", "third"], to: todo_path)
+		let removed = try remove(2, from: todo_path)
+		#expect(removed == "second")
+		#expect(IO.read(todo_path) == ["first", "third"])
+	}
+
+	// MARK: Integration – complete -f moves parent to done and removes children
+
+	@Test("complete -f moves parent to done and removes parent + children from tasks")
+	func complete_f_movesParentToDoneAndRemovesChildren() throws {
+		try IO.write(["parent", "\tchild1", "\tchild2", "sibling"], to: todo_path)
+		try complete_todo(line: 1, launch_editor: false, todo_fpath: todo_path, done_fpath: done_path, repo: nil)
+
+		#expect(IO.read(todo_path) == ["sibling"])
+
+		let done = IO.read(done_path)
+		#expect(done.count == 1)
+		#expect(done.first?.hasSuffix("  parent") == true)
+	}
+
+	@Test("complete -f on a leaf moves it to done and leaves other tasks intact")
+	func complete_f_leafMovesToDone() throws {
+		try IO.write(["parent", "\tchild", "sibling"], to: todo_path)
+		try complete_todo(line: 2, launch_editor: false, todo_fpath: todo_path, done_fpath: done_path, repo: nil)
+
+		#expect(IO.read(todo_path) == ["parent", "sibling"])
+
+		let done = IO.read(done_path)
+		#expect(done.count == 1)
+		#expect(done.first?.hasSuffix("  child") == true)
+	}
+
+	@Test("complete -f with deeply nested children removes all descendants")
+	func complete_f_removesAllDescendants() throws {
+		try IO.write(["parent", "\tchild", "\t\tgrandchild", "sibling"], to: todo_path)
+		try complete_todo(line: 1, launch_editor: false, todo_fpath: todo_path, done_fpath: done_path, repo: nil)
+
+		#expect(IO.read(todo_path) == ["sibling"])
+
+		let done = IO.read(done_path)
+		#expect(done.count == 1)
+		#expect(done.first?.hasSuffix("  parent") == true)
+	}
+}
+

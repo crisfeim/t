@@ -102,7 +102,7 @@ func add_nested(_ text: String, after line: Int, fpath: String) throws {
 }
 
 @discardableResult
-func remove(_ line: Int, from path: String) throws-> String? {
+func remove(_ line: Int, from path: String) throws -> String? {
     do {
         let (lines, removed) = try Todo.remove(line, from: IO.read(path))
         try IO.write(lines, to: path)
