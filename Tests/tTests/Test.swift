@@ -17,8 +17,8 @@ import Foundation
     }
     
     @Test func addTodoAppendsToFile() throws {
-        try addTodo("first", taskPath: todo_path)
-        try addTodo("second", taskPath: todo_path)
+        try add("first", fpath: todo_path)
+        try add("second", fpath: todo_path)
         
         let lines = IO.read(todo_path)
         #expect(lines == ["first", "second"])
@@ -34,7 +34,7 @@ import Foundation
     
     @Test func removeLineRemovesCorrectLine() throws {
         try IO.write(["first", "second", "third"], to: todo_path)
-        let removed = try removeLine(2, from: todo_path)
+        let removed = try remove(2, from: todo_path)
         #expect(removed == "second")
         
         let lines = IO.read(todo_path)
@@ -43,7 +43,7 @@ import Foundation
     
     @Test func addNestedTodoInsertsAfterChildren() throws {
         try IO.write(["parent", "\tchild", "sibling"], to: todo_path)
-        try addNestedTodo("new child", after: 1, taskPath: todo_path)
+        try add_nested("new child", after: 1, fpath: todo_path)
         
         let lines = IO.read(todo_path)
         #expect(lines == ["parent", "\tchild", "\tnew child", "sibling"])
@@ -51,15 +51,15 @@ import Foundation
     
     @Test func addNestedTodoDoubleIndentsNestedChild() throws {
         try IO.write(["parent", "\tchild"], to: todo_path)
-        try addNestedTodo("grandchild", after: 2, taskPath: todo_path)
+        try add_nested("grandchild", after: 2, fpath: todo_path)
         
         let lines = IO.read(todo_path)
         #expect(lines == ["parent", "\tchild", "\t\tgrandchild"])
     }
     
     @Test func appendToDoneCreatesFileAndAppends() {
-        appendToDone("first task", donePath: done_path)
-        appendToDone("second task", donePath: done_path)
+        add_to_done("first task", fpath: done_path)
+        add_to_done("second task", fpath: done_path)
         
         let lines = IO.read(done_path)
         #expect(lines.count == 2)
@@ -69,9 +69,9 @@ import Foundation
     }
     
     @Test func removeLineThenAddTodoStartsAtLine1() throws {
-        try addTodo("first", taskPath: todo_path)
-        _ = try removeLine(1, from: todo_path)
-        try addTodo("second", taskPath: todo_path)
+        try add("first", fpath: todo_path)
+        _ = try remove(1, from: todo_path)
+        try add("second", fpath: todo_path)
         
         let lines = IO.read(todo_path)
         #expect(lines == ["second"])
@@ -79,7 +79,7 @@ import Foundation
     
     @Test func finalizeTodoMovesToDoneAndRemovesFromTasks() throws {
         try IO.write(["first", "second"], to: todo_path)
-        try finalizeTodo(lineNumber: 1, editMessage: false, taskPath: todo_path, donePath: done_path, repo: nil)
+        try complete_todo(line: 1, launch_editor: false, todo_fpath: todo_path, done_fpath: done_path, repo: nil)
         
         let remaining = IO.read(todo_path)
         #expect(remaining == ["second"])

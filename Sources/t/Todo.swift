@@ -6,7 +6,7 @@ enum Todo {
 		let text: String
 		let indent: Int
 		
-		var text_without_indent: String { text.trimmingCharacters(in: .whitespaces) }
+		var dedented: String { text.trimmingCharacters(in: .whitespaces) }
 	}
 	
 	static func parse(from lines: [String]) -> [t] {
@@ -32,22 +32,22 @@ enum Todo {
 			throw WrongLineNumber()
 		}
 		
-		let refIndex = line_number - 1
-		let refIndent = lines[refIndex].prefix(while: { $0 == "\t" }).count
-		let newLine = String(repeating: "\t", count: refIndent + 1) + text
+		let ref_idx = line_number - 1
+		let ref_indent = lines[ref_idx].prefix(while: { $0 == "\t" }).count
+		let new = String(repeating: "\t", count: ref_indent + 1) + text
 		
-		var insertIndex = refIndex + 1
-		while insertIndex < lines.count {
-			let line = lines[insertIndex]
+		var insert_idx = ref_idx + 1
+		while insert_idx < lines.count {
+			let line = lines[insert_idx]
 			if line.trimmingCharacters(in: .whitespaces).isEmpty {
-				insertIndex += 1
+				insert_idx += 1
 				continue
 			}
-			if line.prefix(while: { $0 == "\t" }).count <= refIndent { break }
-			insertIndex += 1
+			if line.prefix(while: { $0 == "\t" }).count <= ref_indent { break }
+			insert_idx += 1
 		}
 		
-		lines.insert(newLine, at: insertIndex)
+		lines.insert(new, at: insert_idx)
 		return lines
 	}
 	

@@ -2,25 +2,25 @@ import Foundation
 
 enum VCS {
     
-    static func root(from path: String) -> (root: String, vcs: String)? {
+    static func get(from path: String) -> (dir: String, vcs: String)? {
         let fm = FileManager.default
         var current = path
-        var fossilRoot: String? = nil
-        var gitRoot: String? = nil
+        var fossil_root: String? = nil
+        var git_root: String? = nil
         
         while true {
-            if fossilRoot == nil && fm.fileExists(atPath: current + "/.fslckout") {
-                fossilRoot = current
+            if fossil_root == nil && fm.fileExists(atPath: current + "/.fslckout") {
+                fossil_root = current
             }
-            if gitRoot == nil && fm.fileExists(atPath: current + "/.git") {
-                gitRoot = current
+            if git_root == nil && fm.fileExists(atPath: current + "/.git") {
+                git_root = current
             }
             let parent = (current as NSString).deletingLastPathComponent
             if parent == current { break }
             current = parent
         }
         
-        switch (fossilRoot, gitRoot) {
+        switch (fossil_root, git_root) {
             case (let f?, let g?):
             return f.count >= g.count ? (f, "fossil") : (g, "git")
             case (let f?, nil):
@@ -32,7 +32,7 @@ enum VCS {
         }
     }
     
-    static func get() -> (root: String, vcs: String)? {
-        root(from: FileManager.default.currentDirectoryPath)
+    static func get() -> (dir: String, vcs: String)? {
+        get(from: FileManager.default.currentDirectoryPath)
     }
 }

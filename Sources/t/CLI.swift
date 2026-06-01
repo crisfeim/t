@@ -26,28 +26,28 @@ struct CLI: ParsableCommand {
     var args: [String] = []
     
     func run() throws {
-        let repo     = g ? nil : VCS.get()
-        let taskPath = g ? global.tasks : taskFilePath(repoRoot: repo?.root)
-        let donePath = g ? global.done  : doneFilePath(repoRoot: repo?.root)
+        let repo       = g ? nil : VCS.get()
+        let todo_fpath = g ? global.todo : todo_fpath(repo_dir: repo?.dir)
+        let done_fpath = g ? global.done : done_fpath(repo_dir: repo?.dir)
         
-        if let r { try removeLine(r, from: taskPath) }
+        if let r { try remove(r, from: todo_fpath) }
         if let f {
-            try finalizeTodo(
-                lineNumber: f,
-                editMessage: e,
-                taskPath: taskPath,
-                donePath: donePath,
+            try complete_todo(
+                line: f,
+                launch_editor: e,
+                todo_fpath: todo_fpath,
+                done_fpath: done_fpath,
                 repo: repo
             )
         }
         if let a {
-            let text = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
-            if text.isEmpty { throw ValidationError("no text provided") }
-            try addNestedTodo(text, after: a, taskPath: taskPath)
+            let todo = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
+            if todo.isEmpty { throw ValidationError("no text provided") }
+            try add_nested(todo, after: a, fpath: todo_fpath)
         }
         
-        let text = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
-        if !text.isEmpty { print(try addTodo(text, taskPath: taskPath)) }
+        let todo = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
+        if !todo.isEmpty { print(try add(todo, fpath: todo_fpath)) }
     }
 }
 
@@ -57,111 +57,111 @@ import Darwin
 // MARK: File Paths
 
 let global = (
-    tasks: NSHomeDirectory() + "/.tasks",
+    todo: NSHomeDirectory() + "/.tasks",
     done: NSHomeDirectory() + "/.tasks.done"
 )
 
-func taskFilePath(repoRoot: String? = nil) -> String {
-    if let root = repoRoot { return root + "/.tasks" }
-    return global.tasks
+func todo_fpath(repo_dir: String? = nil) -> String {
+    if let root = repo_dir { return root + "/.tasks" }
+    return global.todo
 }
 
-func doneFilePath(repoRoot: String? = nil) -> String {
-    if let root = repoRoot { return root + "/.tasks.done" }
+func done_fpath(repo_dir: String? = nil) -> String {
+    if let root = repo_dir { return root + "/.tasks.done" }
     return global.done
 }
 
 @discardableResult
-func addTodo(_ text: String, taskPath: String) throws -> String {
+func add(_ todo: String, fpath: String) throws -> String {
     do {
-        let lines = IO.read(taskPath) + [text]
-        try IO.write(lines, to: taskPath)
-        return "\(lines.count) \(text)"
+        let lines = IO.read(fpath) + [todo]
+        try IO.write(lines, to: fpath)
+        return "\(lines.count) \(todo)"
     } catch {
         throw CleanExit.message("error: adding failed")
     }
 }
 
-func addNestedTodo(_ text: String, after lineNumber: Int, taskPath: String) throws {
+func add_nested(_ text: String, after line: Int, fpath: String) throws {
     do {
-        let updated = try Todo.add(text, to: IO.read(taskPath), after: lineNumber)
-        try IO.write(updated, to: taskPath)
+        let updated = try Todo.add(text, to: IO.read(fpath), after: line)
+        try IO.write(updated, to: fpath)
     } catch {
-        throw ValidationError("line \(lineNumber) does not exist")
+        throw ValidationError("line \(line) does not exist")
     }
 }
 
 @discardableResult
-func removeLine(_ lineNumber: Int, from path: String) throws-> String? {
+func remove(_ line: Int, from path: String) throws-> String? {
     do {
-        let (lines, removed) = try Todo.remove(lineNumber, from: IO.read(path))
+        let (lines, removed) = try Todo.remove(line, from: IO.read(path))
         try IO.write(lines, to: path)
         return removed
     } catch {
-        throw ValidationError("line \(lineNumber) does not exist")
+        throw ValidationError("line \(line) does not exist")
     }
 }
 
-func appendToDone(_ text: String, donePath: String) {
+func add_to_done(_ text: String, fpath: String) {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyyMMddHHmmss"
     let line = "\(formatter.string(from: Date()))  \(text)\n"
-    if let handle = FileHandle(forWritingAtPath: donePath) {
+    if let handle = FileHandle(forWritingAtPath: fpath) {
         handle.seekToEndOfFile()
         handle.write(line.data(using: .utf8)!)
         handle.closeFile()
     } else {
-        try? line.write(toFile: donePath, atomically: true, encoding: .utf8)
+        try? line.write(toFile: fpath, atomically: true, encoding: .utf8)
     }
 }
 
-func finalizeTodo(
-    lineNumber: Int,
-    editMessage: Bool,
-    taskPath: String,
-    donePath: String,
-    repo: (root: String, vcs: String)?
+func complete_todo(
+    line: Int,
+    launch_editor: Bool,
+    todo_fpath: String,
+    done_fpath: String,
+    repo: (dir: String, vcs: String)?
 ) throws {
-    guard let text = try removeLine(lineNumber, from: taskPath) else { return }
-    appendToDone(text, donePath: donePath)
+    guard let text = try remove(line, from: todo_fpath) else { return }
+    add_to_done(text, fpath: done_fpath)
     
     guard let repo = repo else { return }
     
-    let tmpDir = FileManager.default.temporaryDirectory.path
+    let tmp = FileManager.default.temporaryDirectory.path
     
-    if editMessage {
-        let commitMsgFile = tmpDir + "/t_commit_msg"
-        try? text.write(toFile: commitMsgFile, atomically: true, encoding: .utf8)
+    if launch_editor {
+        let commit_msg_tmp_file = tmp + "/t_commit_msg"
+        try? text.write(toFile: commit_msg_tmp_file, atomically: true, encoding: .utf8)
         
         let script: String
         if repo.vcs == "fossil" {
             script = """
-                        cd \(repo.root)
-                        vi \(commitMsgFile)
+                        cd \(repo.dir)
+                        vi \(commit_msg_tmp_file)
                         fossil addremove
-                        fossil commit -M \(commitMsgFile) --allow-empty
-                        rm \(commitMsgFile)
+                        fossil commit -M \(commit_msg_tmp_file) --allow-empty
+                        rm \(commit_msg_tmp_file)
                         """
         } else {
             script = """
-                        cd \(repo.root)
-                        vi \(commitMsgFile)
+                        cd \(repo.dir)
+                        vi \(commit_msg_tmp_file)
                         git add -A
-                        git commit -F \(commitMsgFile)
-                        rm \(commitMsgFile)
+                        git commit -F \(commit_msg_tmp_file)
+                        rm \(commit_msg_tmp_file)
                         """
         }
         
-        let scriptPath = tmpDir + "/t_commit.sh"
-        try? script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+        let script_path = tmp + "/t_commit.sh"
+        try? script.write(toFile: script_path, atomically: true, encoding: .utf8)
         
-        execve("/bin/zsh", [strdup("/bin/zsh"), strdup(scriptPath), nil], environ)
+        execve("/bin/zsh", [strdup("/bin/zsh"), strdup(script_path), nil], environ)
     } else {
         let cmd: String
         if repo.vcs == "fossil" {
-            cmd = "cd \(repo.root) && fossil addremove && fossil commit -m \"\(text)\" --allow-empty"
+            cmd = "cd \(repo.dir) && fossil addremove && fossil commit -m \"\(text)\" --allow-empty"
         } else {
-            cmd = "cd \(repo.root) && git add -A && git commit -m \"\(text)\""
+            cmd = "cd \(repo.dir) && git add -A && git commit -m \"\(text)\""
         }
         execve("/bin/zsh", [strdup("/bin/zsh"), strdup("-c"), strdup(cmd), nil], environ)
     }
