@@ -88,7 +88,7 @@ extension Todo {
 	}
 	
 	static func list_childs(of parent: Int, todos: [String]) -> [String] {
-		parse(todos).filter { $0.line == parent }.flatMap(\.childs).map(\.content)
+		parse(todos).filter { $0.line == parent }.flatMap(\.childs).map(\.content).map(dedent_one)
 	}
 	
 	static
@@ -99,12 +99,12 @@ extension Todo {
 }
 
 private let is_child: @Sendable (String) -> Bool = { $0.contains("\t") }
+private let drop_first: @Sendable (String) -> String = { String($0.dropFirst()) }
+private let dedent_one: @Sendable (String) -> String = { $0.hasPrefix("\t") ? $0=>drop_first : $0 }
 
 // Partial application
 infix operator =>: MultiplicationPrecedence
-func =><A, B>(lhs: A, rhs: (A) -> B) -> B {
-	rhs(lhs)
-}
+func =><A, B>(lhs: A, rhs: (A) -> B) -> B { rhs(lhs) }
 
 
 private extension String {

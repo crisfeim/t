@@ -125,13 +125,13 @@ import Foundation
 		let childs_3 = Todo.list_childs(of: 7, todos: todos)
 		
 		#expect(childs_1 == [
-			"\tChild 1",
-			"\tChild 2"
+			"Child 1",
+			"Child 2"
 		])
 		
 		#expect(childs_2 == [
-			"\tChild 1 (second)",
-			"\tChild 2 (second)"
+			"Child 1 (second)",
+			"Child 2 (second)"
 		])
 		
 		#expect(childs_3.isEmpty)
