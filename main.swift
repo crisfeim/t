@@ -11,151 +11,95 @@ struct Todo {
     var textWithoutIndent: String { text.trimmingCharacters(in: .whitespaces) }
 }
 
-// MARK: VCS Detection
-
-func findRepoRoot(from path: String) -> (root: String, vcs: String)? {
-    let fm = FileManager.default
-    var current = path
-    var fossilRoot: String? = nil
-    var gitRoot: String? = nil
-    
-    while true {
-        if fossilRoot == nil && fm.fileExists(atPath: current + "/.fslckout") {
-            fossilRoot = current
-        }
-        if gitRoot == nil && fm.fileExists(atPath: current + "/.git") {
-            gitRoot = current
-        }
-        let parent = (current as NSString).deletingLastPathComponent
-        if parent == current { break }
-        current = parent
-    }
-    
-    switch (fossilRoot, gitRoot) {
-    case (let f?, let g?):
-        return f.count >= g.count ? (f, "fossil") : (g, "git")
-    case (let f?, nil):
-        return (f, "fossil")
-    case (nil, let g?):
-        return (g, "git")
-    default:
-        return nil
-    }
-}
-
-func currentVCS() -> (root: String, vcs: String)? {
-    findRepoRoot(from: FileManager.default.currentDirectoryPath)
-}
-
 // MARK: File Paths
 
 func taskFilePath(repoRoot: String? = nil) -> String {
-    if let root = repoRoot {
-        return root + "/tasks"
-    }
-    return NSHomeDirectory() + "/.tasks"
+  if let root = repoRoot { return root + "/tasks" }
+  return NSHomeDirectory() + "/.tasks"
 }
 
 func doneFilePath(repoRoot: String? = nil) -> String {
-    if let root = repoRoot {
-        return root + "/.tasks.done"
-    }
-    return NSHomeDirectory() + "/.tasks.done"
+	if let root = repoRoot { return root + "/.tasks.done" }
+  return NSHomeDirectory() + "/.tasks.done"
 }
 
-// MARK: Read / Write
-
-func readLines(from path: String) -> [String] {
-    guard let content = try? String(contentsOfFile: path, encoding: .utf8) else { return [] }
-    var lines = content.components(separatedBy: "\n")
-    if lines.last == "" { lines.removeLast() }
-    return lines
-}
-
-func writeLines(_ lines: [String], to path: String) {
-    let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
-    try? content.write(toFile: path, atomically: true, encoding: .utf8)
-}
 
 func parseTodos(from lines: [String]) -> [Todo] {
-    lines.enumerated().compactMap { i, line in
-        guard !line.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
-        let indent = line.prefix(while: { $0 == "\t" }).count
-        return Todo(lineNumber: i + 1, text: line, indent: indent)
-    }
+  lines.enumerated().compactMap { i, line in
+    guard !line.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+    let indent = line.prefix(while: { $0 == "\t" }).count
+    return Todo(lineNumber: i + 1, text: line, indent: indent)
+  }
 }
 
 // MARK: Actions
 
 func listTodos(taskPath: String) {
-    let lines = readLines(from: taskPath)
-    let todos = parseTodos(from: lines)
-    if todos.isEmpty {
-        print("No todos.")
-        return
-    }
-    let width = String(todos.map { $0.lineNumber }.max() ?? 1).count
-    for todo in todos {
-        print("\(String(todo.lineNumber).leftPadded(width))  \(todo.text)")
-    }
+  let lines = readLines(from: taskPath)
+  let todos = parseTodos(from: lines)
+  if todos.isEmpty { return print("No todos.") }
+  let width = String(todos.map { $0.lineNumber }.max() ?? 1).count
+  for todo in todos {
+  	print("\(String(todo.lineNumber).leftPadded(width))  \(todo.text)")
+  }
 }
 
 func addTodo(_ text: String, taskPath: String) {
-    var lines = readLines(from: taskPath)
-    lines.append(text)
-    writeLines(lines, to: taskPath)
-    print(lines.count, " \(text)")
+	var lines = readLines(from: taskPath)
+	lines.append(text)
+	writeLines(lines, to: taskPath)
+	print(lines.count, " \(text)")
 }
 
 func addNestedTodo(_ text: String, after lineNumber: Int, taskPath: String) {
-    var lines = readLines(from: taskPath)
-    guard lineNumber >= 1 && lineNumber <= lines.count else {
-        print("error: line \(lineNumber) does not exist\n", to:&stderr)
-        exit(1)
+	var lines = readLines(from: taskPath)
+  guard lineNumber >= 1 && lineNumber <= lines.count else {
+    print("error: line \(lineNumber) does not exist\n", to:&stderr)
+    exit(1)
+  }
+
+  let refIndex = lineNumber - 1
+  let refIndent = lines[refIndex].prefix(while: { $0 == "\t" }).count
+  let newLine = String(repeating: "\t", count: refIndent + 1) + text
+
+  var insertIndex = refIndex + 1
+  while insertIndex < lines.count {
+    let line = lines[insertIndex]
+    if line.trimmingCharacters(in: .whitespaces).isEmpty {
+      insertIndex += 1
+      continue
     }
+    if line.prefix(while: { $0 == "\t" }).count <= refIndent { break }
+    insertIndex += 1
+  }
 
-    let refIndex = lineNumber - 1
-    let refIndent = lines[refIndex].prefix(while: { $0 == "\t" }).count
-    let newLine = String(repeating: "\t", count: refIndent + 1) + text
-
-    var insertIndex = refIndex + 1
-    while insertIndex < lines.count {
-        let line = lines[insertIndex]
-        if line.trimmingCharacters(in: .whitespaces).isEmpty {
-            insertIndex += 1
-            continue
-        }
-        if line.prefix(while: { $0 == "\t" }).count <= refIndent { break }
-        insertIndex += 1
-    }
-
-    lines.insert(newLine, at: insertIndex)
-    writeLines(lines, to: taskPath)
+  lines.insert(newLine, at: insertIndex)
+  writeLines(lines, to: taskPath)
 }
 
 @discardableResult
 func removeLine(_ lineNumber: Int, from path: String) -> String? {
-    var lines = readLines(from: path)
-    guard lineNumber >= 1 && lineNumber <= lines.count else {
-        print("error: line \(lineNumber) does not exist\n", to: &stderr)
-        exit(1)
-    }
-    let removed = lines.remove(at: lineNumber - 1)
-    writeLines(lines, to: path)
-    return removed.trimmingCharacters(in: .whitespaces)
+  var lines = readLines(from: path)
+  guard lineNumber >= 1 && lineNumber <= lines.count else {
+    print("error: line \(lineNumber) does not exist\n", to: &stderr)
+    exit(1)
+  }
+  let removed = lines.remove(at: lineNumber - 1)
+  writeLines(lines, to: path)
+  return removed.trimmingCharacters(in: .whitespaces)
 }
 
 func appendToDone(_ text: String, donePath: String) {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyyMMddHHmmss"
-    let line = "\(formatter.string(from: Date()))  \(text)\n"
-    if let handle = FileHandle(forWritingAtPath: donePath) {
-        handle.seekToEndOfFile()
-        handle.write(line.data(using: .utf8)!)
-        handle.closeFile()
-    } else {
-        try? line.write(toFile: donePath, atomically: true, encoding: .utf8)
-    }
+  let formatter = DateFormatter()
+  formatter.dateFormat = "yyyyMMddHHmmss"
+  let line = "\(formatter.string(from: Date()))  \(text)\n"
+  if let handle = FileHandle(forWritingAtPath: donePath) {
+    handle.seekToEndOfFile()
+    handle.write(line.data(using: .utf8)!)
+    handle.closeFile()
+  } else {
+  	try? line.write(toFile: donePath, atomically: true, encoding: .utf8)
+  }
 }
 
 func finalizeTodo(lineNumber: Int, editMessage: Bool, taskPath: String, donePath: String, repo: (root: String, vcs: String)?) {
@@ -201,15 +145,6 @@ func finalizeTodo(lineNumber: Int, editMessage: Bool, taskPath: String, donePath
             cmd = "cd \(repo.root) && git add -A && git commit -m \"\(text)\""
         }
         execve("/bin/zsh", [strdup("/bin/zsh"), strdup("-c"), strdup(cmd), nil], environ)
-    }
-}
-
-// MARK: String Helpers
-
-extension String {
-    func leftPadded(_ width: Int) -> String {
-        let pad = width - self.count
-        return pad > 0 ? String(repeating: " ", count: pad) + self : self
     }
 }
 
@@ -305,19 +240,19 @@ func runTests() {
         assertEqual(lines[1].hasSuffix("  second task"), true)
         assertEqual(lines[0].prefix(14).allSatisfy({ $0.isNumber }), true)
     }
-    
+
     test("removeLine then addTodo starts at line 1") {
         let fm = FileManager.default
         let tmpDir = fm.temporaryDirectory.appendingPathComponent("t-empty-line-test").path
         try? fm.removeItem(atPath: tmpDir)
         try! fm.createDirectory(atPath: tmpDir, withIntermediateDirectories: true)
         defer { try? fm.removeItem(atPath: tmpDir) }
-        
+
         let path = tmpDir + "/tasks"
         addTodo("first", taskPath: path)
         removeLine(1, from: path)
         addTodo("second", taskPath: path)
-        
+
         let lines = readLines(from: path)
         assertEqual(lines.count, 1, "Expected 1 line, got \(lines.count)")
         assertEqual(lines[0], "second")
@@ -341,22 +276,22 @@ func runTests() {
         assertEqual(done.count, 1)
         assertEqual(done[0].hasSuffix("  first"), true)
     }
-    
+
     test("findRepoRoot detects fossil") {
         let fm = FileManager.default
         let repoDir = fm.temporaryDirectory.appendingPathComponent("t-vcs-detection").path
         try? fm.removeItem(atPath: repoDir)
         try! fm.createDirectory(atPath: repoDir, withIntermediateDirectories: true)
         defer { try? fm.removeItem(atPath: repoDir) }
-        
+
         runCommand("fossil init repo.fossil", inDirectory: repoDir)
         runCommand("fossil open repo.fossil", inDirectory: repoDir)
-        
+
         let result = findRepoRoot(from: repoDir)
         assertEqual(result?.root, repoDir)
         assertEqual(result?.vcs, "fossil")
     }
-    
+
     test("fossil integration") {
         let fm = FileManager.default
         let repoDir = fm.temporaryDirectory.appendingPathComponent("t-fossil-tests").path
@@ -381,7 +316,7 @@ func runTests() {
         assertEqual(done.count, 1)
         assertEqual(done[0].hasSuffix("  fix bug"), true)
     }
-    
+
 }
 
 // MARK: Command
@@ -439,57 +374,3 @@ if args.count == 1 {
     }
 }
 
-import Foundation
-struct StandardError: TextOutputStream, Sendable {
-    private static let handle = FileHandle.standardError
-    public func write(_ string: String) {
-        Self.handle.write(Data(string.utf8))
-    }
-}
-
-var stderr = StandardError()
-
-func renderError(
-    file: StaticString,
-    line: UInt,
-    message: String,
-    to stderr: inout StandardError
-) {
-    print("\(file):\(line): \(message)", to: &stderr)
-}
-
-var test: String = ""
-func assertEqual<Type: Equatable>(
-    _ a: Type,
-    _ b: Type,
-    _ message: String? = nil,
-    file: StaticString = #file,
-    line: UInt = #line
-) {
-    if a != b {
-        
-        print("❌ " + line.description + " " + test)
-        print(message ?? "assert equal failed")
-    } else {
-        print("✅ " + line.description + " " + test)
-    }
-}
-
-func fail(_ message: String, file: StaticString = #file, line: UInt = #line) {
-    renderError(
-        file: file,
-        line: line,
-        message: message,
-        to: &stderr
-    )
-}
-
-
-func test(_ name: String, file: StaticString = #file, line: UInt = #line, action: () throws -> Void) {
-    test = name
-    do {
-        try action()
-    } catch {
-        renderError(file: file, line: line, message: "Error thrown", to: &stderr)
-    }
-}

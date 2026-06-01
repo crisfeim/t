@@ -1,1 +1,0 @@
-swiftc main.swift -o bin.o ; mv bin.o ~/.local/bin/t
