@@ -5,7 +5,7 @@ import Foundation
 import ArgumentParser
 
 @main
-struct t: ParsableCommand {
+struct CLI: ParsableCommand {
 
     @Flag(name: .customShort("g"), help: "Use global tasks file if invoked in a local repo")
     var g: Bool = false
