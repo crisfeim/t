@@ -28,9 +28,7 @@ enum Todo {
 	
 	static func add(_ text: String, to lines: [String], after line_number: Int) throws(WrongLineNumber) -> [String] {
 		var lines = lines
-		guard line_number >= 1 && line_number <= lines.count else {
-			throw WrongLineNumber()
-		}
+		guard line_number >= 1 && line_number <= lines.count else { throw WrongLineNumber() }
 		
 		let ref_idx = line_number - 1
 		let ref_indent = lines[ref_idx].prefix(while: { $0 == "\t" }).count
@@ -53,9 +51,7 @@ enum Todo {
 	
 	@discardableResult
 	static func remove(_ line_number: Int, from lines: [String]) throws(WrongLineNumber) -> (lines: [String], removed: String?) {
-		guard line_number >= 1 && line_number <= lines.count else {
-			throw WrongLineNumber()
-		}
+		guard line_number >= 1 && line_number <= lines.count else { throw WrongLineNumber() }
 		var copy = lines
 		let removed = copy.remove(at: line_number - 1).trimmingCharacters(in: .whitespaces)
 		return (copy, removed)

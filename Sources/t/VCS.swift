@@ -21,14 +21,10 @@ enum VCS {
 		}
 		
 		switch (fossil_root, git_root) {
-		case (let f?, let g?):
-			return f.count >= g.count ? (f, "fossil") : (g, "git")
-		case (let f?, nil):
-			return (f, "fossil")
-		case (nil, let g?):
-			return (g, "git")
-		default:
-			return nil
+		case (let f?, let g?): return f.count >= g.count ? (f, "fossil") : (g, "git")
+		case (let f?, nil): return (f, "fossil")
+		case (nil, let g?): return (g, "git")
+		default: return nil
 		}
 	}
 	
