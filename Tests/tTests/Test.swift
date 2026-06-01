@@ -27,8 +27,8 @@ import Foundation
     @Test func todoParseSkipsEmptyLines() {
         let todos = Todo.parse(from: ["first", "", "third"])
         #expect(todos == [
-            Todo.t(line_number: 1, text: "first", indent: 0),
-            Todo.t(line_number: 3, text: "third", indent: 0)
+            Todo.t(line: 1, text: "first", indent: 0),
+            Todo.t(line: 3, text: "third", indent: 0)
         ])
     }
     

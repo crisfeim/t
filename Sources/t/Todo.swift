@@ -2,7 +2,7 @@ import Foundation
 
 enum Todo {
 	struct t: Equatable {
-		let line_number: Int
+		let line: Int
 		let text: String
 		let indent: Int
 		
@@ -13,24 +13,24 @@ enum Todo {
 		lines.enumerated().compactMap { i, line in
 			guard !line.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
 			let indent = line.prefix(while: { $0 == "\t" }).count
-			return t(line_number: i + 1, text: line, indent: indent)
+			return t(line: i + 1, text: line, indent: indent)
 		}
 	}
 	
 	static func list(from lines: [String]) -> [String] {
 		let todos = parse(from: lines)
 		if todos.isEmpty { return [] }
-		let width = String(todos.map { $0.line_number }.max() ?? 1).count
-		return todos.map { todo in "\(String(todo.line_number).left_padded(width))  \(todo.text)" }
+		let width = String(todos.map { $0.line }.max() ?? 1).count
+		return todos.map { todo in "\(String(todo.line).left_padded(width))  \(todo.text)" }
 	}
 	
 	struct WrongLineNumber: Error {}
 	
-	static func add(_ text: String, to lines: [String], after line_number: Int) throws(WrongLineNumber) -> [String] {
+	static func add(_ text: String, to lines: [String], after line: Int) throws(WrongLineNumber) -> [String] {
 		var lines = lines
-		guard line_number >= 1 && line_number <= lines.count else { throw WrongLineNumber() }
+		guard line >= 1 && line <= lines.count else { throw WrongLineNumber() }
 		
-		let ref_idx = line_number - 1
+		let ref_idx = line - 1
 		let ref_indent = lines[ref_idx].prefix(while: { $0 == "\t" }).count
 		let new = String(repeating: "\t", count: ref_indent + 1) + text
 		
@@ -50,10 +50,10 @@ enum Todo {
 	}
 	
 	@discardableResult
-	static func remove(_ line_number: Int, from lines: [String]) throws(WrongLineNumber) -> (lines: [String], removed: String?) {
-		guard line_number >= 1 && line_number <= lines.count else { throw WrongLineNumber() }
+	static func remove(_ line: Int, from lines: [String]) throws(WrongLineNumber) -> (lines: [String], removed: String?) {
+		guard line >= 1 && line <= lines.count else { throw WrongLineNumber() }
 		var copy = lines
-		let removed = copy.remove(at: line_number - 1).trimmingCharacters(in: .whitespaces)
+		let removed = copy.remove(at: line - 1).trimmingCharacters(in: .whitespaces)
 		return (copy, removed)
 	}
 }
