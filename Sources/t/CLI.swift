@@ -6,50 +6,48 @@ import ArgumentParser
 
 @main
 struct CLI: ParsableCommand {
-
+    
     @Flag(name: .customShort("g"), help: "Use global tasks file if invoked in a local repo")
     var g: Bool = false
-
+    
     @Option(name: .customShort("r"), help: "Remove a task by line number.")
     var r: Int?
-
+    
     @Option(name: .customShort("f"), help: "Finalize and commit a task by line number.")
     var f: Int?
-
+    
     @Option(name: .customShort("a"), help: "Add a nested task after the specified line.")
     var a: Int?
-
+    
     @Flag(name: .customShort("e"), help: "Edit commit message before commiting.")
     var e: Bool = false
-
+    
     @Argument(help: "Task text contents.")
     var args: [String] = []
-
+    
     func run() throws {
         let repo     = g ? nil : VCS.get()
         let taskPath = g ? global.tasks : taskFilePath(repoRoot: repo?.root)
         let donePath = g ? global.done  : doneFilePath(repoRoot: repo?.root)
-
-        do {
-            if let r { try removeLine(r, from: taskPath) }
-            if let f {
-                try finalizeTodo(
-                    lineNumber: f,
-                    editMessage: e,
-                    taskPath: taskPath,
-                    donePath: donePath,
-                    repo: repo
-                )
-            }
-            if let a {
-                let text = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
-                if text.isEmpty { throw ValidationError("no text provided") }
-                try addNestedTodo(text, after: a, taskPath: taskPath)
-            }
-            
-            let text = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
-            if !text.isEmpty { print(try addTodo(text, taskPath: taskPath)) }
+        
+        if let r { try removeLine(r, from: taskPath) }
+        if let f {
+            try finalizeTodo(
+                lineNumber: f,
+                editMessage: e,
+                taskPath: taskPath,
+                donePath: donePath,
+                repo: repo
+            )
         }
+        if let a {
+            let text = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
+            if text.isEmpty { throw ValidationError("no text provided") }
+            try addNestedTodo(text, after: a, taskPath: taskPath)
+        }
+        
+        let text = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
+        if !text.isEmpty { print(try addTodo(text, taskPath: taskPath)) }
     }
 }
 
