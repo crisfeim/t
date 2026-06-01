@@ -20,36 +20,19 @@ func doneFilePath(repoRoot: String? = nil) -> String {
 }
 
 func addTodo(_ text: String, taskPath: String) {
-	var lines = IO.read(from: taskPath)
-	lines.append(text)
+	let lines = IO.read(from: taskPath) + [text]
 	IO.write(lines, to: taskPath)
 	print(lines.count, " \(text)")
 }
 
 func addNestedTodo(_ text: String, after lineNumber: Int, taskPath: String) {
-	var lines = IO.read(from: taskPath)
-  guard lineNumber >= 1 && lineNumber <= lines.count else {
+  do {
+    let updated = try Todo.add(text, to: IO.read(from: taskPath), after: lineNumber)
+    IO.write(updated, to: taskPath)
+  } catch {
     print("error: line \(lineNumber) does not exist\n", to:&stderr)
     exit(1)
   }
-
-  let refIndex = lineNumber - 1
-  let refIndent = lines[refIndex].prefix(while: { $0 == "\t" }).count
-  let newLine = String(repeating: "\t", count: refIndent + 1) + text
-
-  var insertIndex = refIndex + 1
-  while insertIndex < lines.count {
-    let line = lines[insertIndex]
-    if line.trimmingCharacters(in: .whitespaces).isEmpty {
-      insertIndex += 1
-      continue
-    }
-    if line.prefix(while: { $0 == "\t" }).count <= refIndent { break }
-    insertIndex += 1
-  }
-
-  lines.insert(newLine, at: insertIndex)
-  IO.write(lines, to: taskPath)
 }
 
 @discardableResult
@@ -209,12 +192,13 @@ func runTests() {
         appendToDone("first task", donePath: path)
         appendToDone("second task", donePath: path)
 
-        let lines = IO.read(from: path)
-        assertEqual(lines.count, 2)
-        assertEqual(lines[0].hasSuffix("  first task"), true)
-        assertEqual(lines[1].hasSuffix("  second task"), true)
-        assertEqual(lines[0].prefix(14).allSatisfy({ $0.isNumber }), true)
-    }
+        IO.read(from: path) * { lines in
+          assertEqual(lines.count, 2)
+          assertEqual(lines[0].hasSuffix("  first task"), true)
+          assertEqual(lines[1].hasSuffix("  second task"), true)
+          assertEqual(lines[0].prefix(14).allSatisfy({ $0.isNumber }), true)
+        }
+      }
 
     test("removeLine then addTodo starts at line 1") {
         let fm = FileManager.default

@@ -24,6 +24,33 @@ enum Todo {
 		let width = String(todos.map { $0.line_number }.max() ?? 1).count
 		return todos.map { todo in "\(String(todo.line_number).left_padded(width))  \(todo.text)" }
 	}
+	
+	struct WrongLineNumber: Error {}
+	
+	static func add(_ text: String, to lines: [String], after line_number: Int) throws(WrongLineNumber) -> [String] {
+		var lines = lines
+		guard line_number >= 1 && line_number <= lines.count else {
+			throw WrongLineNumber()
+		}
+		
+		let refIndex = line_number - 1
+		let refIndent = lines[refIndex].prefix(while: { $0 == "\t" }).count
+		let newLine = String(repeating: "\t", count: refIndent + 1) + text
+		
+		var insertIndex = refIndex + 1
+		while insertIndex < lines.count {
+			let line = lines[insertIndex]
+			if line.trimmingCharacters(in: .whitespaces).isEmpty {
+				insertIndex += 1
+				continue
+			}
+			if line.prefix(while: { $0 == "\t" }).count <= refIndent { break }
+			insertIndex += 1
+		}
+		
+		lines.insert(newLine, at: insertIndex)
+		return lines
+	}
 }
 
 private extension String {

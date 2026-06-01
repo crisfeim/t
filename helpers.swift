@@ -10,6 +10,7 @@ extension String {
 var put: (String) -> Void = { print($0) }
 
 infix operator *: MultiplicationPrecedence
+@discardableResult
 func *<A>(lhs: A, rhs: (inout A) -> Void) -> A {
     var copy = lhs
     rhs(&copy)
