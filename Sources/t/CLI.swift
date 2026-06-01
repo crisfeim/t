@@ -48,8 +48,11 @@ struct CLI: ParsableCommand {
         
         let todo = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
         if !todo.isEmpty { print(try add(todo, fpath: todo_fpath)) }
+        else { Todo.list(from: IO.read(todo_fpath)).forEach(put) }
     }
 }
+
+let put: @Sendable (String) -> Void = { print($0) }
 
 import Foundation
 import Darwin
