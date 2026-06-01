@@ -16,12 +16,30 @@ struct Todo {
 func findRepoRoot(from path: String) -> (root: String, vcs: String)? {
     let fm = FileManager.default
     var current = path
+    var fossilRoot: String? = nil
+    var gitRoot: String? = nil
+    
     while true {
-        if fm.fileExists(atPath: current + "/.git") { return (current, "git") }
-        if fm.fileExists(atPath: current + "/fslckout") { return (current, "fossil") }
+        if fossilRoot == nil && (fm.fileExists(atPath: current + "/fslckout") || fm.fileExists(atPath: current + "/_FOSSIL_")) {
+            fossilRoot = current
+        }
+        if gitRoot == nil && fm.fileExists(atPath: current + "/.git") {
+            gitRoot = current
+        }
         let parent = (current as NSString).deletingLastPathComponent
-        if parent == current { return nil }
+        if parent == current { break }
         current = parent
+    }
+    
+    switch (fossilRoot, gitRoot) {
+    case (let f?, let g?):
+        return f.count >= g.count ? (f, "fossil") : (g, "git")
+    case (let f?, nil):
+        return (f, "fossil")
+    case (nil, let g?):
+        return (g, "git")
+    default:
+        return nil
     }
 }
 
