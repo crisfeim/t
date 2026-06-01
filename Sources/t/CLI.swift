@@ -21,6 +21,9 @@ struct CLI: ParsableCommand {
     
     @Flag(name: .customShort("e"), help: "Edit commit message before commiting.")
     var e: Bool = false
+	
+		@Option(name: .customShort("l"), help: "Lists the child task of a given line")
+		var l: Int?
     
     @Argument(help: "Task text contents.")
     var args: [String] = []
@@ -45,7 +48,11 @@ struct CLI: ParsableCommand {
             if todo.isEmpty { throw ValidationError("no text provided") }
             return try add_nested(todo, after: a, fpath: todo_fpath)
         }
-        
+			
+				if let l {
+					return Todo.list_childs(of: l, todos: IO.read(todo_fpath)).forEach(put)
+				}
+			
         let todo = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
         if !todo.isEmpty { print(try add(todo, fpath: todo_fpath)) }
         else { Todo.list(from: IO.read(todo_fpath)).forEach(put) }
