@@ -185,7 +185,7 @@ private let help: @Sendable (Character) -> ArgumentHelp = {
 	case "r": return "Remove a task by line number."
 	case "f": return "Finalize and commit a task by line number."
 	case "a": return "Add a nested task after the specified line."
-	case "e": return "Edit commit message before commiting."
+	case "e": return "Edit commit message with vi before commiting."
 	case "l": return "Lists the child task of a given line"
 	default: return "Unhandled"
 	}
