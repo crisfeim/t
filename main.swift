@@ -13,14 +13,19 @@ struct Todo {
 
 // MARK: File Paths
 
+let global = (
+  tasks: NSHomeDirectory() + "/.tasks",
+  done: NSHomeDirectory() + "/.tasks.done"
+)
+
 func taskFilePath(repoRoot: String? = nil) -> String {
   if let root = repoRoot { return root + "/.tasks" }
-  return NSHomeDirectory() + "/.tasks"
+  return global.tasks
 }
 
 func doneFilePath(repoRoot: String? = nil) -> String {
 	if let root = repoRoot { return root + "/.tasks.done" }
-  return NSHomeDirectory() + "/.tasks.done"
+  return global.done
 }
 
 
@@ -347,24 +352,23 @@ if args.contains("--test") {
     exit(0)
 }
 
-let forceGlobal = args.contains("-g")
-let repo = forceGlobal ? nil : currentVCS()
-let taskPath = forceGlobal ? NSHomeDirectory() + "/.tasks" : taskFilePath(repoRoot: repo?.root)
-let donePath = forceGlobal ? NSHomeDirectory() + "/.tasks.done" : doneFilePath(repoRoot: repo?.root)
+let repo     = args.contains("-g") ? nil : currentVCS()
+let taskPath = args.contains("-g") ? global.tasks : taskFilePath(repoRoot: repo?.root)
+let donePath = args.contains("-g") ? global.done  : doneFilePath(repoRoot: repo?.root)
 
 if args.count == 1 {
     listTodos(taskPath: taskPath)
-} else if let lineNumber = defaults.string(forKey: "r").flatMap(Int.init) {
-    removeLine(lineNumber, from: taskPath)
-} else if let lineNumber = defaults.string(forKey: "f").flatMap(Int.init) {
-    finalizeTodo(lineNumber: lineNumber, editMessage: editMessage, taskPath: taskPath, donePath: donePath, repo: repo)
-} else if let lineNumber = defaults.string(forKey: "a").flatMap(Int.init) {
+} else if let line = defaults.string(forKey: "r").flatMap(Int.init) {
+    removeLine(line, from: taskPath)
+} else if let line = defaults.string(forKey: "f").flatMap(Int.init) {
+    finalizeTodo(line: line, editMessage: editMessage, taskPath: taskPath, donePath: donePath, repo: repo)
+} else if let line = defaults.string(forKey: "a").flatMap(Int.init) {
     let text = args.dropFirst().filter { !$0.hasPrefix("-") && Int($0) == nil }.joined(separator: " ")
     if text.isEmpty {
         print("error: no text provided\n", to:&stderr)
         exit(1)
     }
-    addNestedTodo(text, after: lineNumber, taskPath: taskPath)
+    addNestedTodo(text, after: line, taskPath: taskPath)
 } else {
     let text = args.dropFirst().filter { !$0.hasPrefix("-") }.joined(separator: " ")
     if !text.isEmpty {
