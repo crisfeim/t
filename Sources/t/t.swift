@@ -1,71 +1,87 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 
+import Foundation
+import ArgumentParser
+
 @main
-struct t {
-    static func main() {
-        
-        let args = CommandLine.arguments
-        let defaults = UserDefaults.standard
-        let editMessage = args.contains("-e")
-        
-        let repo     = args.contains("-g") ? nil : VCS.get()
-        let taskPath = args.contains("-g") ? global.tasks : taskFilePath(repoRoot: repo?.root)
-        let donePath = args.contains("-g") ? global.done  : doneFilePath(repoRoot: repo?.root)
-        
-        if args.count == 1 {
-            Todo.list(from: IO.read(taskPath)).forEach(put)
-        } else if let line = defaults.string(forKey: "r").flatMap(Int.init) {
+struct t: ParsableCommand {
+
+    @Flag(name: .customShort("g"), help: "Use global tasks file if invoked in a local repo")
+    var is_global: Bool = false
+
+    @Option(name: .customShort("r"), help: "Remove a task by line number.")
+    var line_to_remove: Int?
+
+    @Option(name: .customShort("f"), help: "Finalize and commit a task by line number.")
+    var line_to_finalize: Int?
+
+    @Option(name: .customShort("a"), help: "Add a nested task after the specified line.")
+    var line_to_append: Int?
+
+    @Flag(name: .customShort("e"), help: "Edit commit message before commiting.")
+    var edit_msg: Bool = false
+
+    @Argument(help: "Task text contents.")
+    var txt_args: [String] = []
+
+    func run() throws {
+        let repo     = is_global ? nil : VCS.get()
+        let taskPath = is_global ? global.tasks : taskFilePath(repoRoot: repo?.root)
+        let donePath = is_global ? global.done  : doneFilePath(repoRoot: repo?.root)
+
+        if let line_to_remove {
             do {
-                try removeLine(line, from: taskPath)
+                try removeLine(line_to_remove, from: taskPath)
             } catch {
-                print("error: line \(line) does not exist\n", to:&stderr)
-                exit(1)
+                throw ValidationError("line \(line_to_remove) does not exist")
             }
-        } else if let line = defaults.string(forKey: "f").flatMap(Int.init) {
+            return
+        }
+
+        if let line_to_finalize {
             do {
                 try finalizeTodo(
-                    lineNumber: line,
-                    editMessage: editMessage,
+                    lineNumber: line_to_finalize,
+                    editMessage: edit_msg,
                     taskPath: taskPath,
                     donePath: donePath,
                     repo: repo
                 )
             } catch {
-                print("error: line \(line) does not exist\n", to:&stderr)
-                exit(1)
+                throw ValidationError("line \(line_to_finalize) does not exist")
             }
-        } else if let line = defaults.string(forKey: "a").flatMap(Int.init) {
-            let text = args.dropFirst().filter { !$0.hasPrefix("-") && Int($0) == nil }.joined(separator: " ")
+            return
+        }
+
+        if let line_to_append {
+            let text = txt_args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
             if text.isEmpty {
-                print("error: no text provided\n", to:&stderr)
-                exit(1)
+                throw ValidationError("no text provided")
             }
             do {
-                try addNestedTodo(text, after: line, taskPath: taskPath)
+                try addNestedTodo(text, after: line_to_append, taskPath: taskPath)
             } catch {
-                print("error: line \(line) does not exist\n", to:&stderr)
-                exit(1)
+                throw ValidationError("line \(line_to_append) does not exist")
+            }
+            return
+        }
+
+        let text = txt_args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
+        if !text.isEmpty {
+            do {
+                print(try addTodo(text, taskPath: taskPath))
+            } catch {
+                throw CleanExit.message("error: adding failed")
             }
         } else {
-            let text = args.dropFirst().filter { !$0.hasPrefix("-") }.joined(separator: " ")
-            if !text.isEmpty {
-                do {
-                    print(try addTodo(text, taskPath: taskPath))
-                } catch {
-                    print("error: adding failed", to: &stderr)
-                    exit(1)
-                }
-            } else {
-                Todo.list(from: IO.read(taskPath)).forEach(put)
-            }
+            Todo.list(from: IO.read(taskPath)).forEach(put)
         }
     }
 }
 
 import Foundation
 import Darwin
-
 
 // MARK: File Paths
 
