@@ -1,14 +1,15 @@
-// MARK: Read / Write
 import Foundation
 
-func readLines(from path: String) -> [String] {
-    guard let content = try? String(contentsOfFile: path, encoding: .utf8) else { return [] }
-    var lines = content.components(separatedBy: "\n")
-    if lines.last == "" { lines.removeLast() }
-    return lines
-}
-
-func writeLines(_ lines: [String], to path: String) {
-    let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
-    try? content.write(toFile: path, atomically: true, encoding: .utf8)
+enum IO {
+    static func read(from path: String) -> [String] {
+        guard let content = try? String(contentsOfFile: path, encoding: .utf8) else { return [] }
+        var lines = content.components(separatedBy: "\n")
+        if lines.last == "" { lines.removeLast() }
+        return lines
+    }
+    
+    static func write(_ lines: [String], to path: String) {
+        let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
+        try? content.write(toFile: path, atomically: true, encoding: .utf8)
+    }
 }

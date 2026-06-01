@@ -23,18 +23,18 @@ func doneFilePath(repoRoot: String? = nil) -> String {
 // MARK: Actions
 
 func listTodos(taskPath: String) {
-  Todo.list(from: readLines(from: taskPath)).forEach(put)
+  Todo.list(from: IO.read(from: taskPath)).forEach(put)
 }
 
 func addTodo(_ text: String, taskPath: String) {
-	var lines = readLines(from: taskPath)
+	var lines = IO.read(from: taskPath)
 	lines.append(text)
-	writeLines(lines, to: taskPath)
+	IO.write(lines, to: taskPath)
 	print(lines.count, " \(text)")
 }
 
 func addNestedTodo(_ text: String, after lineNumber: Int, taskPath: String) {
-	var lines = readLines(from: taskPath)
+	var lines = IO.read(from: taskPath)
   guard lineNumber >= 1 && lineNumber <= lines.count else {
     print("error: line \(lineNumber) does not exist\n", to:&stderr)
     exit(1)
@@ -56,18 +56,18 @@ func addNestedTodo(_ text: String, after lineNumber: Int, taskPath: String) {
   }
 
   lines.insert(newLine, at: insertIndex)
-  writeLines(lines, to: taskPath)
+  IO.write(lines, to: taskPath)
 }
 
 @discardableResult
 func removeLine(_ lineNumber: Int, from path: String) -> String? {
-  var lines = readLines(from: path)
+  var lines = IO.read(from: path)
   guard lineNumber >= 1 && lineNumber <= lines.count else {
     print("error: line \(lineNumber) does not exist\n", to: &stderr)
     exit(1)
   }
   let removed = lines.remove(at: lineNumber - 1)
-  writeLines(lines, to: path)
+  IO.write(lines, to: path)
   return removed.trimmingCharacters(in: .whitespaces)
 }
 
@@ -145,7 +145,7 @@ func runTests() {
         addTodo("first", taskPath: path)
         addTodo("second", taskPath: path)
 
-        let lines = readLines(from: path)
+        let lines = IO.read(from: path)
         assertEqual(lines.count, 2)
         assertEqual(lines[0], "first")
         assertEqual(lines[1], "second")
@@ -167,10 +167,10 @@ func runTests() {
         defer { try? fm.removeItem(atPath: tmpDir) }
 
         let path = tmpDir + "/tasks"
-        writeLines(["first", "second", "third"], to: path)
+        IO.write(["first", "second", "third"], to: path)
         let removed = removeLine(2, from: path)
         assertEqual(removed, "second")
-        let lines = readLines(from: path)
+        let lines = IO.read(from: path)
         assertEqual(lines.count, 2)
         assertEqual(lines[0], "first")
         assertEqual(lines[1], "third")
@@ -182,10 +182,10 @@ func runTests() {
         defer { try? fm.removeItem(atPath: tmpDir) }
 
         let path = tmpDir + "/tasks"
-        writeLines(["parent", "\tchild", "sibling"], to: path)
+        IO.write(["parent", "\tchild", "sibling"], to: path)
         addNestedTodo("new child", after: 1, taskPath: path)
 
-        let lines = readLines(from: path)
+        let lines = IO.read(from: path)
         assertEqual(lines.count, 4)
         assertEqual(lines[0], "parent")
         assertEqual(lines[1], "\tchild")
@@ -199,10 +199,10 @@ func runTests() {
         defer { try? fm.removeItem(atPath: tmpDir) }
 
         let path = tmpDir + "/tasks"
-        writeLines(["parent", "\tchild"], to: path)
+        IO.write(["parent", "\tchild"], to: path)
         addNestedTodo("grandchild", after: 2, taskPath: path)
 
-        let lines = readLines(from: path)
+        let lines = IO.read(from: path)
         assertEqual(lines.count, 3)
         assertEqual(lines[2], "\t\tgrandchild")
     }
@@ -216,7 +216,7 @@ func runTests() {
         appendToDone("first task", donePath: path)
         appendToDone("second task", donePath: path)
 
-        let lines = readLines(from: path)
+        let lines = IO.read(from: path)
         assertEqual(lines.count, 2)
         assertEqual(lines[0].hasSuffix("  first task"), true)
         assertEqual(lines[1].hasSuffix("  second task"), true)
@@ -235,7 +235,7 @@ func runTests() {
         removeLine(1, from: path)
         addTodo("second", taskPath: path)
 
-        let lines = readLines(from: path)
+        let lines = IO.read(from: path)
         assertEqual(lines.count, 1, "Expected 1 line, got \(lines.count)")
         assertEqual(lines[0], "second")
     }
@@ -247,14 +247,14 @@ func runTests() {
 
         let taskPath = tmpDir + "/tasks"
         let donePath = tmpDir + "/.tasks.done"
-        writeLines(["first", "second"], to: taskPath)
+        IO.write(["first", "second"], to: taskPath)
         finalizeTodo(lineNumber: 1, editMessage: false, taskPath: taskPath, donePath: donePath, repo: nil)
 
-        let remaining = readLines(from: taskPath)
+        let remaining = IO.read(from: taskPath)
         assertEqual(remaining.count, 1)
         assertEqual(remaining[0], "second")
 
-        let done = readLines(from: donePath)
+        let done = IO.read(from: donePath)
         assertEqual(done.count, 1)
         assertEqual(done[0].hasSuffix("  first"), true)
     }
@@ -286,15 +286,15 @@ func runTests() {
 
         let taskPath = repoDir + "/tasks"
         let donePath = repoDir + "/.tasks.done"
-        writeLines(["fix bug", "write docs"], to: taskPath)
+        IO.write(["fix bug", "write docs"], to: taskPath)
 
         finalizeTodo(lineNumber: 1, editMessage: false, taskPath: taskPath, donePath: donePath, repo: (repoDir, "fossil"))
 
-        let remaining = readLines(from: taskPath)
+        let remaining = IO.read(from: taskPath)
         assertEqual(remaining.count, 1)
         assertEqual(remaining[0], "write docs")
 
-        let done = readLines(from: donePath)
+        let done = IO.read(from: donePath)
         assertEqual(done.count, 1)
         assertEqual(done[0].hasSuffix("  fix bug"), true)
     }
