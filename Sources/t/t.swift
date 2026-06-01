@@ -8,74 +8,47 @@ import ArgumentParser
 struct t: ParsableCommand {
 
     @Flag(name: .customShort("g"), help: "Use global tasks file if invoked in a local repo")
-    var is_global: Bool = false
+    var g: Bool = false
 
     @Option(name: .customShort("r"), help: "Remove a task by line number.")
-    var line_to_remove: Int?
+    var r: Int?
 
     @Option(name: .customShort("f"), help: "Finalize and commit a task by line number.")
-    var line_to_finalize: Int?
+    var f: Int?
 
     @Option(name: .customShort("a"), help: "Add a nested task after the specified line.")
-    var line_to_append: Int?
+    var a: Int?
 
     @Flag(name: .customShort("e"), help: "Edit commit message before commiting.")
-    var edit_msg: Bool = false
+    var e: Bool = false
 
     @Argument(help: "Task text contents.")
-    var txt_args: [String] = []
+    var args: [String] = []
 
     func run() throws {
-        let repo     = is_global ? nil : VCS.get()
-        let taskPath = is_global ? global.tasks : taskFilePath(repoRoot: repo?.root)
-        let donePath = is_global ? global.done  : doneFilePath(repoRoot: repo?.root)
+        let repo     = g ? nil : VCS.get()
+        let taskPath = g ? global.tasks : taskFilePath(repoRoot: repo?.root)
+        let donePath = g ? global.done  : doneFilePath(repoRoot: repo?.root)
 
-        if let line_to_remove {
-            do {
-                try removeLine(line_to_remove, from: taskPath)
-            } catch {
-                throw ValidationError("line \(line_to_remove) does not exist")
-            }
-            return
-        }
-
-        if let line_to_finalize {
-            do {
+        do {
+            if let r { try removeLine(r, from: taskPath) }
+            if let f {
                 try finalizeTodo(
-                    lineNumber: line_to_finalize,
-                    editMessage: edit_msg,
+                    lineNumber: f,
+                    editMessage: e,
                     taskPath: taskPath,
                     donePath: donePath,
                     repo: repo
                 )
-            } catch {
-                throw ValidationError("line \(line_to_finalize) does not exist")
             }
-            return
-        }
-
-        if let line_to_append {
-            let text = txt_args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
-            if text.isEmpty {
-                throw ValidationError("no text provided")
+            if let a {
+                let text = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
+                if text.isEmpty { throw ValidationError("no text provided") }
+                try addNestedTodo(text, after: a, taskPath: taskPath)
             }
-            do {
-                try addNestedTodo(text, after: line_to_append, taskPath: taskPath)
-            } catch {
-                throw ValidationError("line \(line_to_append) does not exist")
-            }
-            return
-        }
-
-        let text = txt_args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
-        if !text.isEmpty {
-            do {
-                print(try addTodo(text, taskPath: taskPath))
-            } catch {
-                throw CleanExit.message("error: adding failed")
-            }
-        } else {
-            Todo.list(from: IO.read(taskPath)).forEach(put)
+            
+            let text = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
+            if !text.isEmpty { print(try addTodo(text, taskPath: taskPath)) }
         }
     }
 }
@@ -102,21 +75,33 @@ func doneFilePath(repoRoot: String? = nil) -> String {
 
 @discardableResult
 func addTodo(_ text: String, taskPath: String) throws -> String {
-    let lines = IO.read(taskPath) + [text]
-    try IO.write(lines, to: taskPath)
-    return "\(lines.count) \(text)"
+    do {
+        let lines = IO.read(taskPath) + [text]
+        try IO.write(lines, to: taskPath)
+        return "\(lines.count) \(text)"
+    } catch {
+        throw CleanExit.message("error: adding failed")
+    }
 }
 
 func addNestedTodo(_ text: String, after lineNumber: Int, taskPath: String) throws {
-    let updated = try Todo.add(text, to: IO.read(taskPath), after: lineNumber)
-    try IO.write(updated, to: taskPath)
+    do {
+        let updated = try Todo.add(text, to: IO.read(taskPath), after: lineNumber)
+        try IO.write(updated, to: taskPath)
+    } catch {
+        throw ValidationError("line \(lineNumber) does not exist")
+    }
 }
 
 @discardableResult
-func removeLine(_ lineNumber: Int, from path: String) throws -> String? {
-    let (lines, removed) = try Todo.remove(lineNumber, from: IO.read(path))
-    try IO.write(lines, to: path)
-    return removed
+func removeLine(_ lineNumber: Int, from path: String) throws-> String? {
+    do {
+        let (lines, removed) = try Todo.remove(lineNumber, from: IO.read(path))
+        try IO.write(lines, to: path)
+        return removed
+    } catch {
+        throw ValidationError("line \(lineNumber) does not exist")
+    }
 }
 
 func appendToDone(_ text: String, donePath: String) {
