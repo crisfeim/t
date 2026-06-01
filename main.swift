@@ -1,15 +1,6 @@
 import Foundation
 import Darwin
 
-// MARK: Types
-
-struct Todo {
-    let lineNumber: Int
-    let text: String
-    let indent: Int
-
-    var textWithoutIndent: String { text.trimmingCharacters(in: .whitespaces) }
-}
 
 // MARK: File Paths
 
@@ -29,24 +20,10 @@ func doneFilePath(repoRoot: String? = nil) -> String {
 }
 
 
-func parseTodos(from lines: [String]) -> [Todo] {
-  lines.enumerated().compactMap { i, line in
-    guard !line.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
-    let indent = line.prefix(while: { $0 == "\t" }).count
-    return Todo(lineNumber: i + 1, text: line, indent: indent)
-  }
-}
-
 // MARK: Actions
 
 func listTodos(taskPath: String) {
-  let lines = readLines(from: taskPath)
-  let todos = parseTodos(from: lines)
-  if todos.isEmpty { return print("No todos.") }
-  let width = String(todos.map { $0.lineNumber }.max() ?? 1).count
-  for todo in todos {
-  	print("\(String(todo.lineNumber).leftPadded(width))  \(todo.text)")
-  }
+  Todo.list(from: readLines(from: taskPath)).forEach(put)
 }
 
 func addTodo(_ text: String, taskPath: String) {
@@ -174,13 +151,13 @@ func runTests() {
         assertEqual(lines[1], "second")
     }
 
-    test("parseTodos skips empty lines and tracks line numbers") {
+    test("Todo.parse skips empty lines and tracks line numbers") {
         let lines = ["first", "", "third"]
-        let todos = parseTodos(from: lines)
+        let todos = Todo.parse(from: lines)
         assertEqual(todos.count, 2)
-        assertEqual(todos[0].lineNumber, 1)
+        assertEqual(todos[0].line_number, 1)
         assertEqual(todos[0].text, "first")
-        assertEqual(todos[1].lineNumber, 3)
+        assertEqual(todos[1].line_number, 3)
         assertEqual(todos[1].text, "third")
     }
 
@@ -361,7 +338,7 @@ if args.count == 1 {
 } else if let line = defaults.string(forKey: "r").flatMap(Int.init) {
     removeLine(line, from: taskPath)
 } else if let line = defaults.string(forKey: "f").flatMap(Int.init) {
-    finalizeTodo(line: line, editMessage: editMessage, taskPath: taskPath, donePath: donePath, repo: repo)
+    finalizeTodo(lineNumber: line, editMessage: editMessage, taskPath: taskPath, donePath: donePath, repo: repo)
 } else if let line = defaults.string(forKey: "a").flatMap(Int.init) {
     let text = args.dropFirst().filter { !$0.hasPrefix("-") && Int($0) == nil }.joined(separator: " ")
     if text.isEmpty {
