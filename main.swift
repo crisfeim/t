@@ -121,10 +121,11 @@ func runTests() {
         addTodo("first", taskPath: path)
         addTodo("second", taskPath: path)
 
-        let lines = IO.read(path)
-        assertEqual(lines.count, 2)
-        assertEqual(lines[0], "first")
-        assertEqual(lines[1], "second")
+        IO.read(path) * { lines in 
+          assertEqual(lines.count, 2)
+          assertEqual(lines[0], "first")
+          assertEqual(lines[1], "second")
+        }
     }
 
     test("Todo.parse skips empty lines and tracks line numbers") {
