@@ -128,13 +128,13 @@ func runTests() {
     }
 
     test("Todo.parse skips empty lines and tracks line numbers") {
-        let lines = ["first", "", "third"]
-        let todos = Todo.parse(from: lines)
-        assertEqual(todos.count, 2)
-        assertEqual(todos[0].line_number, 1)
-        assertEqual(todos[0].text, "first")
-        assertEqual(todos[1].line_number, 3)
-        assertEqual(todos[1].text, "third")
+        Todo.parse(from: ["first", "", "third"]) * { todos in 
+          assertEqual(todos.count, 2)
+          assertEqual(todos[0].line_number, 1)
+          assertEqual(todos[0].text, "first")
+          assertEqual(todos[1].line_number, 3)
+          assertEqual(todos[1].text, "third")
+        }
     }
 
     test("removeLine removes correct line") {
@@ -146,10 +146,11 @@ func runTests() {
         IO.write(["first", "second", "third"], to: path)
         let removed = removeLine(2, from: path)
         assertEqual(removed, "second")
-        let lines = IO.read(path)
-        assertEqual(lines.count, 2)
-        assertEqual(lines[0], "first")
-        assertEqual(lines[1], "third")
+        IO.read(path) * { lines in 
+          assertEqual(lines.count, 2)
+          assertEqual(lines[0], "first")
+          assertEqual(lines[1], "third")
+        }
     }
 
     test("addNestedTodo inserts after children") {
@@ -161,12 +162,13 @@ func runTests() {
         IO.write(["parent", "\tchild", "sibling"], to: path)
         addNestedTodo("new child", after: 1, taskPath: path)
 
-        let lines = IO.read(path)
+      IO.read(path) * { lines in
         assertEqual(lines.count, 4)
         assertEqual(lines[0], "parent")
         assertEqual(lines[1], "\tchild")
         assertEqual(lines[2], "\tnew child")
         assertEqual(lines[3], "sibling")
+      }
     }
 
     test("addNestedTodo double indents nested child") {
@@ -178,9 +180,10 @@ func runTests() {
         IO.write(["parent", "\tchild"], to: path)
         addNestedTodo("grandchild", after: 2, taskPath: path)
 
-        let lines = IO.read(path)
-        assertEqual(lines.count, 3)
-        assertEqual(lines[2], "\t\tgrandchild")
+        IO.read(path) * { lines in
+          assertEqual(lines.count, 3)
+          assertEqual(lines[2], "\t\tgrandchild")
+      }
     }
 
     test("appendToDone creates file and appends") {
@@ -212,9 +215,10 @@ func runTests() {
         removeLine(1, from: path)
         addTodo("second", taskPath: path)
 
-        let lines = IO.read(path)
-        assertEqual(lines.count, 1, "Expected 1 line, got \(lines.count)")
-        assertEqual(lines[0], "second")
+        IO.read(path) * { lines in
+          assertEqual(lines.count, 1, "Expected 1 line, got \(lines.count)")
+          assertEqual(lines[0], "second")
+        }
     }
 
     test("finalizeTodo moves to done and removes from tasks") {
@@ -227,13 +231,16 @@ func runTests() {
         IO.write(["first", "second"], to: taskPath)
         finalizeTodo(lineNumber: 1, editMessage: false, taskPath: taskPath, donePath: donePath, repo: nil)
 
-        let remaining = IO.read(taskPath)
-        assertEqual(remaining.count, 1)
-        assertEqual(remaining[0], "second")
+        IO.read(taskPath) * { remaining in
+          assertEqual(remaining.count, 1)
+          assertEqual(remaining[0], "second")
+        }
+        
 
-        let done = IO.read(donePath)
-        assertEqual(done.count, 1)
-        assertEqual(done[0].hasSuffix("  first"), true)
+        IO.read(donePath) * { done in
+          assertEqual(done.count, 1)
+          assertEqual(done[0].hasSuffix("  first"), true)
+        }
     }
 
     test("VCS.root() detects fossil") {
@@ -246,9 +253,10 @@ func runTests() {
         Runner.run("fossil init repo.fossil", inDirectory: repoDir)
         Runner.run("fossil open repo.fossil", inDirectory: repoDir)
 
-        let result = VCS.root(from: repoDir)
-        assertEqual(result?.root, repoDir)
-        assertEqual(result?.vcs, "fossil")
+        VCS.root(from: repoDir) * { result in
+          assertEqual(result?.root, repoDir)
+          assertEqual(result?.vcs, "fossil")
+        }
     }
 
     test("fossil integration") {
@@ -267,13 +275,15 @@ func runTests() {
 
         finalizeTodo(lineNumber: 1, editMessage: false, taskPath: taskPath, donePath: donePath, repo: (repoDir, "fossil"))
 
-        let remaining = IO.read(taskPath)
-        assertEqual(remaining.count, 1)
-        assertEqual(remaining[0], "write docs")
+        IO.read(taskPath) * { remaining in
+          assertEqual(remaining.count, 1)
+          assertEqual(remaining[0], "write docs")
+        }
 
-        let done = IO.read(donePath)
-        assertEqual(done.count, 1)
-        assertEqual(done[0].hasSuffix("  fix bug"), true)
+        IO.read(donePath) * { done in 
+          assertEqual(done.count, 1)
+          assertEqual(done[0].hasSuffix("  fix bug"), true)
+        }
     }
 
 }
