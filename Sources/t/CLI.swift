@@ -139,20 +139,20 @@ func complete_todo(
         let script: String
         if repo.vcs == "fossil" {
             script = """
-                        cd \(repo.dir)
-                        vi \(commit_msg_tmp_file)
-                        fossil addremove
-                        fossil commit -M \(commit_msg_tmp_file) --allow-empty
-                        rm \(commit_msg_tmp_file)
-                        """
+            cd \(repo.dir)
+            vi \(commit_msg_tmp_file)
+            fossil addremove
+            fossil commit -M \(commit_msg_tmp_file) --allow-empty
+            rm \(commit_msg_tmp_file)
+            """
         } else {
             script = """
-                        cd \(repo.dir)
-                        vi \(commit_msg_tmp_file)
-                        git add -A
-                        git commit -F \(commit_msg_tmp_file)
-                        rm \(commit_msg_tmp_file)
-                        """
+            cd \(repo.dir)
+            vi \(commit_msg_tmp_file)
+            git add -A
+            git commit -F \(commit_msg_tmp_file)
+            rm \(commit_msg_tmp_file)
+            """
         }
         
         let script_path = tmp + "/t_commit.sh"
