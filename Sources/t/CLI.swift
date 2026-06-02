@@ -14,6 +14,7 @@ struct CLI: ParsableCommand {
 	
 	@Flag(name: .customShort(.g), help: .g=>help) var g: Bool = false
 	@Flag(name: .customShort(.e), help: .e=>help) var e: Bool = false
+	@Flag(name: .customShort(.s), help: .s=>help) var s: Bool = false
 	
 	@Argument(help: "Task text contents.") var args: [String] = []
 	
@@ -40,6 +41,10 @@ struct CLI: ParsableCommand {
 		
 		if let l {
 			return Todo.list_childs(of: l, todos: IO.read(todo_fpath)).forEach(put)
+		}
+		
+		if s {
+			return Todo.get_all(from: NSHomeDirectory()).map(\.path).forEach(put)
 		}
 		
 		let todo = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
@@ -166,6 +171,34 @@ func complete_todo(
 	}
 }
 
+func get_all() -> [String: [String]] {
+	let fm = FileManager.default
+	let home = NSHomeDirectory()
+	var todo_files = [String]()
+	
+	if fm.fileExists(atPath: global.todo) {
+		todo_files.append(global.todo)
+	}
+	
+	if let enumerator = fm.enumerator(
+		at: URL(fileURLWithPath: home),
+		includingPropertiesForKeys: [.isRegularFileKey],
+		options: [.skipsHiddenFiles, .skipsPackageDescendants]
+	) {
+		for case let url as URL in enumerator {
+			if url.lastPathComponent == ".tasks" && url.path != global.todo {
+				todo_files.append(url.path)
+			}
+		}
+	}
+	
+	var result = [String: [String]]()
+	todo_files.sorted().forEach { fpath in
+		let rel_path = fpath.replacingOccurrences(of: home + "/", with: "~/")
+		result[rel_path] = Todo.list(from: IO.read(fpath))
+	}
+	return result
+}
 
 // MARK: - Commands
 
@@ -176,6 +209,7 @@ private extension Character {
 	static let a: Character = "a"
 	static let e: Character = "e"
 	static let l: Character = "l"
+	static let s: Character = "s"
 }
 
 
@@ -187,6 +221,7 @@ private let help: @Sendable (Character) -> ArgumentHelp = {
 	case "a": return "Add a nested task after the specified line."
 	case "e": return "Edit commit message with vi before commiting."
 	case "l": return "List the child task of a given line"
+	case "s": return "Lists all todos system wide"
 	default: return "Unhandled"
 	}
 }

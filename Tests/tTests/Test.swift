@@ -139,14 +139,7 @@ import Foundation
 }
 
 // MARK: - remove / complete -f / remove -r
-@Suite class TodoTests_remove {
-	
-	lazy var tmp = FileManager.default.temporaryDirectory.appendingPathComponent("t-tests-rwc—\(UUID().uuidString)").path
-	lazy var todo_path = tmp + "/.tasks.txt"
-	lazy var done_path = tmp + "/.tasks.done"
-	
-	init() { try! FileManager.default.createDirectory(atPath: tmp, withIntermediateDirectories: true) }
-	deinit { try? FileManager.default.removeItem(atPath: tmp) }
+extension TodoTests {
 	
 	// MARK: Unit – Todo.remove
 	
@@ -234,6 +227,29 @@ import Foundation
 		let done = IO.read(done_path)
 		#expect(done.count == 1)
 		#expect(done.first?.hasSuffix("  parent") == true)
+	}
+}
+
+extension TodoTests {
+	@Test func `Gets high level list`() throws {
+		
+		let resolvedTmp = URL(fileURLWithPath: tmp).resolvingSymlinksInPath().path
+		
+		try create_list(["first", "second"], at: "list/1")
+		try create_list(["do something"], at: "list/nested/1")
+		try create_list(["another list"], at: "another/1")
+		
+		#expect(Todo.get_all(from: resolvedTmp) == [
+			Todo.p(path: "another/1", todos: ["1 another list"]),
+			Todo.p(path: "list/1", todos: ["1 first", "2 second"]),
+			Todo.p(path: "list/nested/1", todos: ["1 do something"])
+		])
+	}
+	
+	private func create_list(_ list: [String], at dir_path: String) throws  {
+		let path = tmp + "/" + dir_path + "/.tasks"
+		try FileManager.default.createDirectory(atPath: tmp + "/" + dir_path, withIntermediateDirectories: true)
+		try IO.write(list, to: path)
 	}
 }
 

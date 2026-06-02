@@ -118,6 +118,58 @@ private let is_child     : @Sendable (String) -> Bool   = { $0.contains("\t") }
 private let drop_first   : @Sendable (String) -> String = { String($0.dropFirst()) }
 private let dedent_one   : @Sendable (String) -> String = { $0.hasPrefix("\t") ? $0=>drop_first : $0 }
 
+// MARK: System wide listing
+
+extension Todo {
+	struct p: Equatable {
+		let path: String
+		let todos: [String]
+	}
+	
+	static func get_all(from home: String) -> [p] {
+		let homeURL = URL(fileURLWithPath: home).resolvingSymlinksInPath()
+		let homePath = homeURL.path
+		var todo_files = [String]()
+		
+		if let enumerator = FileManager.default.enumerator(
+			at: homeURL,
+			includingPropertiesForKeys: [.isRegularFileKey],
+			options: [.skipsPackageDescendants]
+		) {
+			for case let url as URL in enumerator {
+				print("Scanning", url.path)
+				if url.path.contains("/Library") ||
+						url.path.contains("/.Trash") ||
+						url.path.contains("/node_modules") ||
+						url.path.contains("/.build") ||
+						url.path.contains("/DerivedData") ||
+						url.path.contains("/.git") ||
+						url.path.contains("/.fslckout") ||
+						url.path.contains("/.build") {
+					enumerator.skipDescendants()
+					continue
+				}
+				
+				if let values = try? url.resourceValues(forKeys: [.isSymbolicLinkKey]),
+					 values.isSymbolicLink == true {
+					enumerator.skipDescendants()
+					continue
+				}
+				
+				if url.lastPathComponent == ".tasks" {
+					todo_files.append(url.resolvingSymlinksInPath().path)
+					enumerator.skipDescendants()
+				}
+			}
+		}
+		
+		return todo_files.sorted().map { fpath in
+			let rel_path = fpath.replacingOccurrences(of: homePath + "/", with: "").replacingOccurrences(of: "/.tasks", with: "")
+			return p(path: rel_path, todos: Todo.list(from: IO.read(fpath)))
+		}
+	}
+}
+
 // Partial application
 infix operator =>: MultiplicationPrecedence
 func =><A, B>(lhs: A, rhs: (A) -> B) -> B { rhs(lhs) }
