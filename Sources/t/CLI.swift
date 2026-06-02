@@ -2,7 +2,12 @@
 // https://docs.swift.org/swift-book
 
 import Foundation
-import ArgumentParser
+
+struct ValidationError: Error {
+	let message: String
+	
+	init(_ m: String) { message = m }
+}
 
 struct CLI {
 	let r: Int?
@@ -52,23 +57,26 @@ struct CLI {
 }
 
 @main
-struct t: ParsableCommand {
-	
-	@Option(name: .customShort(.r), help: .r=>help) var r: Int?
-	@Option(name: .customShort(.f), help: .f=>help) var f: Int?
-	@Option(name: .customShort(.a), help: .a=>help) var a: Int?
-	@Option(name: .customShort(.l), help: .l=>help) var l: Int?
-	
-	@Flag(name: .customShort(.g), help: .g=>help) var g: Bool = false
-	@Flag(name: .customShort(.e), help: .e=>help) var e: Bool = false
-	@Flag(name: .customShort(.s), help: .s=>help) var s: Bool = false
-	
-	@Argument(help: "Task text contents.") var args: [String] = []
-	
-	func run() throws {
-		try CLI(r: r, f: f, a: a, l: l, g: g, e: e, s: s, args: args).run()
+struct t {
+	static func main() throws {
+		try CLI(
+			r: "r"=>get,
+			f: "f"=>get,
+			a: "a"=>get,
+			l: "l"=>get,
+			g: "g"=>exists,
+			e: "e"=>exists,
+			s: "s"=>exists,
+			args: CommandLine.arguments.dropFirst()=>Array.init
+		).run()
 	}
 }
+
+let get: @Sendable (String) -> Int? = {
+	$0=>UserDefaults.standard.integer == 0 ? nil : $0=>UserDefaults.standard.integer
+}
+
+let exists: @Sendable (String) -> Bool = { $0=>CommandLine.arguments.contains }
 
 let put: @Sendable (String) -> Void = { print($0) }
 
@@ -99,7 +107,7 @@ func add(_ todo: String, fpath: String) throws -> String {
 		try IO.write(lines, to: fpath)
 		return "\(lines.count) \(todo)"
 	} catch {
-		throw CleanExit.message("error: adding failed")
+		throw ValidationError("error: adding failed")
 	}
 }
 
@@ -185,31 +193,5 @@ func complete_todo(
 			cmd = "cd \(repo.dir) && git add -A && git commit -m \"\(text)\""
 		}
 		execve("/bin/zsh", [strdup("/bin/zsh"), strdup("-c"), strdup(cmd), nil], environ)
-	}
-}
-
-// MARK: - Commands
-
-private extension Character {
-	static let g: Character = "g"
-	static let r: Character = "r"
-	static let f: Character = "f"
-	static let a: Character = "a"
-	static let e: Character = "e"
-	static let l: Character = "l"
-	static let s: Character = "s"
-}
-
-
-private let help: @Sendable (Character) -> ArgumentHelp = {
-	switch $0 {
-	case "g": return "Use global tasks file if invoked in a local repo"
-	case "r": return "Remove a task by line number."
-	case "f": return "Finalize and commit a task by line number."
-	case "a": return "Add a nested task after the specified line."
-	case "e": return "Edit commit message with vi before commiting."
-	case "l": return "List the child task of a given line"
-	case "s": return "Lists all todos system wide"
-	default: return "Unhandled"
 	}
 }

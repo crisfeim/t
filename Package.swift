@@ -6,17 +6,9 @@ import PackageDescription
 let package = Package(
 	name: "t",
 	platforms: [.macOS(.v15)],
-	products: [
-		.executable(name: "t", targets: ["t"])
-	],
-	dependencies: [.package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0")],
+	products: [.executable(name: "t", targets: ["t"])],
 	targets: [
-		.executableTarget(
-			name: "t",
-			dependencies: [
-				.product(name: "ArgumentParser", package: "swift-argument-parser")
-			]
-		),
+		.executableTarget(name: "t"),
 		.testTarget(
 			name: "tTests",
 			dependencies: ["t"]
