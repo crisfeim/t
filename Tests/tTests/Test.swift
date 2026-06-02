@@ -5,7 +5,7 @@ import Foundation
 @Suite class TodoTests {
 	
 	lazy var tmp = FileManager.default.temporaryDirectory.appendingPathComponent("t-tests—\(UUID().uuidString)").path
-	lazy var todo_path = tmp + "/.tasks.txt"
+	lazy var todo_path = tmp + "/todo.txt"
 	lazy var done_path = tmp + "/.tasks.done"
 	
 	init() {
@@ -247,7 +247,7 @@ extension TodoTests {
 	}
 	
 	private func create_list(_ list: [String], at dir_path: String) throws  {
-		let path = tmp + "/" + dir_path + "/.tasks"
+		let path = tmp + "/" + dir_path + "/todo.txt"
 		try FileManager.default.createDirectory(atPath: tmp + "/" + dir_path, withIntermediateDirectories: true)
 		try IO.write(list, to: path)
 	}

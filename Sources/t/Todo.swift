@@ -134,18 +134,26 @@ extension Todo {
 		if let enumerator = FileManager.default.enumerator(
 			at: homeURL,
 			includingPropertiesForKeys: [.isRegularFileKey],
-			options: [.skipsPackageDescendants]
-		) {
+			options: [.skipsPackageDescendants, .skipsHiddenFiles]
+		) {har
 			for case let url as URL in enumerator {
-				print("Scanning", url.path)
+				
 				if url.path.contains("/Library") ||
-						url.path.contains("/.Trash") ||
 						url.path.contains("/node_modules") ||
-						url.path.contains("/.build") ||
 						url.path.contains("/DerivedData") ||
-						url.path.contains("/.git") ||
-						url.path.contains("/.fslckout") ||
-						url.path.contains("/.build") {
+						url.path.contains("/__build") ||
+						url.path.contains("/go/") ||
+						url.path.contains("/Music") ||
+						url.path.contains("/Pictures") ||
+						url.path.contains("/Desktop") ||
+						url.path.contains("/iaWriter") ||
+						url.path.contains("/logs") ||
+						url.path.contains("/Music") ||
+						url.path.contains("/Movies") ||
+						url.path.contains("/Applications") ||
+						url.path.contains("/notability") ||
+						url.path.contains("/caches") ||
+						url.path.contains("/Softorino") {
 					enumerator.skipDescendants()
 					continue
 				}
@@ -156,7 +164,7 @@ extension Todo {
 					continue
 				}
 				
-				if url.lastPathComponent == ".tasks" {
+				if url.lastPathComponent == "todo.txt" {
 					todo_files.append(url.resolvingSymlinksInPath().path)
 					enumerator.skipDescendants()
 				}
@@ -164,7 +172,7 @@ extension Todo {
 		}
 		
 		return todo_files.sorted().map { fpath in
-			let rel_path = fpath.replacingOccurrences(of: homePath + "/", with: "").replacingOccurrences(of: "/.tasks", with: "")
+			let rel_path = fpath.replacingOccurrences(of: homePath + "/", with: "").replacingOccurrences(of: "/todo.txt", with: "")
 			return p(path: rel_path, todos: Todo.list(from: IO.read(fpath)))
 		}
 	}

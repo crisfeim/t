@@ -1,0 +1,4 @@
+Print new list on commit/remove, if child, print parent list
+Update default todos & done files path to have txt extension so they can be opened more simply from finder
+Add flag to list systemwide todos
+Permitir invocar el flag -e sin -f para editar el todo

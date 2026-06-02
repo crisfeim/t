@@ -61,12 +61,12 @@ import Darwin
 // MARK: File Paths
 
 let global = (
-	todo: NSHomeDirectory() + "/.tasks",
+	todo: NSHomeDirectory() + "/todo.txt",
 	done: NSHomeDirectory() + "/.tasks.done"
 )
 
 func todo_fpath(repo_dir: String? = nil) -> String {
-	if let root = repo_dir { return root + "/.tasks" }
+	if let root = repo_dir { return root + "/todo.txt" }
 	return global.todo
 }
 
@@ -169,35 +169,6 @@ func complete_todo(
 		}
 		execve("/bin/zsh", [strdup("/bin/zsh"), strdup("-c"), strdup(cmd), nil], environ)
 	}
-}
-
-func get_all() -> [String: [String]] {
-	let fm = FileManager.default
-	let home = NSHomeDirectory()
-	var todo_files = [String]()
-	
-	if fm.fileExists(atPath: global.todo) {
-		todo_files.append(global.todo)
-	}
-	
-	if let enumerator = fm.enumerator(
-		at: URL(fileURLWithPath: home),
-		includingPropertiesForKeys: [.isRegularFileKey],
-		options: [.skipsHiddenFiles, .skipsPackageDescendants]
-	) {
-		for case let url as URL in enumerator {
-			if url.lastPathComponent == ".tasks" && url.path != global.todo {
-				todo_files.append(url.path)
-			}
-		}
-	}
-	
-	var result = [String: [String]]()
-	todo_files.sorted().forEach { fpath in
-		let rel_path = fpath.replacingOccurrences(of: home + "/", with: "~/")
-		result[rel_path] = Todo.list(from: IO.read(fpath))
-	}
-	return result
 }
 
 // MARK: - Commands
