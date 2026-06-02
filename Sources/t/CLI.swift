@@ -4,19 +4,17 @@
 import Foundation
 import ArgumentParser
 
-@main
-struct CLI: ParsableCommand {
+struct CLI {
+	let r: Int?
+	let f: Int?
+	let a: Int?
+	let l: Int?
 	
-	@Option(name: .customShort(.r), help: .r=>help) var r: Int?
-	@Option(name: .customShort(.f), help: .f=>help) var f: Int?
-	@Option(name: .customShort(.a), help: .a=>help) var a: Int?
-	@Option(name: .customShort(.l), help: .l=>help) var l: Int?
+	let g: Bool
+	let e: Bool
+	let s: Bool
 	
-	@Flag(name: .customShort(.g), help: .g=>help) var g: Bool = false
-	@Flag(name: .customShort(.e), help: .e=>help) var e: Bool = false
-	@Flag(name: .customShort(.s), help: .s=>help) var s: Bool = false
-	
-	@Argument(help: "Task text contents.") var args: [String] = []
+	let args: [String]
 	
 	func run() throws {
 		let repo       = g ? nil : VCS.get()
@@ -50,6 +48,25 @@ struct CLI: ParsableCommand {
 		let todo = args.filter { !$0.hasPrefix("-") }.joined(separator: " ")
 		if !todo.isEmpty { print(try add(todo, fpath: todo_fpath)) }
 		else { Todo.list(from: IO.read(todo_fpath)).forEach(put) }
+	}
+}
+
+@main
+struct t: ParsableCommand {
+	
+	@Option(name: .customShort(.r), help: .r=>help) var r: Int?
+	@Option(name: .customShort(.f), help: .f=>help) var f: Int?
+	@Option(name: .customShort(.a), help: .a=>help) var a: Int?
+	@Option(name: .customShort(.l), help: .l=>help) var l: Int?
+	
+	@Flag(name: .customShort(.g), help: .g=>help) var g: Bool = false
+	@Flag(name: .customShort(.e), help: .e=>help) var e: Bool = false
+	@Flag(name: .customShort(.s), help: .s=>help) var s: Bool = false
+	
+	@Argument(help: "Task text contents.") var args: [String] = []
+	
+	func run() throws {
+		try CLI(r: r, f: f, a: a, l: l, g: g, e: e, s: s, args: args).run()
 	}
 }
 
