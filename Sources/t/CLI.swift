@@ -64,9 +64,9 @@ struct t {
 			f: "f"=>get,
 			a: "a"=>get,
 			l: "l"=>get,
-			g: "g"=>exists,
-			e: "e"=>exists,
-			s: "s"=>exists,
+			g: "-g"=>exists,
+			e: "-e"=>exists,
+			s: "-s"=>exists,
 			args: CommandLine.arguments.dropFirst()=>Array.init
 		).run()
 	}
