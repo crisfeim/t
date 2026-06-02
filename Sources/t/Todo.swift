@@ -135,7 +135,7 @@ extension Todo {
 			at: homeURL,
 			includingPropertiesForKeys: [.isRegularFileKey],
 			options: [.skipsPackageDescendants, .skipsHiddenFiles]
-		) {har
+		) {
 			for case let url as URL in enumerator {
 				
 				if url.path.contains("/Library") ||
