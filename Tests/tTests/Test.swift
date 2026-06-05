@@ -21,24 +21,29 @@ import Foundation
 		try add("second", fpath: todo_path)
 		
 		let lines = IO.read(todo_path)
-		#expect(lines == ["first", "second"])
+		let isMatch = (lines == ["first", "second"]) // Inferencia rápida fuera de la macro
+		#expect(isMatch)
 	}
 	
 	@Test func `Parses todos while skipping empty lines`() {
 		let todos = Todo.parse(from: ["first", "", "third"])
-		#expect(todos == [
+		let expected: [Todo.t] = [ // Tipo declarado explícitamente para evitar lag de inferencia
 			Todo.t(line: 1, text: "first", indent: 0, has_children: false),
 			Todo.t(line: 3, text: "third", indent: 0, has_children: false)
-		])
+		]
+		let isMatch = (todos == expected)
+		#expect(isMatch)
 	}
 	
 	@Test func `Removes a specific line from the todo file`() throws {
 		try IO.write(["first", "second", "third"], to: todo_path)
 		let removed = try remove(2, from: todo_path)
-		#expect(removed == "second")
+		let isSecond = removed == "second"
+		#expect(isSecond)
 		
 		let lines = IO.read(todo_path)
-		#expect(lines == ["first", "third"])
+		let isMatch = (lines == ["first", "third"])
+		#expect(isMatch)
 	}
 	
 	@Test func `Adds a nested todo item after its parent's children`() throws {
@@ -46,7 +51,8 @@ import Foundation
 		try add_nested("new child", after: 1, fpath: todo_path)
 		
 		let lines = IO.read(todo_path)
-		#expect(lines == ["parent", "\tchild", "\tnew child", "sibling"])
+		let isMatch = (lines == ["parent", "\tchild", "\tnew child", "sibling"])
+		#expect(isMatch)
 	}
 	
 	@Test func `Double indents a nested child todo item`() throws {
@@ -54,7 +60,8 @@ import Foundation
 		try add_nested("grandchild", after: 2, fpath: todo_path)
 		
 		let lines = IO.read(todo_path)
-		#expect(lines == ["parent", "\tchild", "\t\tgrandchild"])
+		let isMatch = (lines == ["parent", "\tchild", "\t\tgrandchild"])
+		#expect(isMatch)
 	}
 	
 	@Test func `Appends completed tasks to the done file`() {
@@ -63,9 +70,14 @@ import Foundation
 		
 		let lines = IO.read(done_path)
 		#expect(lines.count == 2)
-		#expect(lines.first?.hasSuffix("  first task") ?? false)
-		#expect(lines.last?.hasSuffix("  second task") ?? false)
-		#expect(lines.first?.prefix(14).allSatisfy({ $0.isNumber }) ?? false)
+		
+		let firstMatch = lines.first?.hasSuffix("  first task") ?? false
+		let lastMatch = lines.last?.hasSuffix("  second task") ?? false
+		let prefixMatch = lines.first?.prefix(14).allSatisfy({ $0.isNumber }) ?? false
+		
+		#expect(firstMatch)
+		#expect(lastMatch)
+		#expect(prefixMatch)
 	}
 	
 	@Test func `Removes a line and then adds a new todo starting at line 1`() throws {
@@ -74,7 +86,8 @@ import Foundation
 		try add("second", fpath: todo_path)
 		
 		let lines = IO.read(todo_path)
-		#expect(lines == ["second"])
+		let isMatch = (lines == ["second"])
+		#expect(isMatch)
 	}
 	
 	@Test func `Moves a completed todo to the done file and removes it from tasks`() throws {
@@ -82,41 +95,31 @@ import Foundation
 		try complete_todo(line: 1, launch_editor: false, todo_fpath: todo_path, done_fpath: done_path, repo: nil)
 		
 		let remaining = IO.read(todo_path)
-		#expect(remaining == ["second"])
+		let isMatchRemaining = (remaining == ["second"])
+		#expect(isMatchRemaining)
 		
 		let done = IO.read(done_path)
-		#expect(done.first?.hasSuffix("  first") == true)
+		let isMatchDone = (done.first?.hasSuffix("  first") == true)
+		#expect(isMatchDone)
 	}
 }
-
 
 @Suite struct TodoTests_2 {
 	@Test func `Lists todos while skipping child items`() {
 		let list = Todo.list(from: [
-			"First todo",
-			"\tChild 1",
-			"\tChild 2",
-			"Second todo",
-			"\tChild 1",
-			"\tChild 2",
+			"First todo", "\tChild 1", "\tChild 2",
+			"Second todo", "\tChild 1", "\tChild 2",
 			"Third todo"
 		])
 		
-		#expect(list == [
-			"1* First todo",
-			"4* Second todo",
-			"7 Third todo"
-		])
+		let isMatch = (list == ["1* First todo", "4* Second todo", "7 Third todo"])
+		#expect(isMatch)
 	}
 	
 	@Test func `Lists child items of a specific parent todo`() {
 		let todos = [
-			"First todo",
-			"\tChild 1",
-			"\tChild 2",
-			"Second todo",
-			"\tChild 1",
-			"\tChild 2",
+			"First todo", "\tChild 1", "\tChild 2",
+			"Second todo", "\tChild 1", "\tChild 2",
 			"Third todo"
 		]
 		
@@ -124,16 +127,11 @@ import Foundation
 		let childs_2 = Todo.list_childs(of: 4, todos: todos)
 		let childs_3 = Todo.list_childs(of: 7, todos: todos)
 		
-		#expect(childs_1 == [
-			"2 Child 1",
-			"3 Child 2"
-		])
+		let match1 = (childs_1 == ["2 Child 1", "3 Child 2"])
+		let match2 = (childs_2 == ["5 Child 1", "6 Child 2"])
 		
-		#expect(childs_2 == [
-			"5 Child 1",
-			"6 Child 2"
-		])
-		
+		#expect(match1)
+		#expect(match2)
 		#expect(childs_3.isEmpty)
 	}
 }
@@ -141,34 +139,41 @@ import Foundation
 // MARK: - remove / complete -f / remove -r
 extension TodoTests {
 	
-	// MARK: Unit – Todo.remove
-	
 	@Test func `Removing parent cascades to direct children`() throws {
-		let lines  = ["parent", "\tchild1", "\tchild2", "sibling"]
+		let lines = ["parent", "\tchild1", "\tchild2", "sibling"]
 		let (result, removed) = try Todo.remove(1, from: lines)
-		#expect(removed == "parent")
-		#expect(result  == ["sibling"])
+		let isParent = removed == "parent"
+		#expect(isParent)
+		
+		let isMatch = (result == ["sibling"])
+		#expect(isMatch)
 	}
 	
 	@Test func `Removing parent cascades to deep descendants`() throws {
-		let lines  = ["parent", "\tchild", "\t\tgrandchild", "sibling"]
+		let lines = ["parent", "\tchild", "\t\tgrandchild", "sibling"]
 		let (result, removed) = try Todo.remove(1, from: lines)
 		#expect(removed == "parent")
-		#expect(result  == ["sibling"])
+		
+		let isMatch = (result == ["sibling"])
+		#expect(isMatch)
 	}
 	
 	@Test func `Removing a leaf node deletes only that single line`() throws {
-		let lines  = ["parent", "\tchild1", "\tchild2"]
+		let lines = ["parent", "\tchild1", "\tchild2"]
 		let (result, removed) = try Todo.remove(2, from: lines)
 		#expect(removed == "child1")
-		#expect(result  == ["parent", "\tchild2"])
+		
+		let isMatch = (result == ["parent", "\tchild2"])
+		#expect(isMatch)
 	}
 	
 	@Test func `Removing a flat node deletes only that line`() throws {
 		let lines = ["first", "second", "third"]
 		let (result, removed) = try Todo.remove(2, from: lines)
 		#expect(removed == "second")
-		#expect(result  == ["first", "third"])
+		
+		let isMatch = (result == ["first", "third"])
+		#expect(isMatch)
 	}
 	
 	@Test func `Removing an out of bounds line throws an error`() throws {
@@ -178,29 +183,30 @@ extension TodoTests {
 		}
 	}
 	
-	// MARK: Integration – remove -r strips children from file
-	
 	@Test func `Remove flag deletes parent and cascades to all children in file`() throws {
 		try IO.write(["parent", "\tchild1", "\tchild2", "sibling"], to: todo_path)
 		let removed = try remove(1, from: todo_path)
 		#expect(removed == "parent")
-		#expect(IO.read(todo_path) == ["sibling"])
+		
+		let isMatch = (IO.read(todo_path) == ["sibling"])
+		#expect(isMatch)
 	}
 	
 	@Test func `Remove flag deletes only the targeted flat node in file`() throws {
 		try IO.write(["first", "second", "third"], to: todo_path)
 		let removed = try remove(2, from: todo_path)
 		#expect(removed == "second")
-		#expect(IO.read(todo_path) == ["first", "third"])
+		
+		let isMatch = (IO.read(todo_path) == ["first", "third"])
+		#expect(isMatch)
 	}
-	
-	// MARK: Integration – complete -f moves parent to done and removes children
 	
 	@Test func `Completing parent logs parent and purges its tree from tasks`() throws {
 		try IO.write(["parent", "\tchild1", "\tchild2", "sibling"], to: todo_path)
 		try complete_todo(line: 1, launch_editor: false, todo_fpath: todo_path, done_fpath: done_path, repo: nil)
 		
-		#expect(IO.read(todo_path) == ["sibling"])
+		let isMatch = (IO.read(todo_path) == ["sibling"])
+		#expect(isMatch)
 		
 		let done = IO.read(done_path)
 		#expect(done.count == 1)
@@ -211,7 +217,8 @@ extension TodoTests {
 		try IO.write(["parent", "\tchild", "sibling"], to: todo_path)
 		try complete_todo(line: 2, launch_editor: false, todo_fpath: todo_path, done_fpath: done_path, repo: nil)
 		
-		#expect(IO.read(todo_path) == ["parent", "sibling"])
+		let isMatch = (IO.read(todo_path) == ["parent", "sibling"])
+		#expect(isMatch)
 		
 		let done = IO.read(done_path)
 		#expect(done.count == 1)
@@ -222,7 +229,8 @@ extension TodoTests {
 		try IO.write(["parent", "\tchild", "\t\tgrandchild", "sibling"], to: todo_path)
 		try complete_todo(line: 1, launch_editor: false, todo_fpath: todo_path, done_fpath: done_path, repo: nil)
 		
-		#expect(IO.read(todo_path) == ["sibling"])
+		let isMatch = (IO.read(todo_path) == ["sibling"])
+		#expect(isMatch)
 		
 		let done = IO.read(done_path)
 		#expect(done.count == 1)
@@ -232,18 +240,19 @@ extension TodoTests {
 
 extension TodoTests {
 	@Test func `Gets high level list`() throws {
-		
 		let resolvedTmp = URL(fileURLWithPath: tmp).resolvingSymlinksInPath().path
 		
 		try create_list(["first", "second"], at: "list/1")
 		try create_list(["do something"], at: "list/nested/1")
 		try create_list(["another list"], at: "another/1")
 		
-		#expect(Todo.get_all(from: resolvedTmp) == [
+		let expected: [Todo.p] = [ // Tipo explícito para agilizar el análisis del compilador
 			Todo.p(path: "another/1", todos: ["1 another list"]),
 			Todo.p(path: "list/1", todos: ["1 first", "2 second"]),
 			Todo.p(path: "list/nested/1", todos: ["1 do something"])
-		])
+		]
+		let isMatch = (Todo.get_all(from: resolvedTmp) == expected)
+		#expect(isMatch)
 	}
 	
 	private func create_list(_ list: [String], at dir_path: String) throws  {
@@ -252,4 +261,3 @@ extension TodoTests {
 		try IO.write(list, to: path)
 	}
 }
-
