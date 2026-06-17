@@ -22,7 +22,7 @@ struct CLI {
 	let args: [String]
 	
 	func run() throws {
-		let repo       = g ? nil : VCS.get()
+		let repo       = g ? nil : VCS.get(from: FileManager.default.currentDirectoryPath)
 		let todo_fpath = g ? global.todo : todo_fpath(repo_dir: repo?.dir)
 		let done_fpath = g ? global.done : done_fpath(repo_dir: repo?.dir)
 		

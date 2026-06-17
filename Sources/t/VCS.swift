@@ -27,8 +27,4 @@ enum VCS {
 		default: return nil
 		}
 	}
-	
-	static func get() -> (dir: String, vcs: String)? {
-		get(from: FileManager.default.currentDirectoryPath)
-	}
 }
