@@ -205,15 +205,6 @@ let getOutput: (() -> Void) -> [String] = { block in
     return output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init).dropLast()
 }
 
-let add: (SUT, String, Int) -> Void = { sut, todo, expectedIdx in
-    let output = getOutput {
-        try! sut.execute(["add", todo])
-    }
-    
-    let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
-    assert(disk == "Comprar leche\n")
-    assert(output.first == "\(expectedIdx) Comprar leche")
-}
 
 let integrationTest: () = {
     
