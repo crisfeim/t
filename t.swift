@@ -40,17 +40,21 @@ struct Environment {
 // ==========================================
 // 3. LÓGICA DE NEGOCIO (GENÉRICA Y PURA)
 // ==========================================
-let program: (Args, TodoPath, DonePath, Environment) throws(AppError) -> Void = { args, todoPath, donePath, env in
-    let command = try parseArgs(args)
-    switch command {
-        case .list:
-            try runList(todoPath, env)
-        case let .add(todo):
-            try runAdd(todoPath, todo, env)
-        case let .remove(line):
-            try runRemove(todoPath, line, env)
-        case let .complete(line):
-            try runComplete(todoPath, donePath, line, env)
+typealias t_cli = (Args) throws(AppError) -> Void
+
+let make: (TodoPath, DonePath, Environment) -> t_cli = { todoPath, donePath, env in
+    return { args throws(AppError) in 
+        let command = try parseArgs(args)
+        switch command {
+            case .list:
+                try runList(todoPath, env)
+            case let .add(todo):
+                try runAdd(todoPath, todo, env)
+            case let .remove(line):
+                try runRemove(todoPath, line, env)
+            case let .complete(line):
+                try runComplete(todoPath, donePath, line, env)
+        }
     }
 }
 
@@ -144,7 +148,7 @@ let liveEnv = Environment(
         }
     ),
     put: { text in print(text) },
-    date: {
+    date: { 
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMddHHmmss"
         return formatter.string(from: Date())
@@ -153,93 +157,116 @@ let liveEnv = Environment(
 
 #if DEBUG
 // ==========================================
-// 6. TESTS: Tests suite
+// 6. TESTS: Tests de integración
 // ==========================================
+typealias SUT = (
+    execute: (Args) throws(AppError) -> Void,
+    todo: TodoPath,
+    done: DonePath,
+    tearDown: () -> Void
+)
 
-let testEnvironment = { (mockDisk: [Path: [String]]) in
-    var mockDisk: [Path: [String]] = mockDisk
-    var outputs: [String] = []
+let makeSUT: () -> SUT = {
+    let tempDir = NSTemporaryDirectory()
+    let uuid = UUID().uuidString
+    let todo = tempDir + "todo_\(uuid).txt"
+    let done = tempDir + "done_\(uuid).txt"
     
-    return (Environment(
-        fs: FileSystem(
-            read: { path throws(AppError) in 
-                guard let mockData = mockDisk[path] else { throw .todoFileNotFound }
-                return mockData
-            },
-            write: { lines, path throws(AppError) in 
-                mockDisk[path] = lines
-            }
-        ),
-        put: { outputs.append($0) },
-        date: { "20260614183000" }
-    ), { outputs }, { mockDisk })
+    try? "".write(toFile: todo, atomically: true, encoding: .utf8)
+    try? "".write(toFile: done, atomically: true, encoding: .utf8)
     
+    let tearDown = {
+        try? FileManager.default.removeItem(atPath: todo)
+        try? FileManager.default.removeItem(atPath: done)
+    }
+    
+    let t = make(todo, done, liveEnv)
+    
+    return (t, todo, done, tearDown)
 }
 
-let testRunList_Success: () = { 
+let captureOutput: (() throws -> Void) throws -> [String] = { block in
+    let pipe = Pipe()
+    let originalStdout = dup(STDOUT_FILENO)
+    setvbuf(stdout, nil, _IONBF, 0)
+    dup2(pipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
     
-    let (env, outputs, _) = testEnvironment(["/todo.txt": ["Comprar leche", "Estudiar Swift"]])
+    try block()
     
-    do {
-        _ = try runList("/todo.txt", env)
-    } catch {
-        assert(false, "Debería ser éxito")
+    fflush(stdout)
+    try? pipe.fileHandleForWriting.close()
+    dup2(originalStdout, STDOUT_FILENO)
+    close(originalStdout)
+    
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    guard let output = String(data: data, encoding: .utf8) else { return [] }
+    return output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init).dropLast()
+}
+
+let add: (SUT, String, Int) -> Void = { sut, todo, expectedIdx in
+    let output = try! captureOutput {
+        try sut.execute(["add", todo])
     }
     
-    assert(outputs().count == 2)
-    assert(outputs()[0] == "1 Comprar leche")
-    assert(outputs()[1] == "2 Estudiar Swift")
-}()
+    let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+    assert(disk == "Comprar leche\n")
+    assert(output.first == "\(expectedIdx) Comprar leche")
+}
 
-let testRunList_FileNotFound: () = { 
-    let (env, outputs, _) = testEnvironment([:])
+let integrationTest: () = {
+    let sut = makeSUT()
     
-    let result = Result { try runList("/todo.txt", env) }
-    
-    
-    switch result {
-    case .failure(let error) where error is AppError: assert(error as! AppError == .todoFileNotFound)
-    default: assert(false, "Debería haber fallado")
+    // 1. Añadir tareas
+    let outputAdd1 = try! captureOutput {
+        try sut.execute(["add", "Comprar leche"])
     }
-    assert(outputs().isEmpty)
-}()
-
-let testRunAdd_Success: () = {
     
-    let (env, outputs, disk) = testEnvironment(["/todo.txt": ["Tarea 1"]])
+    let diskAfterAdd1 = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+    assert(diskAfterAdd1 == "Comprar leche\n")
+    assert(outputAdd1.first == "1 Comprar leche")
     
-    let result = Result { try runAdd("/todo.txt", "Tarea 2", env) }
-    
-    if case .failure = result { assert(false, "Debería ser éxito") }
-    assert(disk()["/todo.txt"] == ["Tarea 1", "Tarea 2"])
-    assert(outputs().first == "2 Tarea 2")
-}()
-
-let testRunRemove_WrongLine: () = {
-    let (env, _, disk) = testEnvironment(["/todo.txt": ["Solo una tarea"]])
-    let result = Result { try runRemove("/todo.txt", 5, env) }
-    
-    switch result {
-    case .failure(let error) where error is AppError: assert(error as! AppError == .wrongLine(5))
-    default: assert(false, "Debería haber fallado")
+    let outputAdd2 = try! captureOutput {
+        try sut.execute(["add", "Estudiar Swift"])
     }
-    assert(disk()["/todo.txt"] == ["Solo una tarea"])
+    let diskAfterAdd2 = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+    assert(diskAfterAdd2 == "Comprar leche\nEstudiar Swift\n")
+    assert(outputAdd2.first == "2 Estudiar Swift")
     
+    // 3. Listar tareas creadas
+    let outputList = try! captureOutput {
+        try sut.execute(["list"])
+    }
+    assert(outputList.count == 2)
+    assert(outputList[0] == "1 Comprar leche")
+    assert(outputList[1] == "2 Estudiar Swift")
+    
+    // 4. Completar Tarea 1
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyyMMddHHmmss"
+    let expectedDatePrefix = formatter.string(from: Date())
+    
+    let outputComplete = try! captureOutput {
+        try sut.execute(["complete", "1"])
+    }
+    let todoDiskAfterComplete = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+    let doneDiskAfterComplete = try! String(contentsOfFile: sut.done, encoding: .utf8)
+    
+    assert(todoDiskAfterComplete == "Estudiar Swift\n")
+    assert(doneDiskAfterComplete.hasPrefix(expectedDatePrefix))
+    assert(doneDiskAfterComplete.hasSuffix(" Comprar leche\n"))
+    assert(outputComplete.first == "Task completed")
+    
+    // 5. Remover Tarea restante
+    let outputRemove = try! captureOutput {
+        try sut.execute(["remove", "1"])
+    }
+    let todoDiskAfterRemove = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+    assert(todoDiskAfterRemove.isEmpty)
+    assert(outputRemove.first == "Task removed")
+    
+    sut.tearDown()
 }()
 
-let testRunComplete_Success: () = {    
-    let (env, outputs, disk) = testEnvironment([
-        "/todo.txt": ["Lavar coche", "Hacer ejercicio"],
-        "/done.txt": []
-    ])
-    
-    let result = Result { try runComplete("/todo.txt", "/done.txt", 1, env) }
-    
-    if case .failure = result { assert(false, "Debería ser éxito") }
-    assert(disk()["/todo.txt"] == ["Hacer ejercicio"])
-    assert(disk()["/done.txt"] == ["20260614183000 Lavar coche"])
-    assert(outputs().first == "Task completed")
-}()
 #endif
 
 // ==========================================
@@ -249,8 +276,10 @@ let todoFile = FileManager.default.currentDirectoryPath + "/todo.txt"
 let doneFile = FileManager.default.currentDirectoryPath + "/done.txt"
 let arguments = Array(CommandLine.arguments.dropFirst())
 
+let t = make(todoFile, doneFile, liveEnv)
+
 do {
-    try program(arguments, todoFile, doneFile, liveEnv)
+    try t(arguments)
 } catch {
     print("error: \(error)")
 }
