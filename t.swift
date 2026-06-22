@@ -91,7 +91,7 @@ let runComplete: (TodoPath, DonePath, Int, Environment) throws(AppError) -> Void
     let todos = try env.fs.read(todoPath)
     guard let (removed, rest) = todos.removing(at: line - 1) else { throw AppError.wrongLine(line) }
     try env.fs.write(rest, todoPath)
-    let done = try env.fs.read(donePath)
+    let done = (try? env.fs.read(donePath)) ?? []
     try env.fs.write(done + [env.date + " " + removed], donePath)
     env.put("Task completed")
 }
@@ -173,7 +173,6 @@ let makeSUT: (@escaping () -> Date) -> SUT = { now in
     let done = tempDir + "done_\(uuid).txt"
     
     try? "".write(toFile: todo, atomically: true, encoding: .utf8)
-    try? "".write(toFile: done, atomically: true, encoding: .utf8)
     
     let tearDown = {
         try? FileManager.default.removeItem(atPath: todo)
