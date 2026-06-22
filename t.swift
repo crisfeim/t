@@ -36,10 +36,12 @@ struct Environment {
     let put: (String) -> Void
     var now: () -> Date
     
-    var date: String {
+    var date: String { Environment.formatter.string(from: now()) }
+    
+    static var formatter:  DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMddHHmmss"
-        return formatter.string(from: now())
+        return formatter
     }
 }
 
@@ -234,9 +236,7 @@ let integrationTest: () = {
     
     // 4. Completar Tarea 1
     do {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMddHHmmss"
-        let expectedDatePrefix = formatter.string(from: now)
+        let expectedDatePrefix = Environment.formatter.string(from: now)
         
         let output = getOutput { try! sut.execute(["complete", "1"]) }
         let todo = try! String(contentsOfFile: sut.todo, encoding: .utf8)
