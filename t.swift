@@ -16,8 +16,7 @@ typealias TodoPath = Path
 typealias DonePath = Path
 
 enum AppError: Error, Equatable {
-    case todoFileNotFound
-    case doneFileNotFound
+    case fileNotFound
     case wrongLine(Int)
     case conflictingFlags
     case unhandledFlag
