@@ -15,11 +15,48 @@ typealias Path = String
 typealias TodoPath = Path
 typealias DonePath = Path
 
-enum AppError: Error, Equatable {
-    case fileNotFound
+enum AppError: Error {
     case wrongLine(Int)
     case conflictingFlags
     case unhandledFlag
+    case fileSystem(FileSystemError)
+    
+    enum FileSystemError {
+        case notFound
+        case permissionDenied
+        case diskFull    
+        case unknownIO(String)
+    }
+}
+
+extension AppError {
+    static func map(_ error: Error) -> AppError {
+        AppError.fileSystem(mapToFSError(error))
+    }
+    
+    static func mapToFSError(_ error: Error) -> AppError.FileSystemError {
+        let nsError = error as NSError
+        
+        switch (nsError.domain, nsError.code) {
+        case (NSCocoaErrorDomain, NSFileReadNoSuchFileError), 
+        (NSCocoaErrorDomain, NSFileNoSuchFileError),
+        (NSPOSIXErrorDomain, Int(ENOENT)):
+        return .notFound
+        
+        case (NSCocoaErrorDomain, NSFileWriteNoPermissionError), 
+        (NSCocoaErrorDomain, NSFileReadNoPermissionError),
+        (NSPOSIXErrorDomain, Int(EACCES)), 
+        (NSPOSIXErrorDomain, Int(EPERM)):
+        return .permissionDenied
+        
+        case (NSCocoaErrorDomain, NSFileWriteOutOfSpaceError), 
+        (NSPOSIXErrorDomain, Int(ENOSPC)):
+        return .diskFull
+        
+        default:
+        return .unknownIO(nsError.localizedDescription)
+        }
+    }
 }
 
 // ==========================================
@@ -137,16 +174,20 @@ let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
 let liveEnv = Environment(
     fs: FileSystem(
         read: { path throws(AppError) in
-            guard let content = try? String(contentsOfFile: path, encoding: .utf8) else {
-                throw AppError.fileNotFound
+            do {
+                let content = try String(contentsOfFile: path, encoding: .utf8)
+                let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+                return lines.last == "" ? lines.dropLast().map { $0 } : lines
+            } catch {
+                throw AppError.map(error)
             }
-            let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-            return lines.last == "" ? lines.dropLast().map { $0 } : lines
         },
         write: { lines, path throws(AppError) in
             let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
-            guard (try? content.write(toFile: path, atomically: true, encoding: .utf8)) != nil else {
-                throw AppError.fileNotFound
+            do {
+                try content.write(toFile: path, atomically: true, encoding: .utf8)
+            } catch {
+                throw AppError.map(error)
             }
         }
     ),
