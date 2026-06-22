@@ -90,9 +90,9 @@ let runRemove: (TodoPath, Int, Environment) throws(AppError) -> Void = { path, l
 let runComplete: (TodoPath, DonePath, Int, Environment) throws(AppError) -> Void = { todoPath, donePath, line, env throws(AppError) in
     let todos = try env.fs.read(todoPath)
     guard let (removed, rest) = todos.removing(at: line - 1) else { throw AppError.wrongLine(line) }
-    try env.fs.write(rest, todoPath)
     let done = (try? env.fs.read(donePath)) ?? []
     try env.fs.write(done + [env.date + " " + removed], donePath)
+    try env.fs.write(rest, todoPath)
     env.put("Task completed")
 }
 
