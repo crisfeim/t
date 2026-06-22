@@ -187,13 +187,13 @@ let makeSUT: (@escaping () -> Date) -> SUT = { now in
     return (t, todo, done, tearDown)
 }
 
-let captureOutput: (() throws -> Void) throws -> [String] = { block in
+let captureOutput: (() -> Void) -> [String] = { block in
     let pipe = Pipe()
     let originalStdout = dup(STDOUT_FILENO)
     setvbuf(stdout, nil, _IONBF, 0)
     dup2(pipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
     
-    try block()
+    block()
     
     fflush(stdout)
     try? pipe.fileHandleForWriting.close()
@@ -206,8 +206,8 @@ let captureOutput: (() throws -> Void) throws -> [String] = { block in
 }
 
 let add: (SUT, String, Int) -> Void = { sut, todo, expectedIdx in
-    let output = try! captureOutput {
-        try sut.execute(["add", todo])
+    let output = captureOutput {
+        try! sut.execute(["add", todo])
     }
     
     let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
@@ -222,16 +222,16 @@ let integrationTest: () = {
     
     // 1. Añadir tareas
     do {
-        let output = try! captureOutput {
-            try sut.execute(["add", "Comprar leche"])
+        let output = captureOutput {
+            try! sut.execute(["add", "Comprar leche"])
         }
         
         let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
         assert(disk == "Comprar leche\n")
         assert(output.first == "1 Comprar leche")
         
-        let output2 = try! captureOutput {
-            try sut.execute(["add", "Estudiar Swift"])
+        let output2 = captureOutput {
+            try! sut.execute(["add", "Estudiar Swift"])
         }
         let disk2 = try! String(contentsOfFile: sut.todo, encoding: .utf8)
         assert(disk2 == "Comprar leche\nEstudiar Swift\n")
@@ -240,8 +240,8 @@ let integrationTest: () = {
     
     // 3. Listar tareas creadas
     do {
-        let output = try! captureOutput {
-            try sut.execute(["list"])
+        let output = captureOutput {
+            try! sut.execute(["list"])
         }
         assert(output.count == 2)
         assert(output[0] == "1 Comprar leche")
@@ -254,8 +254,8 @@ let integrationTest: () = {
         formatter.dateFormat = "yyyyMMddHHmmss"
         let expectedDatePrefix = formatter.string(from: now)
         
-        let output = try! captureOutput {
-            try sut.execute(["complete", "1"])
+        let output = captureOutput {
+            try! sut.execute(["complete", "1"])
         }
         let todo = try! String(contentsOfFile: sut.todo, encoding: .utf8)
         let done = try! String(contentsOfFile: sut.done, encoding: .utf8)
@@ -268,9 +268,7 @@ let integrationTest: () = {
     
     // 5. Remover Tarea restante
     do {
-        let output = try! captureOutput {
-            try sut.execute(["remove", "1"])
-        }
+        let output = captureOutput { try! sut.execute(["remove", "1"]) }
         let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
         assert(disk.isEmpty)
         assert(output.first == "Task removed")
