@@ -138,7 +138,7 @@ let liveEnv = Environment(
     fs: FileSystem(
         read: { path throws(AppError) in
             guard let content = try? String(contentsOfFile: path, encoding: .utf8) else {
-                throw AppError.todoFileNotFound
+                throw AppError.fileNotFound
             }
             let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
             return lines.last == "" ? lines.dropLast().map { $0 } : lines
@@ -146,7 +146,7 @@ let liveEnv = Environment(
         write: { lines, path throws(AppError) in
             let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
             guard (try? content.write(toFile: path, atomically: true, encoding: .utf8)) != nil else {
-                throw AppError.todoFileNotFound
+                throw AppError.fileNotFound
             }
         }
     ),
