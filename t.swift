@@ -224,59 +224,61 @@ let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
 // ==========================================
 // 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL
 // ==========================================
-let liveFx = Effects(
-    fs: .init(
-        read: { path throws(AppError) in
-            do {
-                let content = try String(contentsOfFile: path, encoding: .utf8)
-                let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-                return lines.last == "" ? lines.dropLast().map { $0 } : lines
-            } catch {
-                throw AppError.fileSystem(ErrorMapper.map(error))
+extension Effects: Sendable {
+    static let live = Effects(
+        fs: .init(
+            read: { path throws(AppError) in
+                do {
+                    let content = try String(contentsOfFile: path, encoding: .utf8)
+                    let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+                    return lines.last == "" ? lines.dropLast().map { $0 } : lines
+                } catch {
+                    throw AppError.fileSystem(ErrorMapper.map(error))
+                }
+            },
+            write: { lines, path throws(AppError) in
+                let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
+                do {
+                    try content.write(toFile: path, atomically: true, encoding: .utf8)
+                } catch {
+                    throw AppError.fileSystem(ErrorMapper.map(error))
+                }
+            },
+            delete: { path throws(AppError) in
+                do {
+                    try FileManager.default.removeItem(atPath: path)
+                } catch {
+                    throw AppError.fileSystem(ErrorMapper.map(error))
+                }
             }
-        },
-        write: { lines, path throws(AppError) in
-            let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
+        ),
+        put: { text in print(text) },
+        now: { Date() },
+        editor: { tmpPath throws(AppError) in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/vi")
+            process.arguments = [tmpPath]
+            
             do {
-                try content.write(toFile: path, atomically: true, encoding: .utf8)
+                try process.run()
             } catch {
-                throw AppError.fileSystem(ErrorMapper.map(error))
+                throw AppError.editor(ErrorMapper.map(error))
             }
-        },
-        delete: { path throws(AppError) in
-            do {
-                try FileManager.default.removeItem(atPath: path)
-            } catch {
-                throw AppError.fileSystem(ErrorMapper.map(error))
-            }
+            
+            // Put vi in the foreground so it can interact with the terminal
+            tcsetpgrp(STDIN_FILENO, process.processIdentifier)
+            // Wait until vi is done
+            process.waitUntilExit()
+            
+            // Prevent the system from suspending us when taking back the terminal
+            signal(SIGTTOU, SIG_IGN)
+            // Take back the terminal to our program
+            tcsetpgrp(STDIN_FILENO, getpgrp())
+            // Restore default SIGTTOU behaviour
+            signal(SIGTTOU, SIG_DFL)
         }
-    ),
-    put: { text in print(text) },
-    now: { Date() },
-    editor: { tmpPath throws(AppError) in
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/vi")
-        process.arguments = [tmpPath]
-        
-        do {
-            try process.run()
-        } catch {
-            throw AppError.editor(ErrorMapper.map(error))
-        }
-        
-        // Put vi in the foreground so it can interact with the terminal
-        tcsetpgrp(STDIN_FILENO, process.processIdentifier)
-        // Wait until vi is done
-        process.waitUntilExit()
-        
-        // Prevent the system from suspending us when taking back the terminal
-        signal(SIGTTOU, SIG_IGN)
-        // Take back the terminal to our program
-        tcsetpgrp(STDIN_FILENO, getpgrp())
-        // Restore default SIGTTOU behaviour
-        signal(SIGTTOU, SIG_DFL)
-    }
-)
+    )
+}
 
 
 // Helpers
@@ -311,7 +313,7 @@ let makeSUT: (@escaping () -> Date, @escaping (String) throws(AppError) -> Void)
         try? FileManager.default.removeItem(atPath: done)
     }
     
-    let t = make(todo, done, liveFx * { 
+    let t = make(todo, done, .live * { 
         $0.now = now
         $0.editor = editor
     })
@@ -414,7 +416,7 @@ let todoFile = FileManager.default.currentDirectoryPath + "/todo.txt"
 let doneFile = FileManager.default.currentDirectoryPath + "/done.txt"
 let arguments = Array(CommandLine.arguments.dropFirst())
 
-let t = make(todoFile, doneFile, liveFx)
+let t = make(todoFile, doneFile, .live)
 
 do {
     try t(arguments)
