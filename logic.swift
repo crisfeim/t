@@ -24,7 +24,7 @@ let runRemove: (TodoPath, [Int], Effects) throws(T.Error) -> Void = { todoPath, 
 
 let runComplete: (TodoPath, DonePath, Int, Effects) throws(T.Error) -> Void = { todoPath, donePath, line, fx throws(T.Error) in
     let todos = try fx.fs.read(todoPath)
-    guard let (removed, rest) = todos.removing(at: line - 1) else { throw T.Error.wrongLine(line) }
+    guard let (removed, rest) = todos.removing(at: line - 1) else { throw .wrongLine(line) }
     let done = (try? fx.fs.read(donePath)) ?? []
     try fx.fs.write(done + [fx.date + " " + removed], donePath)
     try fx.fs.write(rest, todoPath)
@@ -34,7 +34,7 @@ let runComplete: (TodoPath, DonePath, Int, Effects) throws(T.Error) -> Void = { 
 let runEdit: (TodoPath, Int, Effects) throws(T.Error) -> Void = { todoPath, line, fx throws(T.Error) in
     let todos = try fx.fs.read(todoPath)
     let idx = line - 1
-    guard todos.indices.contains(idx) else { throw T.Error.wrongLine(line) }
+    guard todos.indices.contains(idx) else { throw .wrongLine(line) }
     
     let tmpPath = NSTemporaryDirectory() + "todo_edit_\(UUID().uuidString).txt"
     defer { try? fx.fs.delete(tmpPath) }
@@ -61,17 +61,17 @@ let runListByProject: (String, Effects) throws(T.Error) -> Void = { projectName,
     let todoFiles = try fx.fs.all()
     
     guard let first = todoFiles.first(where: { $0.contains(projectName) }) else {
-        throw T.Error.unexistentProject(wrongProject: projectName, available: todoFiles)
+        throw .unexistentProject(wrongProject: projectName, available: todoFiles)
     }
     
     try runList(first, fx)
 }
 
 let runCommit: (Int, TodoPath, DonePath, Bool, Effects) throws(T.Error) -> Void = { id, todoPath, donePath, launchingEditor, fx throws(T.Error) in
-    guard let repo = fx.vcs.get(fx.currentDirectory()) else { throw T.Error.vcs("Not a repository") }
+    guard let repo = fx.vcs.get(fx.currentDirectory()) else { throw .vcs("Not a repository") }
     
     let todos = try fx.fs.read(todoPath)
-    guard let (removedTask, rest) = todos.removing(at: id - 1) else { throw T.Error.wrongLine(id) }
+    guard let (removedTask, rest) = todos.removing(at: id - 1) else { throw .wrongLine(id) }
     
     let finalMessage: String
     
