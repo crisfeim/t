@@ -209,7 +209,7 @@ extension T.Error {
             case let .unexistentProject(wrongProject, available):
             return "Project doesn't exist: \(wrongProject), available locations: \(available.reduce("") { acc, next in acc + "\n  " + next })"
             case let .vcs(description): 
-            return "Commit error \(description)"
+            return "Commit error: \(description)"
              
         }
     }

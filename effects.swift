@@ -90,6 +90,21 @@ struct VCS {
         
             do { try process.run() } catch { throw .commit(error.localizedDescription) }
             process.waitUntilExit()
+            
+            guard process.terminationStatus == 0 else {
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorMsg = String(data: errorData, encoding: .utf8) ?? "unknown error"
+                throw .commit(errorMsg)
+            }
+        }
+    }
+}
+
+extension VCS.Error: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .unhandled: return "unsupported VCS"
+        case let .commit(msg): return msg
         }
     }
 }
