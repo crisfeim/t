@@ -11,6 +11,7 @@ enum Command {
     case edit(Int)
     case all
     case project(TodoPath)
+    case commit(line: Int, launchingEditor: Bool)
 }
 
 typealias Args = [String]
@@ -25,6 +26,7 @@ enum AppError: Error {
     case fileSystem(FileSystemError)
     case editor(FileSystemError)
     case unexistentProject(wrongProject: String, available: [TodoPath])
+    case vcs(String)
     
     enum FileSystemError {
         case notFound
@@ -32,6 +34,11 @@ enum AppError: Error {
         case diskFull    
         case unknownIO(String)
     }
+}
+
+enum VersionControlSystem: String {
+    case git
+    case fossil
 }
 
 enum ErrorMapper {
@@ -85,6 +92,8 @@ extension AppError {
             return "editor failed: \(description)"
             case let .unexistentProject(wrongProject, available):
             return "Project doesn't exist: \(wrongProject), available locations: \(available.reduce("") { acc, next in acc + "\n  " + next })"
+            case let .vcs(description): 
+            return "Commit error \(description)"
              
         }
     }
@@ -96,6 +105,7 @@ extension AppError {
 
 struct Effects {
     let fs: FileSystem
+    let vcs: VersionControl
     let put: (String) -> Void
     var now: () -> Date
     var editor: (Path) throws(AppError) -> Void
@@ -106,6 +116,11 @@ struct Effects {
         let write: ([String], Path) throws(AppError) -> Void
         let delete: (Path) throws(AppError) -> Void
         let all: () throws(AppError) -> [Path]
+    }
+    
+    struct VersionControl {
+        let get: () -> (dir: String, type: VersionControlSystem)?
+        let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void
     }
 }
 
@@ -123,6 +138,7 @@ let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
             case let .complete(line): try runComplete(todoPath, donePath, line, fx)
             case let .edit(line): try runEdit(todoPath, line, fx)
             case let .project(todoPath): try runListByProject(todoPath, fx)
+            case let .commit(todoLine, launchingEditor): try runCommit(todoLine, todoPath, donePath, launchingEditor, fx)
             case .all: try runAll(fx)
         }
     }
@@ -167,6 +183,19 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
         case "project":
         guard args.count == 2 else { throw AppError.conflictingFlags }
         return .project(args[1])
+        
+        case "commit":
+        if args.count == 3, let line = Int(args[2]) {
+            guard args[1] == "editor" else { throw AppError.conflictingFlags }
+            return .commit(line: line, launchingEditor: true)
+        }
+        
+        if args.count == 2, let line = Int(args[1]) {
+            return .commit(line: line, launchingEditor: false)
+        }
+        
+        throw AppError.conflictingFlags
+        
         default:
         throw AppError.unhandledFlag
     }
@@ -237,6 +266,37 @@ let runListByProject: (String, Effects) throws(AppError) -> Void = { projectName
     try runList(first, fx)
 }
 
+let runCommit: (Int, TodoPath, DonePath, Bool, Effects) throws(AppError) -> Void = { id, todoPath, donePath, launchingEditor, fx throws(AppError) in
+    guard let repo = fx.vcs.get() else { throw AppError.vcs("Not a repository") }
+    
+    let todos = try fx.fs.read(todoPath)
+    guard let (removedTask, rest) = todos.removing(at: id - 1) else { throw AppError.wrongLine(id) }
+    
+    let finalMessage: String
+    
+    if launchingEditor {
+        let tmpPath = NSTemporaryDirectory() + "t_commit_\(UUID().uuidString).txt"
+        try fx.fs.write([removedTask], tmpPath)
+        defer { try? fx.fs.delete(tmpPath) }
+        
+        try fx.editor(tmpPath)
+        
+        let lines = try fx.fs.read(tmpPath)
+        let msg = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !msg.isEmpty else { throw AppError.vcs("Commit aborted due to empty message") }
+        finalMessage = msg
+    } else {
+        finalMessage = removedTask
+    }
+    
+    let done = (try? fx.fs.read(donePath)) ?? []
+    try fx.fs.write(done + [fx.date + " " + removedTask], donePath)
+    try fx.fs.write(rest, todoPath)
+    
+    try fx.vcs.commit(finalMessage, repo.type, repo.dir)
+    fx.put("Task completed and committed successfully via \(repo.type)")
+}
+
 // ==========================================
 // 4. EXTENSIONES
 // ==========================================
@@ -293,69 +353,102 @@ extension Effects: @unchecked Sendable {
             all: { () throws(AppError) in
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/find")
-                
                 let homeDir = NSHomeDirectory()
                 process.currentDirectoryPath = homeDir
-                
                 process.arguments = [
-                    ".",
-                    "(", "-path", "./Library", "-o", "-path", "./Music", "-o", "-path", "./Pictures", "-o", "-path", "./Movies", "-o", "-path", "./Documents", "-o", "-path", "./Library/*", ")", "-prune",
-                    "-o",
-                    "-type", "d", "-path", "*/.*", "-prune",
-                    "-o",
-                    "-type", "f", "-name", ".todo*", "-print"
+                    ".", "(", "-path", "./Library", "-o", "-path", "./Music", "-o", "-path", "./Pictures", "-o", "-path", "./Movies", "-o", "-path", "./Documents", "-o", "-path", "./Library/*", ")", "-prune",
+                    "-o", "-type", "d", "-path", "*/.*", "-prune", "-o", "-type", "f", "-name", ".todo*", "-print"
                 ]
-                
                 let pipe = Pipe()
                 process.standardOutput = pipe
                 process.standardError = Pipe()
-                
                 do {
                     try process.run()
                     process.waitUntilExit()
                 } catch {
                     throw AppError.fileSystem(.unknownIO("Find failed: \(error.localizedDescription)"))
                 }
-                
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 guard let output = String(data: data, encoding: .utf8) else { 
                     throw AppError.fileSystem(.unknownIO("Invalid UTF-8 output from find command"))
                 }
-                
-                return output
-                .split(separator: "\n")
-                .map(String.init)
-                .map { $0.replacingOccurrences(of: ".", with: homeDir, options: .anchored) } 
+                return output.split(separator: "\n").map(String.init).map { $0.replacingOccurrences(of: ".", with: homeDir, options: .anchored) }
             }
         ),
+        vcs: .init(
+            get: {
+                let fm = FileManager.default
+                var current = fm.currentDirectoryPath
+                var fossilRoot: String? = nil
+                var gitRoot: String? = nil
+                while true {
+                    if fossilRoot == nil && fm.fileExists(atPath: current + "/.fslckout") { fossilRoot = current }
+                    if gitRoot == nil && fm.fileExists(atPath: current + "/.git") { gitRoot = current }
+                    let parent = (current as NSString).deletingLastPathComponent
+                    if parent == current { break }
+                    current = parent
+                }
+                switch (fossilRoot, gitRoot) {
+                    case (let f?, let g?): return f.count >= g.count ? (f, .fossil) : (g, .git)
+                    case (let f?, nil): return (f, .fossil)
+                    case (nil, let g?): return (g, .git)
+                    default: return nil
+                }
+            },
+            commit: { message, type, dir throws(AppError) in
+                    let commands: [[String]] = switch type {
+                        case .git:
+                            [
+                                ["git", "add", "-A"],
+                                ["git", "commit", "-m", message]
+                            ]
+                        case .fossil:
+                            [
+                                ["fossil", "addremove"],
+                                ["fossil", "commit", "-m", message]
+                            ]
+                    }
+                
+                    for args in commands {
+                        let process = Process()
+                        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+                        process.arguments = args
+                        process.currentDirectoryPath = dir
+                        
+                        let pipe = Pipe()
+                        let errorPipe = Pipe()
+                        process.standardOutput = pipe
+                        process.standardError = errorPipe
+                        
+                        do {
+                            try process.run()
+                            process.waitUntilExit()
+                        } catch {
+                            throw AppError.vcs(error.localizedDescription)
+                        }
+                        
+                        if process.terminationStatus != 0 {
+                            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                            let errorMsg = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .newlines) ?? "VCS command failed"
+                            throw AppError.vcs(errorMsg)
+                        }
+                    }
+                }),
         put: { text in print(text) },
         now: { Date() },
         editor: { tmpPath throws(AppError) in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/vi")
             process.arguments = [tmpPath]
-            
-            do {
-                try process.run()
-            } catch {
-                throw AppError.editor(ErrorMapper.map(error))
-            }
-            
-            // Put vi in the foreground so it can interact with the terminal
+            do { try process.run() } catch { throw AppError.editor(ErrorMapper.map(error)) }
             tcsetpgrp(STDIN_FILENO, process.processIdentifier)
-            // Wait until vi is done
             process.waitUntilExit()
-            
-            // Prevent the system from suspending us when taking back the terminal
             signal(SIGTTOU, SIG_IGN)
-            // Take back the terminal to our program
             tcsetpgrp(STDIN_FILENO, getpgrp())
-            // Restore default SIGTTOU behaviour
             signal(SIGTTOU, SIG_DFL)
         }
     )
 }
-
 
 #if DEBUG
 // ==========================================
