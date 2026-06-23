@@ -94,16 +94,21 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
     }
 }
 
+func wrap<T, R>(method: @escaping (T) throws -> R, appError: @escaping (Error) -> AppError) -> (T) throws(AppError) -> R {
+    return { param throws(AppError) in
+        do {
+            return try method(param)
+        } catch {
+            throw appError(error)
+        }
+    }
+}
 
 extension Effects {
     static let live = Effects(
         fs : FileSystem(
             read: { path throws(AppError) in 
-                do {
-                    return try IO.shared.read(path)
-                } catch {
-                    throw .fileSystem(ErrorMapper.map(error))
-                }
+                return try wrap(method: IO.shared.read, appError: { .fileSystem(ErrorMapper.map($0))})(path)
             },
             write: { lines, todoPath throws(AppError) in do {
                 try IO.shared.write(lines, todoPath)
