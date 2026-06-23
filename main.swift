@@ -116,14 +116,14 @@ func |><A, B>(lhs: A, rhs: (A) -> B) -> B {
 extension Effects {
     static let live = Effects(
         fs: FileSystem(
-            read  : IO.shared.read   |> rethrow({ .fileSystem(ErrorMapper.map($0)) }),
-            write : IO.shared.write  |> rethrow({ .fileSystem(ErrorMapper.map($0)) }),
-            delete: IO.shared.delete |> rethrow({ .fileSystem(ErrorMapper.map($0)) }),
-            all   : IO.shared.all    |> rethrow({ .fileSystem(.unknownIO("Find failed: \($0.localizedDescription)")) })
+            read  : IO.shared.read   |> rethrow(AppError.fs),
+            write : IO.shared.write  |> rethrow(AppError.fs),
+            delete: IO.shared.delete |> rethrow(AppError.fs),
+            all   : IO.shared.all    |> rethrow(AppError.fsUnknown)
         ),
         vcs: VersionControl(
             get: { path in VCS.shared.get(path) }, 
-            commit: VCS.shared.commit |> rethrow({ .vcs($0.localizedDescription) })
+            commit: VCS.shared.commit |> rethrow(AppError.vcs)
         ),
         put: { text in print(text) },
         currentDirectory: { FileManager.default.currentDirectoryPath },

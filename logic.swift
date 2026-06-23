@@ -150,6 +150,12 @@ enum AppError: Error {
     }
 }
 
+extension AppError {
+    static let fs  = { AppError.fileSystem(ErrorMapper.map($0)) }
+    static let fsUnknown = { (e: Error) in AppError.fileSystem(.unknownIO(e.localizedDescription)) }
+    static let vcs = { (e: Error) in AppError.vcs(e.localizedDescription) }
+}
+
 // MARK: - Error Mapper
 import Foundation
 
