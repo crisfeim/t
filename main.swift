@@ -20,10 +20,11 @@ typealias Path = String
 // ==========================================
 // 3. LÓGICA DE NEGOCIO (GENÉRICA Y PURA)
 // ==========================================
-typealias t_cli = (Args) throws(AppError) -> Void
+
+typealias t_cli = (Args) throws(T.Error) -> Void
 
 let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
-    return { args throws(AppError) in 
+    return { args throws(T.Error) in 
         switch try parseArgs(args, todoPath) {
             case let .list(todoPath): try runList(todoPath, fx)
             case let .add(todo): try runAdd(todoPath, todo, fx)
@@ -38,7 +39,7 @@ let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
 }
 
 
-let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTodoPath throws(AppError) in
+let parseArgs: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath throws(T.Error) in
     guard let first = args.first else { return .list(defaultTodoPath) }
     
     switch first {
@@ -116,19 +117,19 @@ func |><A, B>(lhs: A, rhs: (A) -> B) -> B {
 extension Effects {
     static let live = Effects(
         fs: FileSystem(
-            read  : IO.shared.read   |> rethrow(AppError.fs),
-            write : IO.shared.write  |> rethrow(AppError.fs),
-            delete: IO.shared.delete |> rethrow(AppError.fs),
-            all   : IO.shared.all    |> rethrow(AppError.fsUnknown)
+            read  : IO.shared.read   |> rethrow(T.Error.fs),
+            write : IO.shared.write  |> rethrow(T.Error.fs),
+            delete: IO.shared.delete |> rethrow(T.Error.fs),
+            all   : IO.shared.all    |> rethrow(T.Error.fsUnknown)
         ),
         vcs: VersionControl(
             get: { path in VCS.shared.get(path) }, 
-            commit: VCS.shared.commit |> rethrow(AppError.vcs)
+            commit: VCS.shared.commit |> rethrow(T.Error.vcs)
         ),
         put: { text in print(text) },
         currentDirectory: { FileManager.default.currentDirectoryPath },
         now: { Date() },
-        editor: { tmpPath throws(AppError) in
+        editor: { tmpPath throws(T.Error) in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/vi")
             process.arguments = [tmpPath]
@@ -147,13 +148,13 @@ extension Effects {
 // 6. TESTS: Tests de integración
 // ==========================================
 typealias SUT = (
-    execute: (Args) throws(AppError) -> Void,
+    execute: (Args) throws(T.Error) -> Void,
     todo: TodoPath,
     done: DonePath,
     tearDown: () -> Void
 )
 
-let makeSUT: (@escaping () -> Date, @escaping (String) throws(AppError) -> Void) -> SUT = { now, editor in
+let makeSUT: (@escaping () -> Date, @escaping (String) throws(T.Error) -> Void) -> SUT = { now, editor in
     let tempDir = NSTemporaryDirectory()
     let uuid = UUID().uuidString
     let todo = tempDir + "todo_\(uuid).txt"
