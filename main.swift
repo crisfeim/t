@@ -104,11 +104,6 @@ func rethrow<each T, R, E: Error>(
     }
 }
 
-infix operator |>: MultiplicationPrecedence
-func |><A, B>(lhs: A, rhs: (A) -> B) -> B {
-    rhs(lhs)
-}
-
 extension Effects {
     static let live = Effects(
         fs: FileSystem(

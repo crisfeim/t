@@ -229,9 +229,16 @@ extension Array {
     }
 }
 
+// Asterisk
 infix operator *: MultiplicationPrecedence
 func *<A>(lhs: A, rhs: (inout A) -> Void) -> A {
     var copy = lhs
     rhs(&copy)
     return copy
+}
+
+// Pipe forward
+infix operator |>: MultiplicationPrecedence
+func |><A, B>(lhs: A, rhs: (A) -> B) -> B {
+    rhs(lhs)
 }
