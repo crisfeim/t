@@ -324,8 +324,11 @@ let yyyyMMddHHmmss: DateFormatter = {
 // 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL
 // ==========================================
 
-@MainActor enum IO {
-    static let read = { path throws(AppError) in
+@MainActor struct IO {
+    private init() {}
+    static let shared = IO()
+    
+    let read = { path throws(AppError) in
         do {
             let content = try String(contentsOfFile: path, encoding: .utf8)
             let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
@@ -335,7 +338,7 @@ let yyyyMMddHHmmss: DateFormatter = {
         }
     }
     
-    static let write: ([String], TodoPath) throws(AppError) -> Void = { lines, path throws(AppError) in
+    let write: ([String], TodoPath) throws(AppError) -> Void = { lines, path throws(AppError) in
         let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
         do {
             try content.write(toFile: path, atomically: true, encoding: .utf8)
@@ -344,7 +347,7 @@ let yyyyMMddHHmmss: DateFormatter = {
         }
     }
     
-    static let delete = { path throws(AppError) in
+    let delete = { path throws(AppError) in
         do {
             try FileManager.default.removeItem(atPath: path)
         } catch {
@@ -352,7 +355,7 @@ let yyyyMMddHHmmss: DateFormatter = {
         }
     }
     
-    static let all = { () throws(AppError) in
+    let all = { () throws(AppError) in
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/find")
         let homeDir = NSHomeDirectory()
@@ -379,9 +382,11 @@ let yyyyMMddHHmmss: DateFormatter = {
 }
 
 
-@MainActor enum VCS {
+@MainActor struct VCS {
+    private init() {}
+    static let shared = VCS()
     
-    static let get = { () -> (dir: String, type: VersionControlSystem)? in
+    let get = { () -> (dir: String, type: VersionControlSystem)? in
         let fm = FileManager.default
         var current = fm.currentDirectoryPath
         var fossilRoot: String? = nil
@@ -401,12 +406,11 @@ let yyyyMMddHHmmss: DateFormatter = {
         }
     }
     
-    static let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void = { message, type, dir throws(AppError) in
+    let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void = { message, type, dir throws(AppError) in
         let commands: [[String]] = switch type {
             case .git: [["git", "add", "-A"], ["git", "commit", "-m", message]]
             case .fossil: [["fossil", "addremove"], ["fossil", "commit", "-m", message] ]
         }
-        
         for args in commands {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
@@ -436,8 +440,8 @@ let yyyyMMddHHmmss: DateFormatter = {
 
 @MainActor extension Effects {
     static let live = Effects(
-        fs : FileSystem(read: IO.read, write: IO.write, delete: IO.delete, all: IO.all),
-        vcs: VersionControl(get: VCS.get, commit: VCS.commit),
+        fs : FileSystem(read: IO.shared.read, write: IO.shared.write, delete: IO.shared.delete, all: IO.shared.all),
+        vcs: VersionControl(get: VCS.shared.get, commit: VCS.shared.commit),
         put: { text in print(text) },
         now: { Date() },
         editor: { tmpPath throws(AppError) in
