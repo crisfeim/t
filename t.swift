@@ -115,8 +115,7 @@ typealias t_cli = (Args) throws(AppError) -> Void
 
 let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
     return { args throws(AppError) in 
-        let command = try parseArgs(args)
-        switch command {
+        switch try parseArgs(args) {
             case .list:
             try runList(todoPath, fx)
             case let .add(todo):
@@ -375,8 +374,7 @@ let integrationTest: () = {
         let done = try! String(contentsOfFile: sut.done, encoding: .utf8)
         
         assert(todo == "Estudiar Swift\n")
-        assert(done.hasPrefix(expectedDatePrefix))
-        assert(done.hasSuffix(" Comprar leche\n"))
+        assert(done == "\(expectedDatePrefix) Comprar leche\n")
         assert(output.first == "Task completed")
     }
     
