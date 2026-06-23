@@ -409,8 +409,8 @@ let integrationTest: () = {
 // ==========================================
 // 6. INVOCACIÓN
 // ==========================================
-let todoFile = FileManager.default.currentDirectoryPath + "/todo.txt"
-let doneFile = FileManager.default.currentDirectoryPath + "/done.txt"
+let todoFile = FileManager.default.currentDirectoryPath + "/.tasks"
+let doneFile = FileManager.default.currentDirectoryPath + "/.done"
 let arguments = Array(CommandLine.arguments.dropFirst())
 
 let t = make(todoFile, doneFile, .live)
