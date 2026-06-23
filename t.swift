@@ -299,6 +299,45 @@ typealias SUT = (
     tearDown: () -> Void
 )
 
+let makeSUT: (@escaping () -> Date, @escaping (String) throws(AppError) -> Void) -> SUT = { now, editor in
+    let tempDir = NSTemporaryDirectory()
+    let uuid = UUID().uuidString
+    let todo = tempDir + "todo_\(uuid).txt"
+    let done = tempDir + "done_\(uuid).txt"
+    
+    try? "".write(toFile: todo, atomically: true, encoding: .utf8)
+    
+    let tearDown = {
+        try? FileManager.default.removeItem(atPath: todo)
+        try? FileManager.default.removeItem(atPath: done)
+    }
+    
+    let t = make(todo, done, .live * { 
+        $0.now = now
+        $0.editor = editor
+    })
+    
+    return (t, todo, done, tearDown)
+}
+
+let getOutput: (() -> Void) -> [String] = { block in
+    let pipe = Pipe()
+    let originalStdout = dup(STDOUT_FILENO)
+    setvbuf(stdout, nil, _IONBF, 0)
+    dup2(pipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
+    
+    block()
+    
+    fflush(stdout)
+    try? pipe.fileHandleForWriting.close()
+    dup2(originalStdout, STDOUT_FILENO)
+    close(originalStdout)
+    
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    guard let output = String(data: data, encoding: .utf8) else { return [] }
+    return output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init).dropLast()
+}
+
 let integrationTest: () = {
     
     let now = Calendar.current.date(from: DateComponents(year: 2016, month: 1, day: 1))!
@@ -365,47 +404,6 @@ let integrationTest: () = {
     
     sut.tearDown()
 }()
-
-
-let makeSUT: (@escaping () -> Date, @escaping (String) throws(AppError) -> Void) -> SUT = { now, editor in
-    let tempDir = NSTemporaryDirectory()
-    let uuid = UUID().uuidString
-    let todo = tempDir + "todo_\(uuid).txt"
-    let done = tempDir + "done_\(uuid).txt"
-    
-    try? "".write(toFile: todo, atomically: true, encoding: .utf8)
-    
-    let tearDown = {
-        try? FileManager.default.removeItem(atPath: todo)
-        try? FileManager.default.removeItem(atPath: done)
-    }
-    
-    let t = make(todo, done, .live * { 
-        $0.now = now
-        $0.editor = editor
-    })
-    
-    return (t, todo, done, tearDown)
-}
-
-let getOutput: (() -> Void) -> [String] = { block in
-    let pipe = Pipe()
-    let originalStdout = dup(STDOUT_FILENO)
-    setvbuf(stdout, nil, _IONBF, 0)
-    dup2(pipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
-    
-    block()
-    
-    fflush(stdout)
-    try? pipe.fileHandleForWriting.close()
-    dup2(originalStdout, STDOUT_FILENO)
-    close(originalStdout)
-    
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    guard let output = String(data: data, encoding: .utf8) else { return [] }
-    return output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init).dropLast()
-}
-
 #endif
 
 // ==========================================
