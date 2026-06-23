@@ -94,30 +94,37 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
     }
 }
 
-func wrap<each P, R>(
-    method: @escaping (repeat each P) throws -> R, 
-    appError: @escaping (Error) -> AppError
-) -> (repeat each P) throws(AppError) -> R {
-    return { (param: repeat each P) throws(AppError) in
-        do {
-            return try method(repeat each param)
-        } catch {
-            throw appError(error)
+func rethrow<each T, R>(
+    _ appError: @escaping (Error) -> AppError
+) -> (@escaping (repeat each T) throws -> R) -> (repeat each T) throws(AppError) -> R {
+    return { (method: @escaping (repeat each T) throws -> R) in
+        return { (param: repeat each T) throws(AppError) in
+            do {
+                return try method(repeat each param)
+            } catch {
+                throw appError(error)
+            }
         }
     }
+}
+
+infix operator |>: MultiplicationPrecedence
+func |><A, B>(lhs: A, rhs: (A) -> B) -> B {
+    rhs(lhs)
 }
 
 extension Effects {
     static let live = Effects(
         fs: FileSystem(
-            read: wrap(method: IO.shared.read, appError: { .fileSystem(ErrorMapper.map($0)) }),
-            write: wrap(method: IO.shared.write, appError: { .fileSystem(ErrorMapper.map($0)) }),
-            delete: wrap(method: IO.shared.delete, appError: { .fileSystem(ErrorMapper.map($0)) }),
-            all: wrap(method: IO.shared.all, appError: { .fileSystem(.unknownIO("Find failed: \($0.localizedDescription)")) })
+            read  : IO.shared.read   |> rethrow({ .fileSystem(ErrorMapper.map($0)) }),
+            write : IO.shared.write  |> rethrow({ .fileSystem(ErrorMapper.map($0)) }),
+            delete: IO.shared.delete |> rethrow({ .fileSystem(ErrorMapper.map($0)) }),
+            all   : IO.shared.all    |> rethrow({ .fileSystem(.unknownIO("Find failed: \($0.localizedDescription)")) })
         ),
         vcs: VersionControl(
-            get: { VCS.shared.get($0) }, 
-            commit: wrap(method: VCS.shared.commit, appError: { .vcs($0.localizedDescription) })),
+            get: { path in VCS.shared.get(path) }, 
+            commit: VCS.shared.commit |> rethrow({ .vcs($0.localizedDescription) })
+        ),
         put: { text in print(text) },
         currentDirectory: { FileManager.default.currentDirectoryPath },
         now: { Date() },
