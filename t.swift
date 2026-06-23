@@ -131,8 +131,7 @@ let make: (TodoPath, DonePath, Environment) -> t_cli = { todoPath, donePath, env
 }
 
 let runList: (TodoPath, Environment) throws(AppError) -> Void = { path, env  in
-    let lines = try env.fs.read(path)
-    lines.enumerated()
+    try env.fs.read(path).enumerated()
     .map { idx, content in (idx + 1).description + " " + content }
     .forEach(env.put)
 }
