@@ -98,14 +98,14 @@ struct Effects {
     let put: (String) -> Void
     var now: () -> Date
     var editor: (Path) throws(AppError) -> Void
-    var date: String { Effects.formatter.string(from: now()) }
-    
-    static var formatter:  DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMddHHmmss"
-        return formatter
-    }
+    var date: String { yyyyMMddHHmmss.string(from: now()) }
 }
+
+let yyyyMMddHHmmss: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyyMMddHHmmss"
+    return formatter
+}()
 
 // ==========================================
 // 3. LÓGICA DE NEGOCIO (GENÉRICA Y PURA)
@@ -365,7 +365,7 @@ let integrationTest: () = {
     
     // 4. Completar Tarea 1
     do {
-        let expectedDatePrefix = Effects.formatter.string(from: now)
+        let expectedDatePrefix = yyyyMMddHHmmss.string(from: now)
         
         let output = getOutput { try! sut.execute(["complete", "1"]) }
         let todo = try! String(contentsOfFile: sut.todo, encoding: .utf8)
