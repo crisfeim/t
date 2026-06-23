@@ -23,12 +23,12 @@ enum AppError: Error {
     case wrongLine(Int)
     case conflictingFlags
     case unhandledFlag
-    case fileSystem(FileSystemError)
-    case editor(FileSystemError)
+    case fileSystem(FileSystem)
+    case editor(FileSystem)
     case unexistentProject(wrongProject: String, available: [TodoPath])
     case vcs(String)
     
-    enum FileSystemError {
+    enum FileSystem {
         case notFound
         case permissionDenied
         case diskFull    
@@ -42,7 +42,7 @@ enum VersionControlSystem: String {
 }
 
 enum ErrorMapper {
-    static func map(_ error: Error) -> AppError.FileSystemError {
+    static func map(_ error: Error) -> AppError.FileSystem {
         let nsError = error as NSError
         
         switch (nsError.domain, nsError.code) {
