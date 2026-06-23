@@ -60,6 +60,27 @@ extension AppError {
     }
 }
 
+extension AppError {
+    var message: String {
+        switch self {
+        case let .wrongLine(line):
+            return "line \(line) does not exist"
+        case .conflictingFlags:
+            return "invalid arguments"
+        case .unhandledFlag:
+            return "unknown command"
+        case .fileSystem(.notFound):
+            return "file not found"
+        case .fileSystem(.permissionDenied):
+            return "permission denied"
+        case .fileSystem(.diskFull):
+            return "disk full"
+        case let .fileSystem(.unknownIO(description)):
+            return "\(description)"
+        }
+    }
+}
+
 // ==========================================
 // 2. ESTRUCTURA DEL ENVIRONMENT (INYECCIÓN)
 // ==========================================
@@ -393,7 +414,7 @@ let t = make(todoFile, doneFile, liveEnv)
 do {
     try t(arguments)
 } catch {
-    print("error: \(error)")
+    print(error.message)
 }
 
 
