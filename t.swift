@@ -290,11 +290,11 @@ let runCommit: (Int, TodoPath, DonePath, Bool, Effects) throws(AppError) -> Void
         finalMessage = removedTask
     }
     
+    try fx.vcs.commit(finalMessage, repo.type, repo.dir)
     let done = (try? fx.fs.read(donePath)) ?? []
     try fx.fs.write(done + [fx.date + " " + removedTask], donePath)
     try fx.fs.write(rest, todoPath)
     
-    try fx.vcs.commit(finalMessage, repo.type, repo.dir)
     fx.put("Task completed and committed successfully via \(repo.type)")
 }
 
