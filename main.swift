@@ -94,68 +94,6 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
     }
 }
 
-// ==========================================
-// 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL
-// ==========================================
-
-struct IO {
-    private init() {}
-    static let shared = IO()
-    
-    let read = { path throws(AppError) in
-        do {
-            let content = try String(contentsOfFile: path, encoding: .utf8)
-            let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-            return lines.last == "" ? lines.dropLast().map { $0 } : lines
-        } catch {
-            throw AppError.fileSystem(ErrorMapper.map(error))
-        }
-    }
-    
-    let write: ([String], TodoPath) throws(AppError) -> Void = { lines, path throws(AppError) in
-        let content = lines.isEmpty ? "" : lines.joined(separator: "\n")
-        do {
-            try content.write(toFile: path, atomically: true, encoding: .utf8)
-        } catch {
-            throw AppError.fileSystem(ErrorMapper.map(error))
-        }
-    }
-    
-    let delete = { path throws(AppError) in
-        do {
-            try FileManager.default.removeItem(atPath: path)
-        } catch {
-            throw AppError.fileSystem(ErrorMapper.map(error))
-        }
-    }
-    
-    let all = { () throws(AppError) in
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/find")
-        let homeDir = NSHomeDirectory()
-        process.currentDirectoryPath = homeDir
-        process.arguments = [
-            ".", "(", "-path", "./Library", "-o", "-path", "./Music", "-o", "-path", "./Pictures", "-o", "-path", "./Movies", "-o", "-path", "./Documents", "-o", "-path", "./Library/*", ")", "-prune",
-            "-o", "-type", "d", "-path", "*/.*", "-prune", "-o", "-type", "f", "-name", ".todo*", "-print"
-        ]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            throw AppError.fileSystem(.unknownIO("Find failed: \(error.localizedDescription)"))
-        }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else { 
-            throw AppError.fileSystem(.unknownIO("Invalid UTF-8 output from find command"))
-        }
-        return output.split(separator: "\n").map(String.init).map { $0.replacingOccurrences(of: ".", with: homeDir, options: .anchored) }
-    }
-}
-
-
 struct VCS {
     private init() {}
     static let shared = VCS()
@@ -212,9 +150,28 @@ struct VCS {
     }
 }
 
+
 extension Effects {
     static let live = Effects(
-        fs : FileSystem(read: IO.shared.read, write: IO.shared.write, delete: IO.shared.delete, all: IO.shared.all),
+        fs : FileSystem(
+            read: { path throws(AppError) in 
+                do {
+                    return try IO.shared.read(path)
+                } catch {
+                    throw AppError.fileSystem(ErrorMapper.map(error))
+                }
+            },
+            write: { lines, todoPath throws(AppError) in do {
+                try IO.shared.write(lines, todoPath)
+            } catch {
+                throw AppError.fileSystem(ErrorMapper.map(error))
+            }
+            },
+            delete: { path throws(AppError) in do { try IO.shared.delete(path) } catch { throw AppError.fileSystem(ErrorMapper.map(error)) } }, 
+            all: { () throws(AppError) in do { return try IO.shared.all() } catch {
+                    throw AppError.fileSystem(.unknownIO("Find failed: \(error.localizedDescription)"))
+                } }
+        ),
         vcs: VersionControl(get: VCS.shared.get, commit: VCS.shared.commit),
         put: { text in print(text) },
         currentDirectory: { FileManager.default.currentDirectoryPath },
