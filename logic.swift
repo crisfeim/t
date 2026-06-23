@@ -28,12 +28,6 @@ struct Effects {
     }
 }
 
-let yyyyMMddHHmmss: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyyMMddHHmmss"
-    return formatter
-}()
-
 // MARK: - Logic
 
 let runList: (TodoPath, Effects) throws(T.Error) -> Void = { todoPath, fx  in
@@ -222,6 +216,14 @@ extension T.Error {
 }
 
 // MARK: - Helpers
+
+let yyyyMMddHHmmss: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyyMMddHHmmss"
+    return formatter
+}()
+
+
 extension Array {
     func removing(at idx: Int) -> (removed: Element, rest: [Element])? {
         guard indices.contains(idx) else { return nil }
