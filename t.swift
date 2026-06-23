@@ -398,6 +398,8 @@ let integrationTest: () = {
         
         assert(disk == "tarea editada\n")
         assert(output.first == "Task updated: tarea editada")
+        
+        sut.tearDown()
     }
     
     sut.tearDown()
