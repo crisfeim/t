@@ -380,6 +380,7 @@ let yyyyMMddHHmmss: DateFormatter = {
 
 
 @MainActor enum VCS {
+    
     static let get = { () -> (dir: String, type: VersionControlSystem)? in
         let fm = FileManager.default
         var current = fm.currentDirectoryPath
@@ -402,16 +403,8 @@ let yyyyMMddHHmmss: DateFormatter = {
     
     static let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void = { message, type, dir throws(AppError) in
         let commands: [[String]] = switch type {
-            case .git:
-            [
-                ["git", "add", "-A"],
-                ["git", "commit", "-m", message]
-            ]
-            case .fossil:
-            [
-                ["fossil", "addremove"],
-                ["fossil", "commit", "-m", message]
-            ]
+            case .git: [["git", "add", "-A"], ["git", "commit", "-m", message]]
+            case .fossil: [["fossil", "addremove"], ["fossil", "commit", "-m", message] ]
         }
         
         for args in commands {
