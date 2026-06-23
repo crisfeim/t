@@ -1,8 +1,5 @@
 import Foundation
 
-// ==========================================
-// 1. MODELO DE DATOS Y ERRORES
-// ==========================================
 enum Command {
     case list(TodoPath)
     case add(String)
