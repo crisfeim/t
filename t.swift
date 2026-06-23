@@ -130,23 +130,23 @@ let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
     }
 }
 
-let runList: (TodoPath, Effects) throws(AppError) -> Void = { path, fx  in
-    try fx.fs.read(path).enumerated()
+let runList: (TodoPath, Effects) throws(AppError) -> Void = { todoPath, fx  in
+    try fx.fs.read(todoPath).enumerated()
     .map { idx, content in (idx + 1).description + " " + content }
     .forEach(fx.put)
 }
 
-let runAdd: (TodoPath, String, Effects) throws(AppError) -> Void = { path, todo, fx in
-    let todos = try fx.fs.read(path)
+let runAdd: (TodoPath, String, Effects) throws(AppError) -> Void = { todoPath, todo, fx in
+    let todos = try fx.fs.read(todoPath)
     let updated = todos + [todo]
-    try fx.fs.write(updated, path)
+    try fx.fs.write(updated, todoPath)
     fx.put(updated.count.description + " " + todo)
 }
 
-let runRemove: (TodoPath, Int, Effects) throws(AppError) -> Void = { path, line, fx throws(AppError) in
-    let todos = try fx.fs.read(path)
+let runRemove: (TodoPath, Int, Effects) throws(AppError) -> Void = { todoPath, line, fx throws(AppError) in
+    let todos = try fx.fs.read(todoPath)
     guard let (_, rest) = todos.removing(at: line - 1) else { throw AppError.wrongLine(line) }
-    try fx.fs.write(rest, path)
+    try fx.fs.write(rest, todoPath)
     fx.put("Task removed")
 }
 
@@ -159,8 +159,8 @@ let runComplete: (TodoPath, DonePath, Int, Effects) throws(AppError) -> Void = {
     fx.put("Task completed")
 }
 
-let runEdit: (TodoPath, Int, Effects) throws(AppError) -> Void = { path, line, fx throws(AppError) in
-    let todos = try fx.fs.read(path)
+let runEdit: (TodoPath, Int, Effects) throws(AppError) -> Void = { todoPath, line, fx throws(AppError) in
+    let todos = try fx.fs.read(todoPath)
     let idx = line - 1
     guard todos.indices.contains(idx) else { throw AppError.wrongLine(line) }
     
@@ -175,7 +175,7 @@ let runEdit: (TodoPath, Int, Effects) throws(AppError) -> Void = { path, line, f
     let updated = lines.joined(separator: "\n").trimmingCharacters(in: .newlines)
     
     guard !updated.isEmpty, updated != original else { return fx.put("No changes") }
-    try fx.fs.write(todos * { $0[idx] = updated }, path)
+    try fx.fs.write(todos * { $0[idx] = updated }, todoPath)
     fx.put("Task updated: \(updated)")
 }
 
