@@ -9,6 +9,7 @@ enum Command {
     case remove([Int])
     case complete(Int)
     case edit(Int)
+    case all
 }
 
 typealias Args = [String]
@@ -36,23 +37,23 @@ enum ErrorMapper {
         let nsError = error as NSError
         
         switch (nsError.domain, nsError.code) {
-        case (NSCocoaErrorDomain, NSFileReadNoSuchFileError), 
-        (NSCocoaErrorDomain, NSFileNoSuchFileError),
-        (NSPOSIXErrorDomain, Int(ENOENT)):
-        return .notFound
+            case (NSCocoaErrorDomain, NSFileReadNoSuchFileError), 
+            (NSCocoaErrorDomain, NSFileNoSuchFileError),
+            (NSPOSIXErrorDomain, Int(ENOENT)):
+            return .notFound
             
-        case (NSCocoaErrorDomain, NSFileWriteNoPermissionError), 
-        (NSCocoaErrorDomain, NSFileReadNoPermissionError),
-        (NSPOSIXErrorDomain, Int(EACCES)), 
-        (NSPOSIXErrorDomain, Int(EPERM)):
-        return .permissionDenied
+            case (NSCocoaErrorDomain, NSFileWriteNoPermissionError), 
+            (NSCocoaErrorDomain, NSFileReadNoPermissionError),
+            (NSPOSIXErrorDomain, Int(EACCES)), 
+            (NSPOSIXErrorDomain, Int(EPERM)):
+            return .permissionDenied
             
-        case (NSCocoaErrorDomain, NSFileWriteOutOfSpaceError), 
-        (NSPOSIXErrorDomain, Int(ENOSPC)):
-        return .diskFull
+            case (NSCocoaErrorDomain, NSFileWriteOutOfSpaceError), 
+            (NSPOSIXErrorDomain, Int(ENOSPC)):
+            return .diskFull
             
-        default:
-        return .unknownIO(nsError.localizedDescription)
+            default:
+            return .unknownIO(nsError.localizedDescription)
         }
     }
 }
@@ -60,25 +61,25 @@ enum ErrorMapper {
 extension AppError {
     var message: String {
         switch self {
-        case let .wrongLine(line):
+            case let .wrongLine(line):
             return "line \(line) does not exist"
-        case .conflictingFlags:
+            case .conflictingFlags:
             return "invalid arguments"
-        case .unhandledFlag:
+            case .unhandledFlag:
             return "unknown command"
-        case .fileSystem(.notFound):
+            case .fileSystem(.notFound):
             return "file not found"
-        case .fileSystem(.permissionDenied):
+            case .fileSystem(.permissionDenied):
             return "permission denied"
-        case .fileSystem(.diskFull), .editor(.diskFull):
+            case .fileSystem(.diskFull), .editor(.diskFull):
             return "disk full"
-        case let .fileSystem(.unknownIO(description)):
+            case let .fileSystem(.unknownIO(description)):
             return "\(description)"
-        case .editor(.notFound):
+            case .editor(.notFound):
             return "editor not found"
-        case .editor(.permissionDenied):
+            case .editor(.permissionDenied):
             return "editor permission denied"
-        case let .editor(.unknownIO(description)):
+            case let .editor(.unknownIO(description)):
             return "editor failed: \(description)"
         }
     }
@@ -99,6 +100,7 @@ struct Effects {
         let read: (Path) throws(AppError) -> [String]
         let write: ([String], Path) throws(AppError) -> Void
         let delete: (Path) throws(AppError) -> Void
+        let all: () throws(AppError) -> [Path]
     }
 }
 
@@ -120,6 +122,8 @@ let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
             try runComplete(todoPath, donePath, line, fx)
             case let .edit(line):
             try runEdit(todoPath, line, fx)
+            case .all:
+            try runAll(fx)
         }
     }
 }
@@ -173,6 +177,10 @@ let runEdit: (TodoPath, Int, Effects) throws(AppError) -> Void = { todoPath, lin
     fx.put("Task updated: \(updated)")
 }
 
+let runAll: (Effects) throws(AppError) -> Void = { fx throws(AppError) in
+    try fx.fs.all().forEach(fx.put)
+}
+
 // ==========================================
 // 4. EXTENSIONES Y PARSER AUXILIARES
 // ==========================================
@@ -221,8 +229,12 @@ let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
         
         case "edit":
         guard args.count == 2, let line = Int(args[1])
-            else { throw AppError.conflictingFlags }
-            return .edit(line)
+        else { throw AppError.conflictingFlags }
+        return .edit(line)
+        
+        case "all":
+        guard args.count == 1 else { throw AppError.conflictingFlags }
+        return .all
         
         default:
         throw AppError.unhandledFlag
@@ -257,6 +269,44 @@ extension Effects: @unchecked Sendable {
                 } catch {
                     throw AppError.fileSystem(ErrorMapper.map(error))
                 }
+            },
+            all: { () throws(AppError) in
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/find")
+                
+                let homeDir = NSHomeDirectory()
+                process.currentDirectoryPath = homeDir
+                
+                process.arguments = [
+                    ".",
+                    "(", "-path", "./Library", "-o", "-path", "./Music", "-o", "-path", "./Pictures", "-o", "-path", "./Movies", "-o", "-path", "./Documents", "-o", "-path", "./Library/*", ")", "-prune",
+                    "-o",
+                    "-type", "d", "-path", "*/.*", "-prune",
+                    "-o",
+                    "-type", "f", "-name", ".tasks", "-print"
+                ]
+                
+                let pipe = Pipe()
+                process.standardOutput = pipe
+                process.standardError = Pipe()
+                
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                } catch {
+                    // Al especificar 'as AppError', el compilador sabe que este catch cumple con 'throws(AppError)'
+                    throw AppError.fileSystem(.unknownIO("Find failed: \(error.localizedDescription)")) as AppError
+                }
+                
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                guard let output = String(data: data, encoding: .utf8) else { 
+                    throw AppError.fileSystem(.unknownIO("Invalid UTF-8 output from find command")) as AppError
+                }
+                
+                return output
+                .split(separator: "\n")
+                .map(String.init)
+                .map { $0.replacingOccurrences(of: ".", with: homeDir, options: .anchored) } 
             }
         ),
         put: { text in print(text) },
