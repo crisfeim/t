@@ -43,11 +43,7 @@ struct VCS {
     private init() {}
     static let shared = VCS()
     typealias Path   = String
-    enum System {
-        case git
-        case fossil
-    }
-    
+    typealias System = String
     typealias t = (dir: String, type: System)
     
     let get = { (current: Path) -> t? in
@@ -63,17 +59,23 @@ struct VCS {
             current = parent
         }
         switch (fossilRoot, gitRoot) {
-            case (let f?, let g?): return f.count >= g.count ? (f, .fossil) : (g, .git)
-            case (let f?, nil): return (f, .fossil)
-            case (nil, let g?): return (g, .git)
+            case (let f?, let g?): return f.count >= g.count ? (f, "fossil") : (g, "git")
+            case (let f?, nil): return (f, "fossil")
+            case (nil, let g?): return (g, "git")
             default: return nil
         }
     }
     
-    let commit: (String, System, Path) throws -> Void = { message, type, dir throws in
+    enum Error: Swift.Error {
+        case unhandled
+        case commit(String)
+    }
+    
+    let commit: (String, System, Path) throws(Error) -> Void = { message, type, dir throws(Error) in
         let commands: [[String]] = switch type {
-            case .git: [["git", "add", "-A"], ["git", "commit", "-m", message]]
-            case .fossil: [["fossil", "addremove"], ["fossil", "commit", "-m", message] ]
+            case "git": [["git", "add", "-A"], ["git", "commit", "-m", message]]
+            case "fossil": [["fossil", "addremove"], ["fossil", "commit", "-m", message] ]
+            default: throw .unhandled
         }
         for args in commands {
             let process = Process()
@@ -86,7 +88,7 @@ struct VCS {
             process.standardOutput = pipe
             process.standardError = errorPipe
         
-            try process.run()
+            do { try process.run() } catch { throw .commit(error.localizedDescription) }
             process.waitUntilExit()
         }
     }

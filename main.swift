@@ -94,26 +94,6 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
     }
 }
 
-enum VCSMapper {
-    
-    static let fx_implem: (Effects.VersionControl.System) -> VCS.System = { system in
-        switch  system {
-            case .git: return .git
-            case .fossil: return .fossil
-        }
-    }
-    
-    static let implem_fx: (VCS.System) -> Effects.VersionControl.System = { system in
-        switch  system {
-            case .git: return .git
-            case .fossil: return .fossil
-        }
-    }
-    
-    static let map: (VCS.t) -> (dir: String, type: Effects.VersionControl.System) = { tuple in 
-        (dir: tuple.dir, type: implem_fx(tuple.type))
-    }
-}
 
 extension Effects {
     static let live = Effects(
@@ -137,10 +117,10 @@ extension Effects {
                 } }
         ),
         vcs: VersionControl(
-            get: { path in return VCS.shared.get(path).map(VCSMapper.map) }, 
+            get: { path in return VCS.shared.get(path) }, 
             commit: { message, system, repoDir throws(AppError) in 
-                do { 
-                    return try VCS.shared.commit(message, VCSMapper.fx_implem(system), repoDir) }
+                do throws(VCS.Error) { 
+                    return try VCS.shared.commit(message, system, repoDir) }
                 catch {
                     throw AppError.vcs(error.localizedDescription)
                 }

@@ -118,11 +118,7 @@ struct Effects {
     }
     
     struct VersionControl {
-        enum System: String {
-            case git
-            case fossil
-        }
-        
+        typealias System = String
         let get: (Path) -> (dir: String, type: System)?
         let commit: (String, System, Path) throws(AppError) -> Void
     }
