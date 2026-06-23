@@ -18,35 +18,33 @@ Unlike the original `t` which uses unique alphanumeric hashes for task identific
 
 ## Installation
 
-  swiftc -O main.swift -o t
-  mv t /usr/local/bin/
+Use make to compile & move to `./local/bin`.
 
 ## Usage
 
 Data persists locally in `.todo` and `.done` files relative to the current directory.
 
 * List pending tasks:
-  t list
+    t list
 
 * Add a new task:
-  t add "Buy milk"
+    t add "Buy milk"
 
 * Complete a task (moves it to `.done` with a timestamp prefix):
-  t complete 1
+    t complete 1
 
 * Edit a task (opens the line inside `vi`):
-  t edit 1
+    t edit 1
 
 * Remove a task (hard deletion without archiving to `.done`):
-  t remove 1
+    t remove 1
 
 * Locate all todo files in the home directory system:
-  t all
+    t all
 
 * List tasks from a specific project file:
-  t project <name>
+    t project <name>
 
 * Complete and commit via VCS:
-  t commit 1
-  # O con el editor para redactar el mensaje de commit:
-  t commit editor 1
+    t commit 1
+    t commit editor 1
