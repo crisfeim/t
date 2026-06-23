@@ -165,6 +165,7 @@ let runEdit: (TodoPath, Int, Environment) throws(AppError) -> Void = { path, lin
     guard todos.indices.contains(idx) else { throw AppError.wrongLine(line) }
     
     let tmpPath = NSTemporaryDirectory() + "todo_edit_\(UUID().uuidString).txt"
+    defer { try? env.fs.delete(tmpPath) }
     let original = todos[idx]
     
     try env.fs.write([original], tmpPath)
@@ -176,7 +177,6 @@ let runEdit: (TodoPath, Int, Environment) throws(AppError) -> Void = { path, lin
     guard !updated.isEmpty, updated != original else { return env.put("No changes") }
     try env.fs.write(todos * { $0[idx] = updated }, path)
     env.put("Task updated: \(updated)")
-    try env.fs.delete(tmpPath)
 }
 
 // ==========================================
