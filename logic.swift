@@ -1,6 +1,40 @@
-// MARK: - Logic
+
 typealias TodoPath = String
 typealias DonePath = String
+
+// MARK: - Effects
+struct Effects {
+    typealias Path = String
+    
+    let fs: FileSystem
+    let vcs: VersionControl
+    let put: (String) -> Void
+    let currentDirectory: () -> String
+    var now: () -> Date
+    var editor: (Path) throws(T.Error) -> Void
+    var date: String { yyyyMMddHHmmss.string(from: now()) }
+    
+    struct FileSystem {
+        let read: (Path) throws(T.Error) -> [String]
+        let write: ([String], Path) throws(T.Error) -> Void
+        let delete: (Path) throws(T.Error) -> Void
+        let all: () throws(T.Error) -> [Path]
+    }
+    
+    struct VersionControl {
+        typealias System = String
+        let get: (Path) -> (dir: String, type: System)?
+        let commit: (String, System, Path) throws(T.Error) -> Void
+    }
+}
+
+let yyyyMMddHHmmss: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyyMMddHHmmss"
+    return formatter
+}()
+
+// MARK: - Logic
 
 let runList: (TodoPath, Effects) throws(T.Error) -> Void = { todoPath, fx  in
     try fx.fs.read(todoPath).enumerated()
@@ -97,40 +131,6 @@ let runCommit: (Int, TodoPath, DonePath, Bool, Effects) throws(T.Error) -> Void 
     
     fx.put("Task completed and committed successfully via \(repo.type)")
 }
-
-// MARK: - Effects
-struct Effects {
-    typealias Path = String
-    
-    let fs: FileSystem
-    let vcs: VersionControl
-    let put: (String) -> Void
-    let currentDirectory: () -> String
-    var now: () -> Date
-    var editor: (Path) throws(T.Error) -> Void
-    var date: String { yyyyMMddHHmmss.string(from: now()) }
-    
-    struct FileSystem {
-        let read: (Path) throws(T.Error) -> [String]
-        let write: ([String], Path) throws(T.Error) -> Void
-        let delete: (Path) throws(T.Error) -> Void
-        let all: () throws(T.Error) -> [Path]
-    }
-    
-    struct VersionControl {
-        typealias System = String
-        let get: (Path) -> (dir: String, type: System)?
-        let commit: (String, System, Path) throws(T.Error) -> Void
-    }
-}
-
-let yyyyMMddHHmmss: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyyMMddHHmmss"
-    return formatter
-}()
-
-
 
 // MARK: - Error
 enum T {
