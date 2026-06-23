@@ -1,6 +1,6 @@
 # t
 
-A minimalist CLI todo manager written in Swift, inspired by Steve Losh's `t`, but built with explicit support for direct Version Control System (Git/Fossil) commits and sequential line-based IDs.
+A minimalist CLI todo manager written in Swift, inspired by [Steve Losh's `t`](https://github.com/sjl/t), but built with explicit support for direct Version Control System (Git/Fossil) commits and sequential line-based IDs.
 
 ## Rationale
 
