@@ -519,12 +519,12 @@ let integrationTest: () = {
     do {
         let output = getOutput { try! sut.execute(["add", "Comprar leche"]) }
         let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
-        assert(disk == "Comprar leche\n")
+        assert(disk == "Comprar leche")
         assert(output.first == "1 Comprar leche")
         
         let output2 = getOutput { try! sut.execute(["add", "Estudiar Swift"]) }
         let disk2 = try! String(contentsOfFile: sut.todo, encoding: .utf8)
-        assert(disk2 == "Comprar leche\nEstudiar Swift\n")
+        assert(disk2 == "Comprar leche\nEstudiar Swift")
         assert(output2.first == "2 Estudiar Swift")
     }
     
@@ -544,8 +544,8 @@ let integrationTest: () = {
         let todo = try! String(contentsOfFile: sut.todo, encoding: .utf8)
         let done = try! String(contentsOfFile: sut.done, encoding: .utf8)
         
-        assert(todo == "Estudiar Swift\n")
-        assert(done == "\(expectedDatePrefix) Comprar leche\n")
+        assert(todo == "Estudiar Swift")
+        assert(done == "\(expectedDatePrefix) Comprar leche")
         assert(output.first == "Task completed")
     }
     
@@ -568,7 +568,7 @@ let integrationTest: () = {
         let output = getOutput { try! sut.execute(["edit", "1"]) }
         let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
         
-        assert(disk == "tarea editada\n")
+        assert(disk == "tarea editada")
         assert(output.first == "Task updated: tarea editada")
         
         sut.tearDown()
