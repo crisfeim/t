@@ -119,18 +119,22 @@ extension Effects {
 
 // MARK: - CLI
 extension T {
-    static func run() throws {
+    static func run() {
         let todoFile = FileManager.default.currentDirectoryPath + "/.todo"
         let doneFile = FileManager.default.currentDirectoryPath + "/.done"
         let arguments = Array(CommandLine.arguments.dropFirst())
         
         let t = make(todoFile, doneFile, .live)
-        try t(arguments)
+        do {
+            try t(arguments)
+        } catch {
+            print(error.message)
+        }
     }
 }
 
 #if RELEASE
-try T.run()
+T.run()
 #endif
 
 // MARK: - Helpers
