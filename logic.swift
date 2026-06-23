@@ -47,7 +47,7 @@ let runRemove: (TodoPath, [Int], Effects) throws(T.Error) -> Void = { todoPath, 
     let todos = try fx.fs.read(todoPath)
     let rest = todos.enumerated().filter { offset, _ in !lines.contains(offset + 1) }.map(\.element)
     try fx.fs.write(rest, todoPath)
-    fx.put("Task removed")
+    fx.put("Todo removed")
 }
 
 let runComplete: (TodoPath, DonePath, Int, Effects) throws(T.Error) -> Void = { todoPath, donePath, line, fx throws(T.Error) in
@@ -56,7 +56,7 @@ let runComplete: (TodoPath, DonePath, Int, Effects) throws(T.Error) -> Void = { 
     let done = (try? fx.fs.read(donePath)) ?? []
     try fx.fs.write(done + [fx.date + " " + removed], donePath)
     try fx.fs.write(rest, todoPath)
-    fx.put("Task completed")
+    fx.put("Todo completed")
 }
 
 let runEdit: (TodoPath, Int, Effects) throws(T.Error) -> Void = { todoPath, line, fx throws(T.Error) in
@@ -76,7 +76,7 @@ let runEdit: (TodoPath, Int, Effects) throws(T.Error) -> Void = { todoPath, line
     
     guard !updated.isEmpty, updated != original else { return fx.put("No changes") }
     try fx.fs.write(todos * { $0[idx] = updated }, todoPath)
-    fx.put("Task updated: \(updated)")
+    fx.put("Todo updated: \(updated)")
 }
 
 let runAll: (Effects) throws(T.Error) -> Void = { fx throws(T.Error) in
@@ -99,13 +99,13 @@ let runCommit: (Int, TodoPath, DonePath, Bool, Effects) throws(T.Error) -> Void 
     guard let repo = fx.vcs.get(fx.currentDirectory()) else { throw .vcs("Not a repository") }
     
     let todos = try fx.fs.read(todoPath)
-    guard let (removedTask, rest) = todos.removing(at: id - 1) else { throw .wrongLine(id) }
+    guard let (removedTodo, rest) = todos.removing(at: id - 1) else { throw .wrongLine(id) }
     
     let finalMessage: String
     
     if launchingEditor {
         let tmpPath = NSTemporaryDirectory() + "t_commit_\(UUID().uuidString).txt"
-        try fx.fs.write([removedTask], tmpPath)
+        try fx.fs.write([removedTodo], tmpPath)
         defer { try? fx.fs.delete(tmpPath) }
         
         try fx.editor(tmpPath)
@@ -115,15 +115,15 @@ let runCommit: (Int, TodoPath, DonePath, Bool, Effects) throws(T.Error) -> Void 
         guard !msg.isEmpty else { throw T.Error.vcs("Commit aborted due to empty message") }
         finalMessage = msg
     } else {
-        finalMessage = removedTask
+        finalMessage = removedTodo
     }
     
     try fx.vcs.commit(finalMessage, repo.type, repo.dir)
     let done = (try? fx.fs.read(donePath)) ?? []
-    try fx.fs.write(done + [fx.date + " " + removedTask], donePath)
+    try fx.fs.write(done + [fx.date + " " + removedTodo], donePath)
     try fx.fs.write(rest, todoPath)
     
-    fx.put("Task completed and committed successfully via \(repo.type)")
+    fx.put("Todo completed and committed successfully via \(repo.type)")
 }
 
 // MARK: - Error

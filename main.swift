@@ -233,7 +233,7 @@ let integrationTest: () = {
         
         assert(todo == "Estudiar Swift")
         assert(done == "\(expectedDatePrefix) Comprar leche")
-        assert(output.first == "Task completed")
+        assert(output.first == "Todo completed")
     }
     
     // 5. Remover Tarea restante
@@ -241,7 +241,7 @@ let integrationTest: () = {
         let output = getOutput { try! sut.execute(["remove", "1"]) }
         let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
         assert(disk.isEmpty)
-        assert(output.first == "Task removed")
+        assert(output.first == "Todo removed")
     }
     
     // 6. Editar tarea
@@ -256,7 +256,7 @@ let integrationTest: () = {
         let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
         
         assert(disk == "tarea editada")
-        assert(output.first == "Task updated: tarea editada")
+        assert(output.first == "Todo updated: tarea editada")
         
         sut.tearDown()
     }
