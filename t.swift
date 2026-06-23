@@ -6,7 +6,7 @@ import Foundation
 enum Command {
     case list
     case add(String)
-    case remove(Int)
+    case remove([Int])
     case complete(Int)
     case edit(Int)
 }
@@ -114,8 +114,8 @@ let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
             try runList(todoPath, fx)
             case let .add(todo):
             try runAdd(todoPath, todo, fx)
-            case let .remove(line):
-            try runRemove(todoPath, line, fx)
+            case let .remove(lines):
+            try runRemove(todoPath, lines, fx)
             case let .complete(line):
             try runComplete(todoPath, donePath, line, fx)
             case let .edit(line):
@@ -137,9 +137,9 @@ let runAdd: (TodoPath, String, Effects) throws(AppError) -> Void = { todoPath, t
     fx.put(updated.count.description + " " + todo)
 }
 
-let runRemove: (TodoPath, Int, Effects) throws(AppError) -> Void = { todoPath, line, fx throws(AppError) in
+let runRemove: (TodoPath, [Int], Effects) throws(AppError) -> Void = { todoPath, lines, fx throws(AppError) in
     let todos = try fx.fs.read(todoPath)
-    guard let (_, rest) = todos.removing(at: line - 1) else { throw AppError.wrongLine(line) }
+    let rest = todos.enumerated().filter { offset, _ in !lines.contains(offset + 1) }.map(\.element)
     try fx.fs.write(rest, todoPath)
     fx.put("Task removed")
 }
@@ -210,9 +210,9 @@ let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
         return .add(args[1])
         
         case "remove":
-        guard args.count == 2, let line = Int(args[1])
-        else { throw AppError.conflictingFlags }
-        return .remove(line)
+        let lines = args.dropFirst().compactMap { Int($0) }
+        guard lines.count == args.count - 1 else { throw AppError.conflictingFlags }
+        return .remove(lines)
         
         case "complete":
         guard args.count == 2, let line = Int(args[1])
