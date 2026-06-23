@@ -257,6 +257,8 @@ let integrationTest: () = {
         assert(output.first == "Task updated: tarea editada")
         
         sut.tearDown()
+        
+        assert(false)
     }
     
     sut.tearDown()
