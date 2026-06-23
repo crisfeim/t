@@ -85,7 +85,7 @@ extension AppError {
 }
 
 // ==========================================
-// 2. ESTRUCTURA DEL ENVIRONMENT (INYECCIÓN)
+// 2. ESTRUCTURA DEL Effects (INYECCIÓN)
 // ==========================================
 struct FileSystem {
     let read: (Path) throws(AppError) -> [String]
@@ -93,12 +93,12 @@ struct FileSystem {
     let delete: (Path) throws(AppError) -> Void
 }
 
-struct Environment {
+struct Effects {
     let fs: FileSystem
     let put: (String) -> Void
     var now: () -> Date
     var editor: (Path) throws(AppError) -> Void
-    var date: String { Environment.formatter.string(from: now()) }
+    var date: String { Effects.formatter.string(from: now()) }
     
     static var formatter:  DateFormatter {
         let formatter = DateFormatter()
@@ -112,71 +112,71 @@ struct Environment {
 // ==========================================
 typealias t_cli = (Args) throws(AppError) -> Void
 
-let make: (TodoPath, DonePath, Environment) -> t_cli = { todoPath, donePath, env in
+let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, effects in
     return { args throws(AppError) in 
         let command = try parseArgs(args)
         switch command {
             case .list:
-            try runList(todoPath, env)
+            try runList(todoPath, effects)
             case let .add(todo):
-            try runAdd(todoPath, todo, env)
+            try runAdd(todoPath, todo, effects)
             case let .remove(line):
-            try runRemove(todoPath, line, env)
+            try runRemove(todoPath, line, effects)
             case let .complete(line):
-            try runComplete(todoPath, donePath, line, env)
+            try runComplete(todoPath, donePath, line, effects)
             case let .edit(line):
-            try runEdit(todoPath, line, env)
+            try runEdit(todoPath, line, effects)
         }
     }
 }
 
-let runList: (TodoPath, Environment) throws(AppError) -> Void = { path, env  in
-    try env.fs.read(path).enumerated()
+let runList: (TodoPath, Effects) throws(AppError) -> Void = { path, effects  in
+    try effects.fs.read(path).enumerated()
     .map { idx, content in (idx + 1).description + " " + content }
-    .forEach(env.put)
+    .forEach(effects.put)
 }
 
-let runAdd: (TodoPath, String, Environment) throws(AppError) -> Void = { path, todo, env in
-    let todos = try env.fs.read(path)
+let runAdd: (TodoPath, String, Effects) throws(AppError) -> Void = { path, todo, effects in
+    let todos = try effects.fs.read(path)
     let updated = todos + [todo]
-    try env.fs.write(updated, path)
-    env.put(updated.count.description + " " + todo)
+    try effects.fs.write(updated, path)
+    effects.put(updated.count.description + " " + todo)
 }
 
-let runRemove: (TodoPath, Int, Environment) throws(AppError) -> Void = { path, line, env throws(AppError) in
-    let todos = try env.fs.read(path)
+let runRemove: (TodoPath, Int, Effects) throws(AppError) -> Void = { path, line, effects throws(AppError) in
+    let todos = try effects.fs.read(path)
     guard let (_, rest) = todos.removing(at: line - 1) else { throw AppError.wrongLine(line) }
-    try env.fs.write(rest, path)
-    env.put("Task removed")
+    try effects.fs.write(rest, path)
+    effects.put("Task removed")
 }
 
-let runComplete: (TodoPath, DonePath, Int, Environment) throws(AppError) -> Void = { todoPath, donePath, line, env throws(AppError) in
-    let todos = try env.fs.read(todoPath)
+let runComplete: (TodoPath, DonePath, Int, Effects) throws(AppError) -> Void = { todoPath, donePath, line, effects throws(AppError) in
+    let todos = try effects.fs.read(todoPath)
     guard let (removed, rest) = todos.removing(at: line - 1) else { throw AppError.wrongLine(line) }
-    let done = (try? env.fs.read(donePath)) ?? []
-    try env.fs.write(done + [env.date + " " + removed], donePath)
-    try env.fs.write(rest, todoPath)
-    env.put("Task completed")
+    let done = (try? effects.fs.read(donePath)) ?? []
+    try effects.fs.write(done + [effects.date + " " + removed], donePath)
+    try effects.fs.write(rest, todoPath)
+    effects.put("Task completed")
 }
 
-let runEdit: (TodoPath, Int, Environment) throws(AppError) -> Void = { path, line, env throws(AppError) in
-    let todos = try env.fs.read(path)
+let runEdit: (TodoPath, Int, Effects) throws(AppError) -> Void = { path, line, effects throws(AppError) in
+    let todos = try effects.fs.read(path)
     let idx = line - 1
     guard todos.indices.contains(idx) else { throw AppError.wrongLine(line) }
     
     let tmpPath = NSTemporaryDirectory() + "todo_edit_\(UUID().uuidString).txt"
-    defer { try? env.fs.delete(tmpPath) }
+    defer { try? effects.fs.delete(tmpPath) }
     let original = todos[idx]
     
-    try env.fs.write([original], tmpPath)
-    try env.editor(tmpPath)
+    try effects.fs.write([original], tmpPath)
+    try effects.editor(tmpPath)
     
-    let lines = try env.fs.read(tmpPath)
+    let lines = try effects.fs.read(tmpPath)
     let updated = lines.joined(separator: "\n").trimmingCharacters(in: .newlines)
     
-    guard !updated.isEmpty, updated != original else { return env.put("No changes") }
-    try env.fs.write(todos * { $0[idx] = updated }, path)
-    env.put("Task updated: \(updated)")
+    guard !updated.isEmpty, updated != original else { return effects.put("No changes") }
+    try effects.fs.write(todos * { $0[idx] = updated }, path)
+    effects.put("Task updated: \(updated)")
 }
 
 // ==========================================
@@ -223,7 +223,7 @@ let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
 // ==========================================
 // 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL
 // ==========================================
-let liveEnv = Environment(
+let liveEffects = Effects(
     fs: FileSystem(
         read: { path throws(AppError) in
             do {
@@ -310,7 +310,7 @@ let makeSUT: (@escaping () -> Date, @escaping (String) throws(AppError) -> Void)
         try? FileManager.default.removeItem(atPath: done)
     }
     
-    let t = make(todo, done, liveEnv * { 
+    let t = make(todo, done, liveEffects * { 
         $0.now = now
         $0.editor = editor
     })
@@ -365,7 +365,7 @@ let integrationTest: () = {
     
     // 4. Completar Tarea 1
     do {
-        let expectedDatePrefix = Environment.formatter.string(from: now)
+        let expectedDatePrefix = Effects.formatter.string(from: now)
         
         let output = getOutput { try! sut.execute(["complete", "1"]) }
         let todo = try! String(contentsOfFile: sut.todo, encoding: .utf8)
@@ -413,7 +413,7 @@ let todoFile = FileManager.default.currentDirectoryPath + "/todo.txt"
 let doneFile = FileManager.default.currentDirectoryPath + "/done.txt"
 let arguments = Array(CommandLine.arguments.dropFirst())
 
-let t = make(todoFile, doneFile, liveEnv)
+let t = make(todoFile, doneFile, liveEffects)
 
 do {
     try t(arguments)
