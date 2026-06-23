@@ -102,12 +102,6 @@ struct Effects {
     }
 }
 
-let yyyyMMddHHmmss: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyyMMddHHmmss"
-    return formatter
-}()
-
 // ==========================================
 // 3. LÓGICA DE NEGOCIO (GENÉRICA Y PURA)
 // ==========================================
@@ -195,6 +189,13 @@ func *<A>(lhs: A, rhs: (inout A) -> Void) -> A {
     rhs(&copy)
     return copy
 }
+
+let yyyyMMddHHmmss: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyyMMddHHmmss"
+    return formatter
+}()
+
 
 let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
     guard let first = args.first else { return .list }
