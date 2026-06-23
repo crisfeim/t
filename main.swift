@@ -204,27 +204,42 @@ let getOutput: (() -> Void) -> [String] = { block in
 let integrationTest: () = {
     
     let now = Calendar.current.date(from: DateComponents(year: 2016, month: 1, day: 1))!
-    let sut = makeSUT({ now }) { _ in }
+    let sut = makeSUT({ now }) { tmpPath in
+        try! "tarea editada".write(toFile: tmpPath, atomically: true, encoding: .utf8)
+    }
     
     // 1. Añadir tareas
     do {
-        let output = getOutput { try! sut.execute(["add", "Comprar leche"]) }
-        let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
-        assert(disk == "Comprar leche")
-        assert(output.first == "1 Comprar leche")
+        do {
+            let output = getOutput { try! sut.execute(["add", "Comprar leche"]) }
+            let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+            assert(disk == "Comprar leche")
+            assert(output.first == "1 Comprar leche")
+        }
         
-        let output2 = getOutput { try! sut.execute(["add", "Estudiar Swift"]) }
-        let disk2 = try! String(contentsOfFile: sut.todo, encoding: .utf8)
-        assert(disk2 == "Comprar leche\nEstudiar Swift")
-        assert(output2.first == "2 Estudiar Swift")
+        do {
+            let output = getOutput { try! sut.execute(["add", "Estudiar Swift"]) }
+            let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+            assert(disk == "Comprar leche\nEstudiar Swift")
+            assert(output.first == "2 Estudiar Swift")
+        }
+        
+        do {
+            let output = getOutput { try! sut.execute(["add", "Estudiar Concurrencia"]) }
+            let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+            assert(disk == "Comprar leche\nEstudiar Swift\nEstudiar Concurrencia")
+            assert(output.first == "3 Estudiar Concurrencia")
+        }
+        
     }
     
     // 3. Listar tareas creadas
     do {
         let output = getOutput { try! sut.execute(["list"]) }
-        assert(output.count == 2)
+        assert(output.count == 3)
         assert(output[0] == "1 Comprar leche")
         assert(output[1] == "2 Estudiar Swift")
+        assert(output[2] == "3 Estudiar Concurrencia")
     }
     
     // 4. Completar Tarea 1
@@ -235,7 +250,7 @@ let integrationTest: () = {
         let todo = try! String(contentsOfFile: sut.todo, encoding: .utf8)
         let done = try! String(contentsOfFile: sut.done, encoding: .utf8)
         
-        assert(todo == "Estudiar Swift")
+        assert(todo == "Estudiar Swift\nEstudiar Concurrencia")
         assert(done == "\(expectedDatePrefix) Comprar leche")
         assert(output.first == "Todo completed")
     }
@@ -244,25 +259,17 @@ let integrationTest: () = {
     do {
         let output = getOutput { try! sut.execute(["remove", "1"]) }
         let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
-        assert(disk.isEmpty)
+        assert(disk == "Estudiar Concurrencia")
         assert(output.first == "Todo removed")
     }
     
     // 6. Editar tarea
     do {
-        let sut = makeSUT({ now }) { tmpPath in
-            // Simula que el usuario editó el fichero en vi
-            try! "tarea editada".write(toFile: tmpPath, atomically: true, encoding: .utf8)
-        }
-        try! sut.execute(["add", "tarea original"])
-        
         let output = getOutput { try! sut.execute(["edit", "1"]) }
         let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
         
         assert(disk == "tarea editada")
         assert(output.first == "Todo updated: tarea editada")
-        
-        sut.tearDown()
     }
     
     sut.tearDown()
