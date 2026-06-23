@@ -96,7 +96,7 @@ extension Effects {
             all   : IO.shared.all    |> rethrow(T.Error.fsUnknown)
         ),
         vcs: VersionControl(
-            get: { path in VCS.shared.get(path) }, 
+            get:    VCS.shared.get, 
             commit: VCS.shared.commit |> rethrow(T.Error.vcs)
         ),
         put: { text in print(text) },
