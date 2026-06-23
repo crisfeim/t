@@ -94,10 +94,13 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
     }
 }
 
-func wrap<T, R>(method: @escaping (T) throws -> R, appError: @escaping (Error) -> AppError) -> (T) throws(AppError) -> R {
-    return { param throws(AppError) in
+func wrap<each P, R>(
+    method: @escaping (repeat each P) throws -> R, 
+    appError: @escaping (Error) -> AppError
+) -> (repeat each P) throws(AppError) -> R {
+    return { (param: repeat each P) throws(AppError) in
         do {
-            return try method(param)
+            return try method(repeat each param)
         } catch {
             throw appError(error)
         }
@@ -106,20 +109,11 @@ func wrap<T, R>(method: @escaping (T) throws -> R, appError: @escaping (Error) -
 
 extension Effects {
     static let live = Effects(
-        fs : FileSystem(
-            read: { path throws(AppError) in 
-                return try wrap(method: IO.shared.read, appError: { .fileSystem(ErrorMapper.map($0))})(path)
-            },
-            write: { lines, todoPath throws(AppError) in do {
-                try IO.shared.write(lines, todoPath)
-            } catch {
-                throw .fileSystem(ErrorMapper.map(error))
-            }
-            },
-            delete: { path throws(AppError) in do { try IO.shared.delete(path) } catch { throw .fileSystem(ErrorMapper.map(error)) } }, 
-            all: { () throws(AppError) in do { return try IO.shared.all() } catch {
-                    throw .fileSystem(.unknownIO("Find failed: \(error.localizedDescription)"))
-                } }
+        fs: FileSystem(
+            read: wrap(method: IO.shared.read, appError: { .fileSystem(ErrorMapper.map($0)) }),
+            write: wrap(method: IO.shared.write, appError: { .fileSystem(ErrorMapper.map($0)) }),
+            delete: wrap(method: IO.shared.delete, appError: { .fileSystem(ErrorMapper.map($0)) }),
+            all: wrap(method: IO.shared.all, appError: { .fileSystem(.unknownIO("Find failed: \($0.localizedDescription)")) })
         ),
         vcs: VersionControl(
             get: { path in return VCS.shared.get(path) }, 
