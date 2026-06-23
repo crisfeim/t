@@ -134,6 +134,8 @@ let yyyyMMddHHmmss: DateFormatter = {
 
 // MARK: - Error
 enum T {
+    typealias CLI = ([String]) throws(T.Error) -> Void
+    
     enum Error: Swift.Error {
         case wrongLine(Int)
         case conflictingFlags

@@ -21,9 +21,7 @@ typealias Path = String
 // 3. LÓGICA DE NEGOCIO (GENÉRICA Y PURA)
 // ==========================================
 
-typealias t_cli = (Args) throws(T.Error) -> Void
-
-let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
+let make: (TodoPath, DonePath, Effects) -> T.CLI = { todoPath, donePath, fx in
     return { args throws(T.Error) in 
         switch try parseArgs(args, todoPath) {
             case let .list(todoPath): try runList(todoPath, fx)
