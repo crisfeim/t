@@ -94,62 +94,26 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
     }
 }
 
-struct VCS {
-    private init() {}
-    static let shared = VCS()
+enum VCSMapper {
     
-    let get = { (current: Path) -> (dir: String, type: VersionControlSystem)? in
-        let fm = FileManager.default
-        var current = current
-        var fossilRoot: String? = nil
-        var gitRoot: String? = nil
-        while true {
-            if fossilRoot == nil && fm.fileExists(atPath: current + "/.fslckout") { fossilRoot = current }
-            if gitRoot == nil && fm.fileExists(atPath: current + "/.git") { gitRoot = current }
-            let parent = (current as NSString).deletingLastPathComponent
-            if parent == current { break }
-            current = parent
-        }
-        switch (fossilRoot, gitRoot) {
-            case (let f?, let g?): return f.count >= g.count ? (f, VersionControlSystem.fossil) : (g, .git)
-            case (let f?, nil): return (f, .fossil)
-            case (nil, let g?): return (g, .git)
-            default: return nil
+    static let fx_implem: (Effects.VersionControl.System) -> VCS.System = { system in
+        switch  system {
+            case .git: return .git
+            case .fossil: return .fossil
         }
     }
     
-    let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void = { message, type, dir throws(AppError) in
-        let commands: [[String]] = switch type {
-            case .git: [["git", "add", "-A"], ["git", "commit", "-m", message]]
-            case .fossil: [["fossil", "addremove"], ["fossil", "commit", "-m", message] ]
+    static let implem_fx: (VCS.System) -> Effects.VersionControl.System = { system in
+        switch  system {
+            case .git: return .git
+            case .fossil: return .fossil
         }
-        for args in commands {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            process.arguments = args
-            process.currentDirectoryPath = dir
-            
-            let pipe = Pipe()
-            let errorPipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = errorPipe
-            
-            do {
-                try process.run()
-                process.waitUntilExit()
-            } catch {
-                throw AppError.vcs(error.localizedDescription)
-            }
-            
-            if process.terminationStatus != 0 {
-                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                let errorMsg = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .newlines) ?? "VCS command failed"
-                throw AppError.vcs(errorMsg)
-            }
-        }
+    }
+    
+    static let map: (VCS.t) -> (dir: String, type: Effects.VersionControl.System) = { tuple in 
+        (dir: tuple.dir, type: implem_fx(tuple.type))
     }
 }
-
 
 extension Effects {
     static let live = Effects(
@@ -172,7 +136,15 @@ extension Effects {
                     throw AppError.fileSystem(.unknownIO("Find failed: \(error.localizedDescription)"))
                 } }
         ),
-        vcs: VersionControl(get: VCS.shared.get, commit: VCS.shared.commit),
+        vcs: VersionControl(
+            get: { path in return VCS.shared.get(path).map(VCSMapper.map) }, 
+            commit: { message, system, repoDir throws(AppError) in 
+                do { 
+                    return try VCS.shared.commit(message, VCSMapper.fx_implem(system), repoDir) }
+                catch {
+                    throw AppError.vcs(error.localizedDescription)
+                }
+        }),
         put: { text in print(text) },
         currentDirectory: { FileManager.default.currentDirectoryPath },
         now: { Date() },

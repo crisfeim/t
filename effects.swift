@@ -38,3 +38,56 @@ struct IO {
         return output.split(separator: "\n").map(String.init).map { $0.replacingOccurrences(of: ".", with: homeDir, options: .anchored) }
     }
 }
+
+struct VCS {
+    private init() {}
+    static let shared = VCS()
+    typealias Path   = String
+    enum System {
+        case git
+        case fossil
+    }
+    
+    typealias t = (dir: String, type: System)
+    
+    let get = { (current: Path) -> t? in
+        let fm = FileManager.default
+        var current = current
+        var fossilRoot: String? = nil
+        var gitRoot: String? = nil
+        while true {
+            if fossilRoot == nil && fm.fileExists(atPath: current + "/.fslckout") { fossilRoot = current }
+            if gitRoot == nil && fm.fileExists(atPath: current + "/.git") { gitRoot = current }
+            let parent = (current as NSString).deletingLastPathComponent
+            if parent == current { break }
+            current = parent
+        }
+        switch (fossilRoot, gitRoot) {
+            case (let f?, let g?): return f.count >= g.count ? (f, .fossil) : (g, .git)
+            case (let f?, nil): return (f, .fossil)
+            case (nil, let g?): return (g, .git)
+            default: return nil
+        }
+    }
+    
+    let commit: (String, System, Path) throws -> Void = { message, type, dir throws in
+        let commands: [[String]] = switch type {
+            case .git: [["git", "add", "-A"], ["git", "commit", "-m", message]]
+            case .fossil: [["fossil", "addremove"], ["fossil", "commit", "-m", message] ]
+        }
+        for args in commands {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = args
+            process.currentDirectoryPath = dir
+            
+            let pipe = Pipe()
+            let errorPipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = errorPipe
+        
+            try process.run()
+            process.waitUntilExit()
+        }
+    }
+}

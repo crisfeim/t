@@ -118,8 +118,13 @@ struct Effects {
     }
     
     struct VersionControl {
-        let get: (Path) -> (dir: String, type: VersionControlSystem)?
-        let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void
+        enum System: String {
+            case git
+            case fossil
+        }
+        
+        let get: (Path) -> (dir: String, type: System)?
+        let commit: (String, System, Path) throws(AppError) -> Void
     }
 }
 
@@ -129,10 +134,6 @@ let yyyyMMddHHmmss: DateFormatter = {
     return formatter
 }()
 
-enum VersionControlSystem: String {
-    case git
-    case fossil
-}
 
 
 // MARK: - Error
