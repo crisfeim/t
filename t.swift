@@ -8,6 +8,7 @@ enum Command {
     case add(String)
     case remove(Int)
     case complete(Int)
+    case edit(Int)
 }
 
 typealias Args = [String]
@@ -65,13 +66,14 @@ extension AppError {
 struct FileSystem {
     let read: (Path) throws(AppError) -> [String]
     let write: ([String], Path) throws(AppError) -> Void
+    let delete: (Path) throws(AppError) -> Void
 }
 
 struct Environment {
     let fs: FileSystem
     let put: (String) -> Void
     var now: () -> Date
-    
+    var editor: (Path) throws(AppError) -> Void
     var date: String { Environment.formatter.string(from: now()) }
     
     static var formatter:  DateFormatter {
@@ -98,6 +100,8 @@ let make: (TodoPath, DonePath, Environment) -> t_cli = { todoPath, donePath, env
             try runRemove(todoPath, line, env)
             case let .complete(line):
             try runComplete(todoPath, donePath, line, env)
+            case let .edit(line):
+            try runEdit(todoPath, line, env)
         }
     }
 }
@@ -132,6 +136,26 @@ let runComplete: (TodoPath, DonePath, Int, Environment) throws(AppError) -> Void
     env.put("Task completed")
 }
 
+let runEdit: (TodoPath, Int, Environment) throws(AppError) -> Void = { path, line, env throws(AppError) in
+    let todos = try env.fs.read(path)
+    let idx = line - 1
+    guard todos.indices.contains(idx) else { throw AppError.wrongLine(line) }
+    
+    let tmpPath = NSTemporaryDirectory() + "todo_edit_\(UUID().uuidString).txt"
+    let original = todos[idx]
+    
+    try env.fs.write([original], tmpPath)
+    try env.editor(tmpPath)
+    
+    let lines = try env.fs.read(tmpPath)
+    let updated = lines.joined(separator: "\n").trimmingCharacters(in: .newlines)
+    
+    guard !updated.isEmpty, updated != original else { return env.put("No changes (empty)") }
+    try env.fs.write(todos * { $0[idx] = updated }, path)
+    env.put("Task updated: \(updated)")
+    try env.fs.delete(tmpPath)
+}
+
 // ==========================================
 // 4. EXTENSIONES Y PARSER AUXILIARES
 // ==========================================
@@ -164,6 +188,11 @@ let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
         else { throw AppError.conflictingFlags }
         return .complete(line)
         
+        case "edit":
+        guard args.count == 2, let line = Int(args[1])
+            else { throw AppError.conflictingFlags }
+            return .edit(line)
+        
         default:
         throw AppError.unhandledFlag
     }
@@ -189,11 +218,50 @@ let liveEnv = Environment(
             } catch {
                 throw AppError.map(error)
             }
+        },
+        delete: { path throws(AppError) in
+            do {
+                try FileManager.default.removeItem(atPath: path)
+            } catch {
+                throw AppError.map(error)
+            }
         }
     ),
     put: { text in print(text) },
-    now: { Date() }
+    now: { Date() },
+    editor: { tmpPath throws(AppError) in
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/vi")
+        process.arguments = [tmpPath]
+        
+        do {
+            try process.run()
+        } catch {
+            throw AppError.map(error)
+        }
+        
+        // Put vi in the foreground so it can interact with the terminal
+        tcsetpgrp(STDIN_FILENO, process.processIdentifier)
+        // Wait until vi is done
+        process.waitUntilExit()
+        
+        // Prevent the system from suspending us when taking back the terminal
+        signal(SIGTTOU, SIG_IGN)
+        // Take back the terminal to our program
+        tcsetpgrp(STDIN_FILENO, getpgrp())
+        // Restore default SIGTTOU behaviour
+        signal(SIGTTOU, SIG_DFL)
+    }
 )
+
+
+// Helpers
+infix operator *: MultiplicationPrecedence
+func *<A>(lhs: A, rhs: (inout A) -> Void) -> A {
+    var copy = lhs
+    rhs(&copy)
+    return copy
+}
 
 #if DEBUG
 // ==========================================
@@ -206,7 +274,7 @@ typealias SUT = (
     tearDown: () -> Void
 )
 
-let makeSUT: (@escaping () -> Date) -> SUT = { now in
+let makeSUT: (@escaping () -> Date, @escaping (String) throws(AppError) -> Void) -> SUT = { now, editor in
     let tempDir = NSTemporaryDirectory()
     let uuid = UUID().uuidString
     let todo = tempDir + "todo_\(uuid).txt"
@@ -219,7 +287,10 @@ let makeSUT: (@escaping () -> Date) -> SUT = { now in
         try? FileManager.default.removeItem(atPath: done)
     }
     
-    let t = make(todo, done, liveEnv * { $0.now = now })
+    let t = make(todo, done, liveEnv * { 
+        $0.now = now
+        $0.editor = editor
+    })
     
     return (t, todo, done, tearDown)
 }
@@ -246,7 +317,7 @@ let getOutput: (() -> Void) -> [String] = { block in
 let integrationTest: () = {
     
     let now = Calendar.current.date(from: DateComponents(year: 2016, month: 1, day: 1))!
-    let sut = makeSUT({ now })
+    let sut = makeSUT({ now }) { _ in }
     
     // 1. Añadir tareas
     do {
@@ -291,19 +362,23 @@ let integrationTest: () = {
         assert(output.first == "Task removed")
     }
     
+    // 6. Editar tarea
+    do {
+        let sut = makeSUT({ now }) { tmpPath in
+            // Simula que el usuario editó el fichero en vi
+            try! "tarea editada".write(toFile: tmpPath, atomically: true, encoding: .utf8)
+        }
+        try! sut.execute(["add", "tarea original"])
+        
+        let output = getOutput { try! sut.execute(["edit", "1"]) }
+        let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+        
+        assert(disk == "tarea editada\n")
+        assert(output.first == "Task updated: tarea editada")
+    }
+    
     sut.tearDown()
 }()
-
-
-
-// Helpers
-infix operator *: MultiplicationPrecedence
-func *<A>(lhs: A, rhs: (inout A) -> Void) -> A {
-    var copy = lhs
-    rhs(&copy)
-    return copy
-}
-
 #endif
 
 // ==========================================
