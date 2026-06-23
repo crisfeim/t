@@ -339,7 +339,7 @@ struct IO {
     }
     
     let write: ([String], TodoPath) throws(AppError) -> Void = { lines, path throws(AppError) in
-        let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
+        let content = lines.isEmpty ? "" : lines.joined(separator: "\n")
         do {
             try content.write(toFile: path, atomically: true, encoding: .utf8)
         } catch {
