@@ -10,6 +10,7 @@ enum Command {
     case complete(Int)
     case edit(Int)
     case all
+    case project(TodoPath)
 }
 
 typealias Args = [String]
@@ -117,6 +118,7 @@ let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
             case let .remove(lines): try runRemove(todoPath, lines, fx)
             case let .complete(line): try runComplete(todoPath, donePath, line, fx)
             case let .edit(line): try runEdit(todoPath, line, fx)
+            case let .project(todoPath): try runListByProject(todoPath, fx)
             case .all: try runAll(fx)
         }
     }
@@ -158,6 +160,9 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
         guard args.count == 1 else { throw AppError.conflictingFlags }
         return .all
         
+        case "project":
+        guard args.count == 2 else { throw AppError.conflictingFlags }
+        return .project(args[1])
         default:
         throw AppError.unhandledFlag
     }
@@ -213,8 +218,18 @@ let runEdit: (TodoPath, Int, Effects) throws(AppError) -> Void = { todoPath, lin
 }
 
 let runAll: (Effects) throws(AppError) -> Void = { fx throws(AppError) in
-    try fx.fs.all().forEach(fx.put)
+    try fx.fs.all().enumerated().forEach { idx, path in
+        fx.put("\(idx + 1) \(path)")
+    }
 }
+
+let runListByProject: (String, Effects) throws(AppError) -> Void = { projectName, fx throws(AppError) in
+    guard let first = try? fx.fs.all().first(where: { $0.contains(projectName) }) else {
+        throw AppError.fileSystem(.notFound)
+    }
+    try runList(first, fx)
+}
+
 
 // ==========================================
 // 4. EXTENSIONES
