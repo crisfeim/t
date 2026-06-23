@@ -1,1 +1,0 @@
-swift build -c release && cp .build/release/t ~/.local/bin/t
