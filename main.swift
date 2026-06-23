@@ -94,11 +94,11 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
     }
 }
 
-func rethrow<each T, R>(
-    _ appError: @escaping (Error) -> AppError
-) -> (@escaping (repeat each T) throws -> R) -> (repeat each T) throws(AppError) -> R {
+func rethrow<each T, R, E: Error>(
+    _ appError: @escaping (Error) -> E
+) -> (@escaping (repeat each T) throws -> R) -> (repeat each T) throws(E) -> R {
     return { (method: @escaping (repeat each T) throws -> R) in
-        return { (param: repeat each T) throws(AppError) in
+        return { (param: repeat each T) throws(E) in
             do {
                 return try method(repeat each param)
             } catch {
