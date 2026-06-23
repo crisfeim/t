@@ -19,39 +19,6 @@ typealias Path = String
 typealias TodoPath = Path
 typealias DonePath = Path
 
-
-// ==========================================
-// 2. ESTRUCTURA DEL Effects (INYECCIÓN)
-// ==========================================
-
-struct Effects {
-    let fs: FileSystem
-    let vcs: VersionControl
-    let put: (String) -> Void
-    let currentDirectory: () -> Path
-    var now: () -> Date
-    var editor: (Path) throws(AppError) -> Void
-    var date: String { yyyyMMddHHmmss.string(from: now()) }
-    
-    struct FileSystem {
-        let read: (Path) throws(AppError) -> [String]
-        let write: ([String], Path) throws(AppError) -> Void
-        let delete: (Path) throws(AppError) -> Void
-        let all: () throws(AppError) -> [Path]
-    }
-    
-    struct VersionControl {
-        let get: (Path) -> (dir: String, type: VersionControlSystem)?
-        let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void
-    }
-}
-
-enum VersionControlSystem: String {
-    case git
-    case fossil
-}
-
-
 // ==========================================
 // 3. LÓGICA DE NEGOCIO (GENÉRICA Y PURA)
 // ==========================================
@@ -241,12 +208,6 @@ func *<A>(lhs: A, rhs: (inout A) -> Void) -> A {
     rhs(&copy)
     return copy
 }
-
-let yyyyMMddHHmmss: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyyMMddHHmmss"
-    return formatter
-}()
 
 // ==========================================
 // 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL

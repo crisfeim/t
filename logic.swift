@@ -1,4 +1,41 @@
+// MARK: - Effects
+struct Effects {
+    typealias Path = String
+    
+    let fs: FileSystem
+    let vcs: VersionControl
+    let put: (String) -> Void
+    let currentDirectory: () -> String
+    var now: () -> Date
+    var editor: (Path) throws(AppError) -> Void
+    var date: String { yyyyMMddHHmmss.string(from: now()) }
+    
+    struct FileSystem {
+        let read: (Path) throws(AppError) -> [String]
+        let write: ([String], Path) throws(AppError) -> Void
+        let delete: (Path) throws(AppError) -> Void
+        let all: () throws(AppError) -> [Path]
+    }
+    
+    struct VersionControl {
+        let get: (Path) -> (dir: String, type: VersionControlSystem)?
+        let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void
+    }
+}
 
+let yyyyMMddHHmmss: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyyMMddHHmmss"
+    return formatter
+}()
+
+enum VersionControlSystem: String {
+    case git
+    case fossil
+}
+
+
+// MARK: - Error
 enum AppError: Error {
     case wrongLine(Int)
     case conflictingFlags
