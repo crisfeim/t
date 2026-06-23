@@ -21,6 +21,7 @@ enum AppError: Error {
     case conflictingFlags
     case unhandledFlag
     case fileSystem(FileSystemError)
+    case editor(FileSystemError)
     
     enum FileSystemError {
         case notFound
@@ -30,12 +31,8 @@ enum AppError: Error {
     }
 }
 
-extension AppError {
-    static func map(_ error: Error) -> AppError {
-        AppError.fileSystem(mapToFSError(error))
-    }
-    
-    static func mapToFSError(_ error: Error) -> AppError.FileSystemError {
+enum ErrorMapper {
+    static func map(_ error: Error) -> AppError.FileSystemError {
         let nsError = error as NSError
         
         switch (nsError.domain, nsError.code) {
@@ -43,17 +40,17 @@ extension AppError {
         (NSCocoaErrorDomain, NSFileNoSuchFileError),
         (NSPOSIXErrorDomain, Int(ENOENT)):
         return .notFound
-        
+            
         case (NSCocoaErrorDomain, NSFileWriteNoPermissionError), 
         (NSCocoaErrorDomain, NSFileReadNoPermissionError),
         (NSPOSIXErrorDomain, Int(EACCES)), 
         (NSPOSIXErrorDomain, Int(EPERM)):
         return .permissionDenied
-        
+            
         case (NSCocoaErrorDomain, NSFileWriteOutOfSpaceError), 
         (NSPOSIXErrorDomain, Int(ENOSPC)):
         return .diskFull
-        
+            
         default:
         return .unknownIO(nsError.localizedDescription)
         }
@@ -73,10 +70,16 @@ extension AppError {
             return "file not found"
         case .fileSystem(.permissionDenied):
             return "permission denied"
-        case .fileSystem(.diskFull):
+        case .fileSystem(.diskFull), .editor(.diskFull):
             return "disk full"
         case let .fileSystem(.unknownIO(description)):
             return "\(description)"
+        case .editor(.notFound):
+            return "editor not found"
+        case .editor(.permissionDenied):
+            return "editor permission denied"
+        case let .editor(.unknownIO(description)):
+            return "editor failed: \(description)"
         }
     }
 }
@@ -229,7 +232,7 @@ let liveEnv = Environment(
                 let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
                 return lines.last == "" ? lines.dropLast().map { $0 } : lines
             } catch {
-                throw AppError.map(error)
+                throw AppError.fileSystem(ErrorMapper.map(error))
             }
         },
         write: { lines, path throws(AppError) in
@@ -237,14 +240,14 @@ let liveEnv = Environment(
             do {
                 try content.write(toFile: path, atomically: true, encoding: .utf8)
             } catch {
-                throw AppError.map(error)
+                throw AppError.fileSystem(ErrorMapper.map(error))
             }
         },
         delete: { path throws(AppError) in
             do {
                 try FileManager.default.removeItem(atPath: path)
             } catch {
-                throw AppError.map(error)
+                throw AppError.fileSystem(ErrorMapper.map(error))
             }
         }
     ),
@@ -258,7 +261,7 @@ let liveEnv = Environment(
         do {
             try process.run()
         } catch {
-            throw AppError.map(error)
+            throw AppError.editor(ErrorMapper.map(error))
         }
         
         // Put vi in the foreground so it can interact with the terminal
