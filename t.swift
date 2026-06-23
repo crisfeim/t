@@ -24,6 +24,7 @@ enum AppError: Error {
     case unhandledFlag
     case fileSystem(FileSystemError)
     case editor(FileSystemError)
+    case unexistentProject(wrongProject: String, available: [TodoPath])
     
     enum FileSystemError {
         case notFound
@@ -82,6 +83,9 @@ extension AppError {
             return "editor permission denied"
             case let .editor(.unknownIO(description)):
             return "editor failed: \(description)"
+            case let .unexistentProject(wrongProject, available):
+            return "Project doesn't exist: \(wrongProject), available locations: \(available.reduce("") { acc, next in acc + "\n  " + next })"
+             
         }
     }
 }
@@ -224,12 +228,14 @@ let runAll: (Effects) throws(AppError) -> Void = { fx throws(AppError) in
 }
 
 let runListByProject: (String, Effects) throws(AppError) -> Void = { projectName, fx throws(AppError) in
-    guard let first = try? fx.fs.all().first(where: { $0.contains(projectName) }) else {
-        throw AppError.fileSystem(.notFound)
+    let todoFiles = try fx.fs.all()
+    
+    guard let first = todoFiles.first(where: { $0.contains(projectName) }) else {
+        throw AppError.unexistentProject(wrongProject: projectName, available: todoFiles)
     }
+    
     try runList(first, fx)
 }
-
 
 // ==========================================
 // 4. EXTENSIONES
