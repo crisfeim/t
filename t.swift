@@ -324,7 +324,7 @@ let yyyyMMddHHmmss: DateFormatter = {
 // 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL
 // ==========================================
 
-@MainActor struct IO {
+struct IO {
     private init() {}
     static let shared = IO()
     
@@ -382,7 +382,7 @@ let yyyyMMddHHmmss: DateFormatter = {
 }
 
 
-@MainActor struct VCS {
+struct VCS {
     private init() {}
     static let shared = VCS()
     
@@ -438,7 +438,7 @@ let yyyyMMddHHmmss: DateFormatter = {
     }
 }
 
-@MainActor extension Effects {
+extension Effects {
     static let live = Effects(
         fs : FileSystem(read: IO.shared.read, write: IO.shared.write, delete: IO.shared.delete, all: IO.shared.all),
         vcs: VersionControl(get: VCS.shared.get, commit: VCS.shared.commit),
