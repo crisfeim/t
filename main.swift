@@ -116,14 +116,8 @@ extension Effects {
             all: wrap(method: IO.shared.all, appError: { .fileSystem(.unknownIO("Find failed: \($0.localizedDescription)")) })
         ),
         vcs: VersionControl(
-            get: { path in return VCS.shared.get(path) }, 
-            commit: { message, system, repoDir throws(AppError) in 
-                do throws(VCS.Error) { 
-                    return try VCS.shared.commit(message, system, repoDir) }
-                catch {
-                    throw .vcs(error.localizedDescription)
-                }
-        }),
+            get: { VCS.shared.get($0) }, 
+            commit: wrap(method: VCS.shared.commit, appError: { .vcs($0.localizedDescription) })),
         put: { text in print(text) },
         currentDirectory: { FileManager.default.currentDirectoryPath },
         now: { Date() },
