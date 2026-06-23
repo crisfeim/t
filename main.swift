@@ -129,7 +129,9 @@ extension T {
     }
 }
 
+#if RELEASE
 try T.run()
+#endif
 
 // MARK: - Helpers
 func rethrow<each T, R, E: Error>(
