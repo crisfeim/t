@@ -282,7 +282,7 @@ extension Effects: @unchecked Sendable {
                     "-o",
                     "-type", "d", "-path", "*/.*", "-prune",
                     "-o",
-                    "-type", "f", "-name", ".tasks*", "-print"
+                    "-type", "f", "-name", ".todo*", "-print"
                 ]
                 
                 let pipe = Pipe()
@@ -457,7 +457,7 @@ let integrationTest: () = {
 // ==========================================
 // 6. INVOCACIÓN
 // ==========================================
-let todoFile = FileManager.default.currentDirectoryPath + "/.tasks"
+let todoFile = FileManager.default.currentDirectoryPath + "/.todo"
 let doneFile = FileManager.default.currentDirectoryPath + "/.done"
 let arguments = Array(CommandLine.arguments.dropFirst())
 
