@@ -107,6 +107,7 @@ struct Effects {
     let fs: FileSystem
     let vcs: VersionControl
     let put: (String) -> Void
+    let currentDirectory: () -> Path
     var now: () -> Date
     var editor: (Path) throws(AppError) -> Void
     var date: String { yyyyMMddHHmmss.string(from: now()) }
@@ -119,7 +120,7 @@ struct Effects {
     }
     
     struct VersionControl {
-        let get: () -> (dir: String, type: VersionControlSystem)?
+        let get: (Path) -> (dir: String, type: VersionControlSystem)?
         let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void
     }
 }
@@ -267,7 +268,7 @@ let runListByProject: (String, Effects) throws(AppError) -> Void = { projectName
 }
 
 let runCommit: (Int, TodoPath, DonePath, Bool, Effects) throws(AppError) -> Void = { id, todoPath, donePath, launchingEditor, fx throws(AppError) in
-    guard let repo = fx.vcs.get() else { throw AppError.vcs("Not a repository") }
+    guard let repo = fx.vcs.get(fx.currentDirectory()) else { throw AppError.vcs("Not a repository") }
     
     let todos = try fx.fs.read(todoPath)
     guard let (removedTask, rest) = todos.removing(at: id - 1) else { throw AppError.wrongLine(id) }
@@ -386,9 +387,9 @@ struct VCS {
     private init() {}
     static let shared = VCS()
     
-    let get = { () -> (dir: String, type: VersionControlSystem)? in
+    let get = { (current: Path) -> (dir: String, type: VersionControlSystem)? in
         let fm = FileManager.default
-        var current = fm.currentDirectoryPath
+        var current = current
         var fossilRoot: String? = nil
         var gitRoot: String? = nil
         while true {
@@ -443,6 +444,7 @@ extension Effects {
         fs : FileSystem(read: IO.shared.read, write: IO.shared.write, delete: IO.shared.delete, all: IO.shared.all),
         vcs: VersionControl(get: VCS.shared.get, commit: VCS.shared.commit),
         put: { text in print(text) },
+        currentDirectory: { FileManager.default.currentDirectoryPath },
         now: { Date() },
         editor: { tmpPath throws(AppError) in
             let process = Process()
