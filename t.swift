@@ -128,6 +128,43 @@ let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
     }
 }
 
+
+let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
+    guard let first = args.first else { return .list }
+    
+    switch first {
+        case "list":
+        guard args.count == 1 else { throw AppError.conflictingFlags }
+        return .list
+        
+        case "add":
+        guard args.count == 2 else { throw AppError.conflictingFlags }
+        return .add(args[1])
+        
+        case "remove":
+        let lines = args.dropFirst().compactMap { Int($0) }
+        guard lines.count == args.count - 1 else { throw AppError.conflictingFlags }
+        return .remove(lines)
+        
+        case "complete":
+        guard args.count == 2, let line = Int(args[1])
+        else { throw AppError.conflictingFlags }
+        return .complete(line)
+        
+        case "edit":
+        guard args.count == 2, let line = Int(args[1])
+        else { throw AppError.conflictingFlags }
+        return .edit(line)
+        
+        case "all":
+        guard args.count == 1 else { throw AppError.conflictingFlags }
+        return .all
+        
+        default:
+        throw AppError.unhandledFlag
+    }
+}
+
 let runList: (TodoPath, Effects) throws(AppError) -> Void = { todoPath, fx  in
     try fx.fs.read(todoPath).enumerated()
     .map { idx, content in (idx + 1).description + " " + content }
@@ -182,7 +219,7 @@ let runAll: (Effects) throws(AppError) -> Void = { fx throws(AppError) in
 }
 
 // ==========================================
-// 4. EXTENSIONES Y PARSER AUXILIARES
+// 4. EXTENSIONES
 // ==========================================
 extension Array {
     func removing(at idx: Int) -> (removed: Element, rest: [Element])? {
@@ -204,42 +241,6 @@ let yyyyMMddHHmmss: DateFormatter = {
     return formatter
 }()
 
-
-let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
-    guard let first = args.first else { return .list }
-    
-    switch first {
-        case "list":
-        guard args.count == 1 else { throw AppError.conflictingFlags }
-        return .list
-        
-        case "add":
-        guard args.count == 2 else { throw AppError.conflictingFlags }
-        return .add(args[1])
-        
-        case "remove":
-        let lines = args.dropFirst().compactMap { Int($0) }
-        guard lines.count == args.count - 1 else { throw AppError.conflictingFlags }
-        return .remove(lines)
-        
-        case "complete":
-        guard args.count == 2, let line = Int(args[1])
-        else { throw AppError.conflictingFlags }
-        return .complete(line)
-        
-        case "edit":
-        guard args.count == 2, let line = Int(args[1])
-        else { throw AppError.conflictingFlags }
-        return .edit(line)
-        
-        case "all":
-        guard args.count == 1 else { throw AppError.conflictingFlags }
-        return .all
-        
-        default:
-        throw AppError.unhandledFlag
-    }
-}
 // ==========================================
 // 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL
 // ==========================================
