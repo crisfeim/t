@@ -43,7 +43,7 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
     
     switch first {
         case "list":
-        guard args.count >= 1, args.count <= 2 else { throw AppError.conflictingFlags }
+        guard args.count >= 1, args.count <= 2 else { throw .conflictingFlags }
         if args.count == 1 {
             return .list(defaultTodoPath)
         } else {
@@ -51,35 +51,35 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
         }
         
         case "add":
-        guard args.count == 2 else { throw AppError.conflictingFlags }
+        guard args.count == 2 else { throw .conflictingFlags }
         return .add(args[1])
         
         case "remove":
         let lines = args.dropFirst().compactMap { Int($0) }
-        guard lines.count == args.count - 1 else { throw AppError.conflictingFlags }
+        guard lines.count == args.count - 1 else { throw .conflictingFlags }
         return .remove(lines)
         
         case "complete":
         guard args.count == 2, let line = Int(args[1])
-        else { throw AppError.conflictingFlags }
+        else { throw .conflictingFlags }
         return .complete(line)
         
         case "edit":
         guard args.count == 2, let line = Int(args[1])
-        else { throw AppError.conflictingFlags }
+        else { throw .conflictingFlags }
         return .edit(line)
         
         case "all":
-        guard args.count == 1 else { throw AppError.conflictingFlags }
+        guard args.count == 1 else { throw .conflictingFlags }
         return .all
         
         case "project":
-        guard args.count == 2 else { throw AppError.conflictingFlags }
+        guard args.count == 2 else { throw .conflictingFlags }
         return .project(args[1])
         
         case "commit":
         if args.count == 3, let line = Int(args[2]) {
-            guard args[1] == "editor" else { throw AppError.conflictingFlags }
+            guard args[1] == "editor" else { throw .conflictingFlags }
             return .commit(line: line, launchingEditor: true)
         }
         
@@ -87,10 +87,10 @@ let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTod
             return .commit(line: line, launchingEditor: false)
         }
         
-        throw AppError.conflictingFlags
+        throw .conflictingFlags
         
         default:
-        throw AppError.unhandledFlag
+        throw .unhandledFlag
     }
 }
 
@@ -102,18 +102,18 @@ extension Effects {
                 do {
                     return try IO.shared.read(path)
                 } catch {
-                    throw AppError.fileSystem(ErrorMapper.map(error))
+                    throw .fileSystem(ErrorMapper.map(error))
                 }
             },
             write: { lines, todoPath throws(AppError) in do {
                 try IO.shared.write(lines, todoPath)
             } catch {
-                throw AppError.fileSystem(ErrorMapper.map(error))
+                throw .fileSystem(ErrorMapper.map(error))
             }
             },
-            delete: { path throws(AppError) in do { try IO.shared.delete(path) } catch { throw AppError.fileSystem(ErrorMapper.map(error)) } }, 
+            delete: { path throws(AppError) in do { try IO.shared.delete(path) } catch { throw .fileSystem(ErrorMapper.map(error)) } }, 
             all: { () throws(AppError) in do { return try IO.shared.all() } catch {
-                    throw AppError.fileSystem(.unknownIO("Find failed: \(error.localizedDescription)"))
+                    throw .fileSystem(.unknownIO("Find failed: \(error.localizedDescription)"))
                 } }
         ),
         vcs: VersionControl(
@@ -122,7 +122,7 @@ extension Effects {
                 do throws(VCS.Error) { 
                     return try VCS.shared.commit(message, system, repoDir) }
                 catch {
-                    throw AppError.vcs(error.localizedDescription)
+                    throw .vcs(error.localizedDescription)
                 }
         }),
         put: { text in print(text) },
@@ -132,7 +132,7 @@ extension Effects {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/vi")
             process.arguments = [tmpPath]
-            do { try process.run() } catch { throw AppError.editor(ErrorMapper.map(error)) }
+            do { try process.run() } catch { throw .editor(ErrorMapper.map(error)) }
             tcsetpgrp(STDIN_FILENO, process.processIdentifier)
             process.waitUntilExit()
             signal(SIGTTOU, SIG_IGN)
