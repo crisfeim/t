@@ -112,18 +112,12 @@ typealias t_cli = (Args) throws(AppError) -> Void
 let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
     return { args throws(AppError) in 
         switch try parseArgs(args) {
-            case .list:
-            try runList(todoPath, fx)
-            case let .add(todo):
-            try runAdd(todoPath, todo, fx)
-            case let .remove(lines):
-            try runRemove(todoPath, lines, fx)
-            case let .complete(line):
-            try runComplete(todoPath, donePath, line, fx)
-            case let .edit(line):
-            try runEdit(todoPath, line, fx)
-            case .all:
-            try runAll(fx)
+            case .list: try runList(todoPath, fx)
+            case let .add(todo): try runAdd(todoPath, todo, fx)
+            case let .remove(lines): try runRemove(todoPath, lines, fx)
+            case let .complete(line): try runComplete(todoPath, donePath, line, fx)
+            case let .edit(line): try runEdit(todoPath, line, fx)
+            case .all: try runAll(fx)
         }
     }
 }
