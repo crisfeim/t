@@ -87,20 +87,6 @@ let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath
     }
 }
 
-func rethrow<each T, R, E: Error>(
-    _ appError: @escaping (Error) -> E
-) -> (@escaping (repeat each T) throws -> R) -> (repeat each T) throws(E) -> R {
-    return { (method: @escaping (repeat each T) throws -> R) in
-        return { (param: repeat each T) throws(E) in
-            do {
-                return try method(repeat each param)
-            } catch {
-                throw appError(error)
-            }
-        }
-    }
-}
-
 extension Effects {
     static let live = Effects(
         fs: FileSystem(
@@ -128,6 +114,21 @@ extension Effects {
             signal(SIGTTOU, SIG_DFL)
         }
     )
+}
+
+// Helpers
+func rethrow<each T, R, E: Error>(
+    _ appError: @escaping (Error) -> E
+) -> (@escaping (repeat each T) throws -> R) -> (repeat each T) throws(E) -> R {
+    return { (method: @escaping (repeat each T) throws -> R) in
+        return { (param: repeat each T) throws(E) in
+            do {
+                return try method(repeat each param)
+            } catch {
+                throw appError(error)
+            }
+        }
+    }
 }
 
 #if DEBUG
