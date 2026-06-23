@@ -17,9 +17,6 @@ enum Command {
 typealias Args = [String]
 typealias Path = String
 
-// ==========================================
-// 3. LÓGICA DE NEGOCIO (GENÉRICA Y PURA)
-// ==========================================
 
 let make: (TodoPath, DonePath, Effects) -> T.CLI = { todoPath, donePath, fx in
     return { args throws(T.Error) in 
@@ -143,7 +140,7 @@ extension Effects {
 
 #if DEBUG
 // ==========================================
-// 6. TESTS: Tests de integración
+// TESTS: Tests de integración
 // ==========================================
 typealias SUT = (
     execute: (Args) throws(T.Error) -> Void,
@@ -260,7 +257,7 @@ let integrationTest: () = {
 #endif
 
 // ==========================================
-// 6. INVOCACIÓN
+// INVOCACIÓN
 // ==========================================
 let todoFile = FileManager.default.currentDirectoryPath + "/.todo"
 let doneFile = FileManager.default.currentDirectoryPath + "/.done"
