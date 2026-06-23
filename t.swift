@@ -113,71 +113,71 @@ let yyyyMMddHHmmss: DateFormatter = {
 // ==========================================
 typealias t_cli = (Args) throws(AppError) -> Void
 
-let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, effects in
+let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
     return { args throws(AppError) in 
         let command = try parseArgs(args)
         switch command {
             case .list:
-            try runList(todoPath, effects)
+            try runList(todoPath, fx)
             case let .add(todo):
-            try runAdd(todoPath, todo, effects)
+            try runAdd(todoPath, todo, fx)
             case let .remove(line):
-            try runRemove(todoPath, line, effects)
+            try runRemove(todoPath, line, fx)
             case let .complete(line):
-            try runComplete(todoPath, donePath, line, effects)
+            try runComplete(todoPath, donePath, line, fx)
             case let .edit(line):
-            try runEdit(todoPath, line, effects)
+            try runEdit(todoPath, line, fx)
         }
     }
 }
 
-let runList: (TodoPath, Effects) throws(AppError) -> Void = { path, effects  in
-    try effects.fs.read(path).enumerated()
+let runList: (TodoPath, Effects) throws(AppError) -> Void = { path, fx  in
+    try fx.fs.read(path).enumerated()
     .map { idx, content in (idx + 1).description + " " + content }
-    .forEach(effects.put)
+    .forEach(fx.put)
 }
 
-let runAdd: (TodoPath, String, Effects) throws(AppError) -> Void = { path, todo, effects in
-    let todos = try effects.fs.read(path)
+let runAdd: (TodoPath, String, Effects) throws(AppError) -> Void = { path, todo, fx in
+    let todos = try fx.fs.read(path)
     let updated = todos + [todo]
-    try effects.fs.write(updated, path)
-    effects.put(updated.count.description + " " + todo)
+    try fx.fs.write(updated, path)
+    fx.put(updated.count.description + " " + todo)
 }
 
-let runRemove: (TodoPath, Int, Effects) throws(AppError) -> Void = { path, line, effects throws(AppError) in
-    let todos = try effects.fs.read(path)
+let runRemove: (TodoPath, Int, Effects) throws(AppError) -> Void = { path, line, fx throws(AppError) in
+    let todos = try fx.fs.read(path)
     guard let (_, rest) = todos.removing(at: line - 1) else { throw AppError.wrongLine(line) }
-    try effects.fs.write(rest, path)
-    effects.put("Task removed")
+    try fx.fs.write(rest, path)
+    fx.put("Task removed")
 }
 
-let runComplete: (TodoPath, DonePath, Int, Effects) throws(AppError) -> Void = { todoPath, donePath, line, effects throws(AppError) in
-    let todos = try effects.fs.read(todoPath)
+let runComplete: (TodoPath, DonePath, Int, Effects) throws(AppError) -> Void = { todoPath, donePath, line, fx throws(AppError) in
+    let todos = try fx.fs.read(todoPath)
     guard let (removed, rest) = todos.removing(at: line - 1) else { throw AppError.wrongLine(line) }
-    let done = (try? effects.fs.read(donePath)) ?? []
-    try effects.fs.write(done + [effects.date + " " + removed], donePath)
-    try effects.fs.write(rest, todoPath)
-    effects.put("Task completed")
+    let done = (try? fx.fs.read(donePath)) ?? []
+    try fx.fs.write(done + [fx.date + " " + removed], donePath)
+    try fx.fs.write(rest, todoPath)
+    fx.put("Task completed")
 }
 
-let runEdit: (TodoPath, Int, Effects) throws(AppError) -> Void = { path, line, effects throws(AppError) in
-    let todos = try effects.fs.read(path)
+let runEdit: (TodoPath, Int, Effects) throws(AppError) -> Void = { path, line, fx throws(AppError) in
+    let todos = try fx.fs.read(path)
     let idx = line - 1
     guard todos.indices.contains(idx) else { throw AppError.wrongLine(line) }
     
     let tmpPath = NSTemporaryDirectory() + "todo_edit_\(UUID().uuidString).txt"
-    defer { try? effects.fs.delete(tmpPath) }
+    defer { try? fx.fs.delete(tmpPath) }
     let original = todos[idx]
     
-    try effects.fs.write([original], tmpPath)
-    try effects.editor(tmpPath)
+    try fx.fs.write([original], tmpPath)
+    try fx.editor(tmpPath)
     
-    let lines = try effects.fs.read(tmpPath)
+    let lines = try fx.fs.read(tmpPath)
     let updated = lines.joined(separator: "\n").trimmingCharacters(in: .newlines)
     
-    guard !updated.isEmpty, updated != original else { return effects.put("No changes") }
-    try effects.fs.write(todos * { $0[idx] = updated }, path)
-    effects.put("Task updated: \(updated)")
+    guard !updated.isEmpty, updated != original else { return fx.put("No changes") }
+    try fx.fs.write(todos * { $0[idx] = updated }, path)
+    fx.put("Task updated: \(updated)")
 }
 
 // ==========================================
@@ -224,7 +224,7 @@ let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
 // ==========================================
 // 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL
 // ==========================================
-let liveEffects = Effects(
+let liveFx = Effects(
     fs: .init(
         read: { path throws(AppError) in
             do {
@@ -311,7 +311,7 @@ let makeSUT: (@escaping () -> Date, @escaping (String) throws(AppError) -> Void)
         try? FileManager.default.removeItem(atPath: done)
     }
     
-    let t = make(todo, done, liveEffects * { 
+    let t = make(todo, done, liveFx * { 
         $0.now = now
         $0.editor = editor
     })
@@ -414,7 +414,7 @@ let todoFile = FileManager.default.currentDirectoryPath + "/todo.txt"
 let doneFile = FileManager.default.currentDirectoryPath + "/done.txt"
 let arguments = Array(CommandLine.arguments.dropFirst())
 
-let t = make(todoFile, doneFile, liveEffects)
+let t = make(todoFile, doneFile, liveFx)
 
 do {
     try t(arguments)
