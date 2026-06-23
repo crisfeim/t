@@ -131,10 +131,24 @@ func rethrow<each T, R, E: Error>(
     }
 }
 
+// ==========================================
+// INVOCACIÓN
+// ==========================================
+let todoFile = FileManager.default.currentDirectoryPath + "/.todo"
+let doneFile = FileManager.default.currentDirectoryPath + "/.done"
+let arguments = Array(CommandLine.arguments.dropFirst())
+
+let t = make(todoFile, doneFile, .live)
+
+do {
+    try t(arguments)
+} catch {
+    print(error.message)
+}
+
+
+// MARK: - Tests
 #if DEBUG
-// ==========================================
-// TESTS: Tests de integración
-// ==========================================
 typealias SUT = (
     execute: (Args) throws(T.Error) -> Void,
     todo: TodoPath,
@@ -248,18 +262,3 @@ let integrationTest: () = {
     sut.tearDown()
 }()
 #endif
-
-// ==========================================
-// INVOCACIÓN
-// ==========================================
-let todoFile = FileManager.default.currentDirectoryPath + "/.todo"
-let doneFile = FileManager.default.currentDirectoryPath + "/.done"
-let arguments = Array(CommandLine.arguments.dropFirst())
-
-let t = make(todoFile, doneFile, .live)
-
-do {
-    try t(arguments)
-} catch {
-    print(error.message)
-}
