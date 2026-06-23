@@ -189,6 +189,13 @@ extension Array {
     }
 }
 
+infix operator *: MultiplicationPrecedence
+func *<A>(lhs: A, rhs: (inout A) -> Void) -> A {
+    var copy = lhs
+    rhs(&copy)
+    return copy
+}
+
 let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
     guard let first = args.first else { return .list }
     
@@ -279,14 +286,6 @@ extension Effects: @unchecked Sendable {
     )
 }
 
-
-// Helpers
-infix operator *: MultiplicationPrecedence
-func *<A>(lhs: A, rhs: (inout A) -> Void) -> A {
-    var copy = lhs
-    rhs(&copy)
-    return copy
-}
 
 #if DEBUG
 // ==========================================
