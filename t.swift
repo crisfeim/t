@@ -323,117 +323,135 @@ let yyyyMMddHHmmss: DateFormatter = {
 // ==========================================
 // 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL
 // ==========================================
+let liveFS = {
+    let read = { path throws(AppError) in
+        do {
+            let content = try String(contentsOfFile: path, encoding: .utf8)
+            let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+            return lines.last == "" ? lines.dropLast().map { $0 } : lines
+        } catch {
+            throw AppError.fileSystem(ErrorMapper.map(error))
+        }
+    }
+    
+    let write: ([String], TodoPath) throws(AppError) -> Void = { lines, path throws(AppError) in
+        let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
+        do {
+            try content.write(toFile: path, atomically: true, encoding: .utf8)
+        } catch {
+            throw AppError.fileSystem(ErrorMapper.map(error))
+        }
+    }
+    
+    let delete = { path throws(AppError) in
+        do {
+            try FileManager.default.removeItem(atPath: path)
+        } catch {
+            throw AppError.fileSystem(ErrorMapper.map(error))
+        }
+    }
+    
+    let all = { () throws(AppError) in
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/find")
+        let homeDir = NSHomeDirectory()
+        process.currentDirectoryPath = homeDir
+        process.arguments = [
+            ".", "(", "-path", "./Library", "-o", "-path", "./Music", "-o", "-path", "./Pictures", "-o", "-path", "./Movies", "-o", "-path", "./Documents", "-o", "-path", "./Library/*", ")", "-prune",
+            "-o", "-type", "d", "-path", "*/.*", "-prune", "-o", "-type", "f", "-name", ".todo*", "-print"
+        ]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            throw AppError.fileSystem(.unknownIO("Find failed: \(error.localizedDescription)"))
+        }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else { 
+            throw AppError.fileSystem(.unknownIO("Invalid UTF-8 output from find command"))
+        }
+        return output.split(separator: "\n").map(String.init).map { $0.replacingOccurrences(of: ".", with: homeDir, options: .anchored) }
+    }
+
+    return Effects.FileSystem(
+        read: read,
+        write: write,
+        delete: delete,
+        all: all
+    )
+}
+
+let liveVCS = {
+    let get = { () -> (dir: String, type: VersionControlSystem)? in
+        let fm = FileManager.default
+        var current = fm.currentDirectoryPath
+        var fossilRoot: String? = nil
+        var gitRoot: String? = nil
+        while true {
+            if fossilRoot == nil && fm.fileExists(atPath: current + "/.fslckout") { fossilRoot = current }
+            if gitRoot == nil && fm.fileExists(atPath: current + "/.git") { gitRoot = current }
+            let parent = (current as NSString).deletingLastPathComponent
+            if parent == current { break }
+            current = parent
+        }
+        switch (fossilRoot, gitRoot) {
+            case (let f?, let g?): return f.count >= g.count ? (f, VersionControlSystem.fossil) : (g, .git)
+            case (let f?, nil): return (f, .fossil)
+            case (nil, let g?): return (g, .git)
+            default: return nil
+        }
+    }
+    
+    let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void = { message, type, dir throws(AppError) in
+        let commands: [[String]] = switch type {
+            case .git:
+            [
+                ["git", "add", "-A"],
+                ["git", "commit", "-m", message]
+            ]
+            case .fossil:
+            [
+                ["fossil", "addremove"],
+                ["fossil", "commit", "-m", message]
+            ]
+        }
+        
+        for args in commands {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = args
+            process.currentDirectoryPath = dir
+            
+            let pipe = Pipe()
+            let errorPipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = errorPipe
+            
+            do {
+                try process.run()
+                process.waitUntilExit()
+            } catch {
+                throw AppError.vcs(error.localizedDescription)
+            }
+            
+            if process.terminationStatus != 0 {
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorMsg = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .newlines) ?? "VCS command failed"
+                throw AppError.vcs(errorMsg)
+            }
+        }
+    }
+    
+    return Effects.VersionControl(get: get, commit: commit)
+}
+
 extension Effects: @unchecked Sendable {
     static let live = Effects(
-        fs: .init(
-            read: { path throws(AppError) in
-                do {
-                    let content = try String(contentsOfFile: path, encoding: .utf8)
-                    let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-                    return lines.last == "" ? lines.dropLast().map { $0 } : lines
-                } catch {
-                    throw AppError.fileSystem(ErrorMapper.map(error))
-                }
-            },
-            write: { lines, path throws(AppError) in
-                let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
-                do {
-                    try content.write(toFile: path, atomically: true, encoding: .utf8)
-                } catch {
-                    throw AppError.fileSystem(ErrorMapper.map(error))
-                }
-            },
-            delete: { path throws(AppError) in
-                do {
-                    try FileManager.default.removeItem(atPath: path)
-                } catch {
-                    throw AppError.fileSystem(ErrorMapper.map(error))
-                }
-            },
-            all: { () throws(AppError) in
-                let process = Process()
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/find")
-                let homeDir = NSHomeDirectory()
-                process.currentDirectoryPath = homeDir
-                process.arguments = [
-                    ".", "(", "-path", "./Library", "-o", "-path", "./Music", "-o", "-path", "./Pictures", "-o", "-path", "./Movies", "-o", "-path", "./Documents", "-o", "-path", "./Library/*", ")", "-prune",
-                    "-o", "-type", "d", "-path", "*/.*", "-prune", "-o", "-type", "f", "-name", ".todo*", "-print"
-                ]
-                let pipe = Pipe()
-                process.standardOutput = pipe
-                process.standardError = Pipe()
-                do {
-                    try process.run()
-                    process.waitUntilExit()
-                } catch {
-                    throw AppError.fileSystem(.unknownIO("Find failed: \(error.localizedDescription)"))
-                }
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                guard let output = String(data: data, encoding: .utf8) else { 
-                    throw AppError.fileSystem(.unknownIO("Invalid UTF-8 output from find command"))
-                }
-                return output.split(separator: "\n").map(String.init).map { $0.replacingOccurrences(of: ".", with: homeDir, options: .anchored) }
-            }
-        ),
-        vcs: .init(
-            get: {
-                let fm = FileManager.default
-                var current = fm.currentDirectoryPath
-                var fossilRoot: String? = nil
-                var gitRoot: String? = nil
-                while true {
-                    if fossilRoot == nil && fm.fileExists(atPath: current + "/.fslckout") { fossilRoot = current }
-                    if gitRoot == nil && fm.fileExists(atPath: current + "/.git") { gitRoot = current }
-                    let parent = (current as NSString).deletingLastPathComponent
-                    if parent == current { break }
-                    current = parent
-                }
-                switch (fossilRoot, gitRoot) {
-                    case (let f?, let g?): return f.count >= g.count ? (f, .fossil) : (g, .git)
-                    case (let f?, nil): return (f, .fossil)
-                    case (nil, let g?): return (g, .git)
-                    default: return nil
-                }
-            },
-            commit: { message, type, dir throws(AppError) in
-                    let commands: [[String]] = switch type {
-                        case .git:
-                            [
-                                ["git", "add", "-A"],
-                                ["git", "commit", "-m", message]
-                            ]
-                        case .fossil:
-                            [
-                                ["fossil", "addremove"],
-                                ["fossil", "commit", "-m", message]
-                            ]
-                    }
-                
-                    for args in commands {
-                        let process = Process()
-                        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-                        process.arguments = args
-                        process.currentDirectoryPath = dir
-                        
-                        let pipe = Pipe()
-                        let errorPipe = Pipe()
-                        process.standardOutput = pipe
-                        process.standardError = errorPipe
-                        
-                        do {
-                            try process.run()
-                            process.waitUntilExit()
-                        } catch {
-                            throw AppError.vcs(error.localizedDescription)
-                        }
-                        
-                        if process.terminationStatus != 0 {
-                            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                            let errorMsg = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .newlines) ?? "VCS command failed"
-                            throw AppError.vcs(errorMsg)
-                        }
-                    }
-                }),
+        fs : liveFS(),
+        vcs: liveVCS(),
         put: { text in print(text) },
         now: { Date() },
         editor: { tmpPath throws(AppError) in
