@@ -224,7 +224,7 @@ let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
 // ==========================================
 // 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL
 // ==========================================
-extension Effects: Sendable {
+extension Effects: @unchecked Sendable {
     static let live = Effects(
         fs: .init(
             read: { path throws(AppError) in
