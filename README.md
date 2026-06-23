@@ -25,34 +25,42 @@ Use make to compile & move to `./local/bin`.
 Data persists locally in `.todo` and `.done` files relative to the current directory.
 
 * List pending tasks:
-
-    t list
+```bash
+t list
+```
 
 * Add a new task:
-
-    t add "Buy milk"
+```bash
+t add "Buy milk"
+```
 
 * Complete a task (moves it to `.done` with a timestamp prefix):
-
-    t complete 1
+```bash
+t complete 1
+```
 
 * Edit a task (opens the line inside `vi`):
-
-    t edit 1
+```bash
+t edit 1
+```
 
 * Remove a task (hard deletion without archiving to `.done`):
-
-    t remove 1
+```bash
+t remove 1
+```
 
 * Locate all todo files in the home directory system:
-
-    t all
+```bash
+t all
+```
 
 * List tasks from a specific project file:
-
-    t project <name>
+```bash
+t project <name>
+```
 
 * Complete and commit via VCS:
-
-    t commit 1
-    t commit editor 1
+```bash
+t commit 1
+t commit editor 1
+```
