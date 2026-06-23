@@ -17,7 +17,7 @@ typealias Path = String
 
 let make: (TodoPath, DonePath, Effects) -> T.CLI = { todoPath, donePath, fx in
     return { args throws(T.Error) in 
-        switch try parseArgs(args, todoPath) {
+        switch try parse(args, todoPath) {
             case let .list(todoPath):    try runList(todoPath, fx)
             case let .add(todo):         try runAdd(todoPath, todo, fx)
             case let .remove(lines):     try runRemove(todoPath, lines, fx)
@@ -31,7 +31,7 @@ let make: (TodoPath, DonePath, Effects) -> T.CLI = { todoPath, donePath, fx in
 }
 
 
-let parseArgs: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath throws(T.Error) in
+let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath throws(T.Error) in
     guard let first = args.first else { return .list(defaultTodoPath) }
     
     switch first {
