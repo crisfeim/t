@@ -87,11 +87,6 @@ extension AppError {
 // ==========================================
 // 2. ESTRUCTURA DEL Effects (INYECCIÓN)
 // ==========================================
-struct FileSystem {
-    let read: (Path) throws(AppError) -> [String]
-    let write: ([String], Path) throws(AppError) -> Void
-    let delete: (Path) throws(AppError) -> Void
-}
 
 struct Effects {
     let fs: FileSystem
@@ -99,6 +94,12 @@ struct Effects {
     var now: () -> Date
     var editor: (Path) throws(AppError) -> Void
     var date: String { yyyyMMddHHmmss.string(from: now()) }
+    
+    struct FileSystem {
+        let read: (Path) throws(AppError) -> [String]
+        let write: ([String], Path) throws(AppError) -> Void
+        let delete: (Path) throws(AppError) -> Void
+    }
 }
 
 let yyyyMMddHHmmss: DateFormatter = {
@@ -224,7 +225,7 @@ let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
 // 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL
 // ==========================================
 let liveEffects = Effects(
-    fs: FileSystem(
+    fs: .init(
         read: { path throws(AppError) in
             do {
                 let content = try String(contentsOfFile: path, encoding: .utf8)
