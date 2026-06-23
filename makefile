@@ -1,5 +1,5 @@
 compile: 
-	swiftc -O -strict-concurrency=minimal -o t *.swift
+	swiftc -O -strict-concurrency=minimal -D RELEASE -o t *.swift
 	mv t ~/.local/bin/t
 
 test:
