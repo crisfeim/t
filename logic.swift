@@ -93,13 +93,13 @@ let runListByProject: (String, Effects) throws(T.Error) -> Void = { projectName,
     try runList(first, fx)
 }
 
-let runCommit: (Int, TodoPath, DonePath, Bool, Effects) throws(T.Error) -> Void = { id, todoPath, donePath, editing, fx throws(T.Error) in
+let runCommit: (Int, TodoPath, DonePath, Bool, Effects) throws(T.Error) -> Void = { id, todoPath, donePath, editMsg, fx throws(T.Error) in
     
     guard let repo = fx.vcs.get(fx.currentDirectory()) else { throw .vcs("Not a repository") }
     let todos = try fx.fs.read(todoPath)
     guard let (removedTodo, rest) = todos.removing(at: id - 1) else { throw .wrongLine(id) }
     
-    let finalMessage = if editing {
+    let finalMessage = if editMsg {
         try withTempFile(prefix: "t_commit", content: [removedTodo], fx: fx) { tmpPath throws(T.Error) in
             try fx.editor(tmpPath)
             let lines = try fx.fs.read(tmpPath)

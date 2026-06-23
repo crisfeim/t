@@ -8,7 +8,7 @@ enum Command {
     case edit(Int)
     case all
     case project(TodoPath)
-    case commit(line: Int, launchingEditor: Bool)
+    case commit(line: Int, editMsg: Bool)
 }
 
 typealias Args = [String]
@@ -24,7 +24,7 @@ let make: (TodoPath, DonePath, Effects) -> T.CLI = { todoPath, donePath, fx in
             case let .complete(line):    try runComplete(todoPath, donePath, line, fx)
             case let .edit(line):        try runEdit(todoPath, line, fx)
             case let .project(todoPath): try runListByProject(todoPath, fx)
-            case let .commit(todoLine, launchingEditor): try runCommit(todoLine, todoPath, donePath, launchingEditor, fx)
+            case let .commit(todoLine, editMsg): try runCommit(todoLine, todoPath, donePath, editMsg, fx)
             case .all: try runAll(fx)
         }
     }
@@ -73,11 +73,11 @@ let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath
         case "commit":
         if args.count == 3, let line = Int(args[2]) {
             guard args[1] == "editor" else { throw .conflictingFlags }
-            return .commit(line: line, launchingEditor: true)
+            return .commit(line: line, editMsg: true)
         }
         
         if args.count == 2, let line = Int(args[1]) {
-            return .commit(line: line, launchingEditor: false)
+            return .commit(line: line, editMsg: false)
         }
         
         throw .conflictingFlags
