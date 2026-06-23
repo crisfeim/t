@@ -4,7 +4,7 @@ import Foundation
 // 1. MODELO DE DATOS Y ERRORES
 // ==========================================
 enum Command {
-    case list
+    case list(TodoPath)
     case add(String)
     case remove([Int])
     case complete(Int)
@@ -111,8 +111,8 @@ typealias t_cli = (Args) throws(AppError) -> Void
 
 let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
     return { args throws(AppError) in 
-        switch try parseArgs(args) {
-            case .list: try runList(todoPath, fx)
+        switch try parseArgs(args, todoPath) {
+            case let .list(todoPath): try runList(todoPath, fx)
             case let .add(todo): try runAdd(todoPath, todo, fx)
             case let .remove(lines): try runRemove(todoPath, lines, fx)
             case let .complete(line): try runComplete(todoPath, donePath, line, fx)
@@ -123,13 +123,17 @@ let make: (TodoPath, DonePath, Effects) -> t_cli = { todoPath, donePath, fx in
 }
 
 
-let parseArgs: (Args) throws(AppError) -> Command = { args throws(AppError) in
-    guard let first = args.first else { return .list }
+let parseArgs: (Args, TodoPath) throws(AppError) -> Command = { args, defaultTodoPath throws(AppError) in
+    guard let first = args.first else { return .list(defaultTodoPath) }
     
     switch first {
         case "list":
-        guard args.count == 1 else { throw AppError.conflictingFlags }
-        return .list
+        guard args.count >= 1, args.count <= 2 else { throw AppError.conflictingFlags }
+        if args.count == 1 {
+            return .list(defaultTodoPath)
+        } else {
+            return .list(args[1])
+        }
         
         case "add":
         guard args.count == 2 else { throw AppError.conflictingFlags }
@@ -278,7 +282,7 @@ extension Effects: @unchecked Sendable {
                     "-o",
                     "-type", "d", "-path", "*/.*", "-prune",
                     "-o",
-                    "-type", "f", "-name", ".tasks", "-print"
+                    "-type", "f", "-name", ".tasks*", "-print"
                 ]
                 
                 let pipe = Pipe()
