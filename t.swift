@@ -150,7 +150,7 @@ let runEdit: (TodoPath, Int, Environment) throws(AppError) -> Void = { path, lin
     let lines = try env.fs.read(tmpPath)
     let updated = lines.joined(separator: "\n").trimmingCharacters(in: .newlines)
     
-    guard !updated.isEmpty, updated != original else { return env.put("No changes (empty)") }
+    guard !updated.isEmpty, updated != original else { return env.put("No changes") }
     try env.fs.write(todos * { $0[idx] = updated }, path)
     env.put("Task updated: \(updated)")
     try env.fs.delete(tmpPath)
