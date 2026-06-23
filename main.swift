@@ -116,7 +116,22 @@ extension Effects {
     )
 }
 
-// Helpers
+
+// MARK: - CLI
+extension T {
+    static func run() throws {
+        let todoFile = FileManager.default.currentDirectoryPath + "/.todo"
+        let doneFile = FileManager.default.currentDirectoryPath + "/.done"
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        
+        let t = make(todoFile, doneFile, .live)
+        try t(arguments)
+    }
+}
+
+try T.run()
+
+// MARK: - Helpers
 func rethrow<each T, R, E: Error>(
     _ appError: @escaping (Error) -> E
 ) -> (@escaping (repeat each T) throws -> R) -> (repeat each T) throws(E) -> R {
@@ -129,21 +144,6 @@ func rethrow<each T, R, E: Error>(
             }
         }
     }
-}
-
-// ==========================================
-// INVOCACIÓN
-// ==========================================
-let todoFile = FileManager.default.currentDirectoryPath + "/.todo"
-let doneFile = FileManager.default.currentDirectoryPath + "/.done"
-let arguments = Array(CommandLine.arguments.dropFirst())
-
-let t = make(todoFile, doneFile, .live)
-
-do {
-    try t(arguments)
-} catch {
-    print(error.message)
 }
 
 
