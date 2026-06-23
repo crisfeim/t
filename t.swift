@@ -323,8 +323,9 @@ let yyyyMMddHHmmss: DateFormatter = {
 // ==========================================
 // 5. PRODUCCIÓN: IMPLEMENTACIÓN REAL
 // ==========================================
-let liveFS = {
-    let read = { path throws(AppError) in
+
+@MainActor enum IO {
+    static let read = { path throws(AppError) in
         do {
             let content = try String(contentsOfFile: path, encoding: .utf8)
             let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
@@ -334,7 +335,7 @@ let liveFS = {
         }
     }
     
-    let write: ([String], TodoPath) throws(AppError) -> Void = { lines, path throws(AppError) in
+    static let write: ([String], TodoPath) throws(AppError) -> Void = { lines, path throws(AppError) in
         let content = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
         do {
             try content.write(toFile: path, atomically: true, encoding: .utf8)
@@ -343,7 +344,7 @@ let liveFS = {
         }
     }
     
-    let delete = { path throws(AppError) in
+    static let delete = { path throws(AppError) in
         do {
             try FileManager.default.removeItem(atPath: path)
         } catch {
@@ -351,7 +352,7 @@ let liveFS = {
         }
     }
     
-    let all = { () throws(AppError) in
+    static let all = { () throws(AppError) in
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/find")
         let homeDir = NSHomeDirectory()
@@ -375,17 +376,11 @@ let liveFS = {
         }
         return output.split(separator: "\n").map(String.init).map { $0.replacingOccurrences(of: ".", with: homeDir, options: .anchored) }
     }
-
-    return Effects.FileSystem(
-        read: read,
-        write: write,
-        delete: delete,
-        all: all
-    )
 }
 
-let liveVCS = {
-    let get = { () -> (dir: String, type: VersionControlSystem)? in
+
+@MainActor enum VCS {
+    static let get = { () -> (dir: String, type: VersionControlSystem)? in
         let fm = FileManager.default
         var current = fm.currentDirectoryPath
         var fossilRoot: String? = nil
@@ -405,7 +400,7 @@ let liveVCS = {
         }
     }
     
-    let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void = { message, type, dir throws(AppError) in
+    static let commit: (String, VersionControlSystem, Path) throws(AppError) -> Void = { message, type, dir throws(AppError) in
         let commands: [[String]] = switch type {
             case .git:
             [
@@ -444,14 +439,12 @@ let liveVCS = {
             }
         }
     }
-    
-    return Effects.VersionControl(get: get, commit: commit)
 }
 
-extension Effects: @unchecked Sendable {
+@MainActor extension Effects {
     static let live = Effects(
-        fs : liveFS(),
-        vcs: liveVCS(),
+        fs : FileSystem(read: IO.read, write: IO.write, delete: IO.delete, all: IO.all),
+        vcs: VersionControl(get: VCS.get, commit: VCS.commit),
         put: { text in print(text) },
         now: { Date() },
         editor: { tmpPath throws(AppError) in
