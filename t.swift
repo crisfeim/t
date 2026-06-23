@@ -294,13 +294,12 @@ extension Effects: @unchecked Sendable {
                     try process.run()
                     process.waitUntilExit()
                 } catch {
-                    // Al especificar 'as AppError', el compilador sabe que este catch cumple con 'throws(AppError)'
-                    throw AppError.fileSystem(.unknownIO("Find failed: \(error.localizedDescription)")) as AppError
+                    throw AppError.fileSystem(.unknownIO("Find failed: \(error.localizedDescription)"))
                 }
                 
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 guard let output = String(data: data, encoding: .utf8) else { 
-                    throw AppError.fileSystem(.unknownIO("Invalid UTF-8 output from find command")) as AppError
+                    throw AppError.fileSystem(.unknownIO("Invalid UTF-8 output from find command"))
                 }
                 
                 return output
