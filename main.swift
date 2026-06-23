@@ -21,11 +21,11 @@ typealias Path = String
 let make: (TodoPath, DonePath, Effects) -> T.CLI = { todoPath, donePath, fx in
     return { args throws(T.Error) in 
         switch try parseArgs(args, todoPath) {
-            case let .list(todoPath): try runList(todoPath, fx)
-            case let .add(todo): try runAdd(todoPath, todo, fx)
-            case let .remove(lines): try runRemove(todoPath, lines, fx)
-            case let .complete(line): try runComplete(todoPath, donePath, line, fx)
-            case let .edit(line): try runEdit(todoPath, line, fx)
+            case let .list(todoPath):    try runList(todoPath, fx)
+            case let .add(todo):         try runAdd(todoPath, todo, fx)
+            case let .remove(lines):     try runRemove(todoPath, lines, fx)
+            case let .complete(line):    try runComplete(todoPath, donePath, line, fx)
+            case let .edit(line):        try runEdit(todoPath, line, fx)
             case let .project(todoPath): try runListByProject(todoPath, fx)
             case let .commit(todoLine, launchingEditor): try runCommit(todoLine, todoPath, donePath, launchingEditor, fx)
             case .all: try runAll(fx)
