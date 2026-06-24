@@ -86,7 +86,8 @@ let runAll: (Effects.All) throws(T.Error) -> Void = { fx throws(T.Error) in
 
 let runCommit: (Int, TodoPath, DonePath, Bool, Effects.All) throws(T.Error) -> Void = { id, todoPath, donePath, editMsg, fx throws(T.Error) in
     
-    guard let repo = fx.vcs.get(fx.currentDirectory()) else { throw .vcs("Not a repository") }
+    let projectDirectory = (todoPath as NSString).deletingLastPathComponent
+    guard let repo = fx.vcs.get(projectDirectory) else { throw .vcs("Not a repository") }
     let todos = try fx.io.read(todoPath)
     guard let (removedTodo, rest) = todos.removing(at: id - 1) else { throw .wrongLines([id]) }
     
