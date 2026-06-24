@@ -7,7 +7,6 @@ enum Command {
     case complete(TodoPath, Int)
     case edit(TodoPath, Int)
     case all
-    case project(TodoPath)
     case commit(TodoPath, line: Int, editMsg: Bool)
 }
 
@@ -15,22 +14,19 @@ typealias Args   = [String]
 typealias Path   = String
 typealias Parser = (Args, TodoPath) throws(T.Error) -> Command
 
-
 let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { defaultTodoPath, donePath, fx in
     return { args throws(T.Error) in 
         switch try projctPreparsing(fx, parse)(args, defaultTodoPath) {
             case let .list(path):               try runList(path, fx)
             case let .add(path, todo):          try runAdd(path, todo, fx)
             case let .remove(path, lines):      try runRemove(path, lines, fx)
-            case let .complete(path, line):    try runComplete(path, donePath, line, fx)
+            case let .complete(path, line):     try runComplete(path, donePath, line, fx)
             case let .edit(path, line):         try runEdit(path, line, fx)
-            case let .project(path):            try runListByProject(path, fx)
             case let .commit(path, line, edit): try runCommit(line, path, donePath, edit, fx)
             case .all:                          try runAll(fx)
         }
     }
 }
-
 
 let projctPreparsing: (Effects.All, @escaping Parser) -> Parser = { fx, parser in
     return { args, defaultTodoPath throws(T.Error) in
@@ -87,10 +83,6 @@ let parse: Parser = { args, defaultTodoPath throws(T.Error) in
         case "all":
         guard args.count == 1 else { throw .conflictingFlags }
         return .all
-        
-        case "project":
-        guard args.count == 2 else { throw .conflictingFlags }
-        return .project(args[1])
         
         case "commit":
         if args.count == 3, let line = Int(args[2]) {
@@ -163,6 +155,19 @@ func rethrow<each T, R, E: Error>(
     }
 }
 
+// Filter to show more relevant folder 
+// (ej. "t project cristian"  --> /Users/cristian before that /Users/cristian/💻/t)
+let sortMatches: ([String]) -> [String] = { todoFiles in 
+    todoFiles.sorted { path1, path2 in
+        let count1 = path1.components(separatedBy: "/").count
+        let count2 = path2.components(separatedBy: "/").count
+        if count1 != count2 {
+            return count1 < count2
+        }
+        if path1.count != path2.count { return path1.count < path2.count }
+        return path1 < path2
+    }
+}
 
 // MARK: - Tests
 #if DEBUG

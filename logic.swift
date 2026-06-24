@@ -81,34 +81,6 @@ let runAll: (Effects.All) throws(T.Error) -> Void = { fx throws(T.Error) in
     }
 }
 
-let sortMatches: ([String]) -> [String] = { todoFiles in 
-    todoFiles.sorted { path1, path2 in
-        let count1 = path1.components(separatedBy: "/").count
-        let count2 = path2.components(separatedBy: "/").count
-        if count1 != count2 {
-            return count1 < count2
-        }
-        if path1.count != path2.count { return path1.count < path2.count }
-        return path1 < path2
-    }
-}
-
-let runListByProject: (String, Effects.All) throws(T.Error) -> Void = { projectName, fx throws(T.Error) in
-    let todoFiles = try fx.io.all()
-    
-    // Filter to show more relevant folder 
-    // (ej. "t project cristian"  --> /Users/cristian before that /Users/cristian/💻/t)
-    let sortedMatches = todoFiles
-        .filter { $0.contains(projectName) } 
-        |> sortMatches
-
-    guard let mostPertinent = sortedMatches.first else {
-        throw .unexistentProject(wrongProject: projectName, available: todoFiles)
-    }
-    
-    try runList(mostPertinent, fx)
-}
-
 let runCommit: (Int, TodoPath, DonePath, Bool, Effects.All) throws(T.Error) -> Void = { id, todoPath, donePath, editMsg, fx throws(T.Error) in
     
     guard let repo = fx.vcs.get(fx.currentDirectory()) else { throw .vcs("Not a repository") }
