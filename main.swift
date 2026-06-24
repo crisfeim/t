@@ -162,7 +162,7 @@ typealias SUT = (
     tearDown: () -> Void
 )
 
-let makeSUT: (@escaping () -> Date, @escaping (String) throws(T.Error) -> Void) -> SUT = { now, editor in
+let makeSUT: (Effects) -> SUT = { fx in
     let tempDir = NSTemporaryDirectory()
     let uuid = UUID().uuidString
     let todo = tempDir + "todo_\(uuid).txt"
@@ -175,10 +175,7 @@ let makeSUT: (@escaping () -> Date, @escaping (String) throws(T.Error) -> Void) 
         try? FileManager.default.removeItem(atPath: done)
     }
     
-    let t = make(todo, done, .live * { 
-        $0.now = now
-        $0.editor = editor
-    })
+    let t = make(todo, done, fx)
     
     return (t, todo, done, tearDown)
 }
@@ -201,8 +198,9 @@ let getOutput: (() -> Void) -> [String] = { block in
     return output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init).dropLast()
 }
 
+
 let testParserErrors: () = {
-    let sut = makeSUT({ Date() }) { _ in }
+    let sut = makeSUT(.live)
     
     // 1. Comando desconocido
     assertThrows(T.Error.unhandledFlag, { () throws(T.Error) in try sut.execute(["invalid_command"]) })
@@ -243,9 +241,10 @@ let testParserErrors: () = {
 let integrationTest: () = {
     
     let now = Calendar.current.date(from: DateComponents(year: 2016, month: 1, day: 1))!
-    let sut = makeSUT({ now }) { tmpPath in
-        try! "tarea editada".write(toFile: tmpPath, atomically: true, encoding: .utf8)
-    }
+    let sut = makeSUT(.live * { 
+        $0.now = { now }
+        $0.editor = { tmpPath in try! "tarea editada".write(toFile: tmpPath, atomically: true, encoding: .utf8) }
+    })
     
     // 1. Añadir tareas
     do {
