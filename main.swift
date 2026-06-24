@@ -14,9 +14,9 @@ typealias Args   = [String]
 typealias Path   = String
 typealias Parser = (Args, TodoPath) throws(T.Error) -> Command
 
-let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { defaultTodoPath, donePath, fx in
+let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { todoPath, donePath, fx in
     return { args throws(T.Error) in 
-        switch try projectPreparsing(fx.io, parse)(args, defaultTodoPath) {
+        switch try projectPreparsing(fx.io, parse)(args, todoPath) {
             case let .list(path):               try runList(path, fx)
             case let .add(path, todo):          try runAdd(path, todo, fx)
             case let .remove(path, lines):      try runRemove(path, lines, fx)
@@ -32,8 +32,8 @@ let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { defaultTodoPath, donePa
 // Allows global project manipulation
 // Ej: t project cristian add "new todo" -> Adds todo in ~/cristian/.todo if exists.
 let projectPreparsing: (Effects.IO, @escaping Parser) -> Parser = { fx, parser in
-    return { args, defaultTodoPath throws(T.Error) in
-        guard args.first == "project" else { return try parser(args, defaultTodoPath) }
+    return { args, todoPath throws(T.Error) in
+        guard args.first == "project" else { return try parser(args, todoPath) }
         
         guard args.count >= 2 else { throw .conflictingFlags }
         let projectName = args[1]
