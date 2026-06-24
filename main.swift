@@ -2,82 +2,95 @@ import Foundation
 
 enum Command {
     case list(TodoPath)
-    case add(String)
-    case remove([Int])
-    case complete(Int)
-    case edit(Int)
+    case add(TodoPath, String)
+    case remove(TodoPath, [Int])
+    case complete(TodoPath, Int)
+    case edit(TodoPath, Int)
     case all
-    case project(TodoPath)
-    case commit(line: Int, editMsg: Bool)
+    case commit(TodoPath, line: Int, editMsg: Bool)
 }
 
-typealias Args = [String]
-typealias Path = String
+typealias Args   = [String]
+typealias Path   = String
+typealias Parser = (Args, TodoPath) throws(T.Error) -> Command
 
-
-let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { todoPath, donePath, fx in
+let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { defaultTodoPath, donePath, fx in
     return { args throws(T.Error) in 
-        switch try parse(args, todoPath) {
-            case let .list(todoPath):    try runList(todoPath, fx)
-            case let .add(todo):         try runAdd(todoPath, todo, fx)
-            case let .remove(lines):     try runRemove(todoPath, lines, fx)
-            case let .complete(line):    try runComplete(todoPath, donePath, line, fx)
-            case let .edit(line):        try runEdit(todoPath, line, fx)
-            case let .project(todoPath): try runListByProject(todoPath, fx)
-            case let .commit(todoLine, editMsg): try runCommit(todoLine, todoPath, donePath, editMsg, fx)
-            case .all: try runAll(fx)
+        switch try projectPreparsing(fx, parse)(args, defaultTodoPath) {
+            case let .list(path):               try runList(path, fx)
+            case let .add(path, todo):          try runAdd(path, todo, fx)
+            case let .remove(path, lines):      try runRemove(path, lines, fx)
+            case let .complete(path, line):     try runComplete(path, donePath, line, fx)
+            case let .edit(path, line):         try runEdit(path, line, fx)
+            case let .commit(path, line, edit): try runCommit(line, path, donePath, edit, fx)
+            case .all:                          try runAll(fx)
         }
     }
 }
 
+let projectPreparsing: (Effects.All, @escaping Parser) -> Parser = { fx, parser in
+    return { args, defaultTodoPath throws(T.Error) in
+        guard args.first == "project" else { return try parser(args, defaultTodoPath) }
+        
+        guard args.count >= 2 else { throw .conflictingFlags }
+        let projectName = args[1]
+        
+        let todoFiles = try fx.io.all()
+        
+        guard let projectTodoPath = todoFiles.filter({ $0.contains(projectName) }) |> sortMatches |> first else {
+            throw .notFound(projectName, available: todoFiles)
+        }
+        
+        let remainingArgs = args.dropFirst(2)
+        let finalArgs = remainingArgs.isEmpty ? ["list"] : Array(remainingArgs)
+        
+        return try parser(finalArgs, projectTodoPath)
+    }
+}
 
-let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath throws(T.Error) in
-    guard let first = args.first else { return .list(defaultTodoPath) }
+let parse: Parser = { args, todoPath throws(T.Error) in
+    guard let first = args.first else { return .list(todoPath) }
     
     switch first {
         case "list":
         guard args.count >= 1, args.count <= 2 else { throw .conflictingFlags }
         if args.count == 1 {
-            return .list(defaultTodoPath)
+            return .list(todoPath)
         } else {
             return .list(args[1])
         }
         
         case "add", "new":
         guard args.count == 2 else { throw .conflictingFlags }
-        return .add(args[1])
+        return .add(todoPath, args[1])
         
         case "remove", "rm":
         let lines = args.dropFirst().compactMap { Int($0) }
         guard lines.count == args.count - 1 else { throw .conflictingFlags }
-        return .remove(lines)
+        return .remove(todoPath, lines)
         
         case "complete":
         guard args.count == 2, let line = Int(args[1])
         else { throw .conflictingFlags }
-        return .complete(line)
+        return .complete(todoPath, line)
         
         case "edit":
         guard args.count == 2, let line = Int(args[1])
         else { throw .conflictingFlags }
-        return .edit(line)
+        return .edit(todoPath, line)
         
         case "all":
         guard args.count == 1 else { throw .conflictingFlags }
         return .all
         
-        case "project":
-        guard args.count == 2 else { throw .conflictingFlags }
-        return .project(args[1])
-        
         case "commit":
         if args.count == 3, let line = Int(args[2]) {
             guard args[1] == "editor" else { throw .conflictingFlags }
-            return .commit(line: line, editMsg: true)
+            return .commit(todoPath, line: line, editMsg: true)
         }
         
         if args.count == 2, let line = Int(args[1]) {
-            return .commit(line: line, editMsg: false)
+            return .commit(todoPath, line: line, editMsg: false)
         }
         
         throw .conflictingFlags
@@ -86,7 +99,6 @@ let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath
         throw .unhandledFlag
     }
 }
-
 
 let liveFx = Effects.All(
     io: (
@@ -142,6 +154,21 @@ func rethrow<each T, R, E: Error>(
     }
 }
 
+func first<T>(array: Array<T>) -> T? { array.first }
+
+// Filter to show more relevant folder 
+// (ej. "t project cristian"  --> /Users/cristian before that /Users/cristian/💻/t)
+let sortMatches: ([String]) -> [String] = { todoFiles in 
+    todoFiles.sorted { path1, path2 in
+        let count1 = path1.components(separatedBy: "/").count
+        let count2 = path2.components(separatedBy: "/").count
+        if count1 != count2 {
+            return count1 < count2
+        }
+        if path1.count != path2.count { return path1.count < path2.count }
+        return path1 < path2
+    }
+}
 
 // MARK: - Tests
 #if DEBUG
@@ -211,7 +238,6 @@ let test_parserErrors: () = {
     assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["all", "extra"]) })
     
     assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["project"]) })
-    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["project", "mi_proyecto", "extra"]) })
     
     assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit"]) })
     assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit", "wrong_flag", "1"]) })
@@ -293,6 +319,81 @@ let test_versionControlIntegration: () = {
         try! sut.execute(["commit", "editor", "1"])
         
         assert(receivedMessage == "Custom commit message from editor")
+        
+        sut.tearDown()
+    }
+}()
+
+let test_remoteProjectManagement: () = {
+    // 1: Comando básico 'project <nombre>' debe transformarse en 'list' implícito
+    do {
+        var readCalledWithPath = ""
+        let mockFx = liveFx * {
+            $0.io.all = { ["/proyectos/cristian/.todo", "/proyectos/otro/.todo"] }
+            $0.io.read = { path in 
+                readCalledWithPath = path
+                return []
+            }
+        }
+        let sut = makeSUT(mockFx)
+        
+        try! sut.execute(["project", "cristian"])
+        assert(readCalledWithPath == "/proyectos/cristian/.todo")
+        
+        sut.tearDown()
+    }
+    
+    // Escenario 2: Subcomandos remotos pasados a través de 'project'
+    do {
+        var writeCalledWithPath = ""
+        var contentWritten = ""
+        let mockFx = liveFx * {
+            $0.io.all = { ["/proyectos/cristian/.todo"] }
+            $0.io.read = { _ in [] }
+            $0.io.write = { content, path in
+                writeCalledWithPath = path
+                contentWritten = content.joined()
+            }
+        }
+        let sut = makeSUT(mockFx)
+        
+        try! sut.execute(["project", "cristian", "add", "Nueva tarea remota"])
+        assert(writeCalledWithPath == "/proyectos/cristian/.todo")
+        assert(contentWritten == "Nueva tarea remota")
+        
+        sut.tearDown()
+    }
+    
+    // Escenario 3: Desempate por orden de pertinencia (jerarquía y longitud)
+    do {
+        var readCalledWithPath = ""
+        let mockFx = liveFx * {
+            $0.io.all = { [
+                "/Users/cristian/💻/a/.todo", 
+                "/Users/cristian/💻/t/.todo",
+                "/Users/cristian/💻/sub/nivel/extra/cristian/.todo"
+            ] }
+            $0.io.read = { path in
+                readCalledWithPath = path
+                return []
+            }
+        }
+        let sut = makeSUT(mockFx)
+        
+        try! sut.execute(["project", "cristian"])
+        assert(readCalledWithPath == "/Users/cristian/💻/a/.todo")
+        
+        sut.tearDown()
+    }
+    
+    // Escenario 4: Errores esperados lanzados desde el decorador
+    do {
+        let mockFx = liveFx * { $0.io.all = { ["/proyectos/otro/.todo"] } }
+        let sut = makeSUT(mockFx)
+        
+        assertThrows(.notFound("cristian", available: ["/proyectos/otro/.todo"]), { () throws(T.Error) in
+            try sut.execute(["project", "cristian"])
+        })
         
         sut.tearDown()
     }
