@@ -162,7 +162,7 @@ typealias SUT = (
     tearDown: () -> Void
 )
 
-let makeSUT: (() -> Effects) -> SUT = { fx in
+let makeSUT: (Effects) -> SUT = { fx in
     let tempDir = NSTemporaryDirectory()
     let uuid = UUID().uuidString
     let todo = tempDir + "todo_\(uuid).txt"
@@ -175,7 +175,7 @@ let makeSUT: (() -> Effects) -> SUT = { fx in
         try? FileManager.default.removeItem(atPath: done)
     }
     
-    let t = make(todo, done, fx())
+    let t = make(todo, done, fx)
     
     return (t, todo, done, tearDown)
 }
@@ -201,7 +201,7 @@ let getOutput: (() -> Void) -> [String] = { block in
 
 
 let test_parserErrors: () = {
-    let sut = makeSUT({.live})
+    let sut = makeSUT(.live)
     
     assertThrows(.unhandledFlag, { () throws(T.Error) in try sut.execute(["invalid_command"]) })
     
@@ -231,7 +231,7 @@ let test_parserErrors: () = {
 }()
 
 let test_lineBounds: () = {
-    let sut = makeSUT({.live})
+    let sut = makeSUT(.live)
     try! sut.execute(["add", "Single task"])
     
     assertThrows(.wrongLine(0), { () throws(T.Error) in try sut.execute(["complete", "0"]) })
@@ -249,7 +249,7 @@ let test_lineBounds: () = {
 let test_versionControlIntegration: () = {    
     // CASE 1: Not a repository error
     do {
-        let sut = makeSUT { .live * { $0.vcs.get = { _ in nil } } }
+        let sut = makeSUT(.live * { $0.vcs.get = { _ in nil } })
         assertThrows(.vcs("Not a repository"), { () throws(T.Error) in try sut.execute(["commit", "1"]) })
         sut.tearDown()
     }
@@ -259,7 +259,7 @@ let test_versionControlIntegration: () = {
         var receivedMessage = ""
         var receivedSystem = ""
         
-        let sut = makeSUT { 
+        let sut = makeSUT(
             .live * {
                 $0.vcs.get = { _ in (dir: "/mock/repo", type: "fossil") }
                 $0.vcs.commit = { msg, sys, _ in 
@@ -267,7 +267,7 @@ let test_versionControlIntegration: () = {
                     receivedSystem = sys
                 }
             }
-        }
+        )
         
         try! sut.execute(["add", "Fossil task"])
         try! sut.execute(["commit", "1"])
@@ -287,7 +287,7 @@ let test_versionControlIntegration: () = {
     do {
         var receivedMessage = ""
         
-        let sut = makeSUT { 
+        let sut = makeSUT(
             .live * {
                 $0.vcs.get = { _ in (dir: "/mock/repo", type: "git") }
                 $0.vcs.commit = { msg, _, _ in 
@@ -297,7 +297,7 @@ let test_versionControlIntegration: () = {
                     try! "Custom commit message from editor".write(toFile: tmpPath, atomically: true, encoding: .utf8)
                 }
             }
-        }
+        )
         
         try! sut.execute(["add", "Original task text"])
         try! sut.execute(["commit", "editor", "1"])
@@ -314,10 +314,10 @@ let test_integration: () = {
     
     var editor = { (p: String) in try! "tarea editada".write(toFile: p, atomically: true, encoding: .utf8) }
      
-    let sut = makeSUT({ .live * { 
+    let sut = makeSUT(.live * { 
         $0.now = { now }
         $0.editor = editor }
-    })
+    )
     
     // 1. Añadir tareas
     do {
