@@ -44,7 +44,11 @@ let projectPreparsing: (Effects.IO, @escaping Parser) -> Parser = { fx, parser i
         
         let todoFiles = try fx.all()
         
-        guard let projectTodoPath = todoFiles.filter({ $0.contains(projectName) }) |> sortMatches |> first else {
+        guard let projectTodoPath = todoFiles.filter({ path in
+            let components = path.split(separator: "/")
+            return components.contains { $0 == projectName }
+        }) |> sortMatches |> first
+        else {
             throw .notFound(projectName, available: todoFiles)
         }
         
