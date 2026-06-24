@@ -89,13 +89,13 @@ let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath
 
 extension Effects {
     static let live = Effects(
-        fs: FileSystem(
+        fs: (
             read  : IO.shared.read   |> rethrow(T.Error.fs),
             write : IO.shared.write  |> rethrow(T.Error.fs),
             delete: IO.shared.delete |> rethrow(T.Error.fs),
             all   : IO.shared.all    |> rethrow(T.Error.fsUnknown)
         ),
-        vcs: VersionControl(
+        vcs: (
             get:    VCS.shared.get, 
             commit: VCS.shared.commit |> rethrow(T.Error.vcs)
         ),

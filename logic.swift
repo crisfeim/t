@@ -14,18 +14,17 @@ struct Effects {
     var editor: (Path) throws(T.Error) -> Void
     var date: String { yyyyMMddHHmmss.string(from: now()) }
     
-    struct FileSystem {
-        let read: (Path) throws(T.Error) -> [String]
-        let write: ([String], Path) throws(T.Error) -> Void
-        let delete: (Path) throws(T.Error) -> Void
-        let all: () throws(T.Error) -> [Path]
-    }
-    
-    struct VersionControl {
-        typealias System = String
-        var get: (Path) -> (dir: String, type: System)?
-        var commit: (String, System, Path) throws(T.Error) -> Void
-    }
+    typealias FileSystem = (
+        read: (Path) throws(T.Error) -> [String],
+        write: ([String], Path) throws(T.Error) -> Void,
+        delete: (Path) throws(T.Error) -> Void,
+        all: () throws(T.Error) -> [Path],
+    )
+
+    typealias VersionControl = (
+        get: (Path) -> (dir: String, type: String)?,
+        commit: (String, String, Path) throws(T.Error) -> Void
+    )
 }
 
 // MARK: - Logic
