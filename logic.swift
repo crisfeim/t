@@ -11,6 +11,7 @@ enum Effects {
         currentDirectory: () -> String,
         now: () -> Date,
         editor: (String) throws(T.Error) -> Void,
+        copyToClipboard: (String) -> Void
     )
     
     typealias IO = (
@@ -121,6 +122,17 @@ let runProjectsList: (Effects.All) throws(T.Error) -> Void = { fx in
             fx.put("    \(index + 1) \(line)")
         }
     }
+}
+
+let runCopy: (TodoPath, Int, Effects.All) throws(T.Error) -> Void = { todoPath, line, fx throws(T.Error) in 
+    let todos = try fx.io.read(todoPath)
+    let idx = line - 1
+    guard todos.indices.contains(line - 1) else { throw .wrongLine(line) }
+    
+    let todoToCopy = todos[idx]
+    
+    fx.copyToClipboard(todoToCopy)
+    fx.put("Copied to clipboard: \(todoToCopy)")
 }
 
 

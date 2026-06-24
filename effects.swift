@@ -118,3 +118,13 @@ enum Editor {
         signal(SIGTTOU, SIG_DFL)
     }
 }
+
+import AppKit
+
+enum Clipboard {
+    static let copy = { text in
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+    }
+}
