@@ -262,7 +262,6 @@ let testVersionControlIntegration: () = {
     
     // CASE 2: Fossil integration
     do {
-        var commitCalled = false
         var receivedMessage = ""
         var receivedSystem = ""
         
@@ -270,7 +269,6 @@ let testVersionControlIntegration: () = {
             .live * {
                 $0.vcs.get = { _ in (dir: "/mock/repo", type: "fossil") }
                 $0.vcs.commit = { msg, sys, _ in 
-                    commitCalled = true
                     receivedMessage = msg
                     receivedSystem = sys
                 }
@@ -280,7 +278,6 @@ let testVersionControlIntegration: () = {
         try! sut.execute(["add", "Fossil task"])
         try! sut.execute(["commit", "1"])
         
-        assert(commitCalled == true)
         assert(receivedMessage == "Fossil task")
         assert(receivedSystem == "fossil")
         
@@ -294,14 +291,12 @@ let testVersionControlIntegration: () = {
     
     // CASE 3: Commit via Editor modifications
     do {
-        var commitCalled = false
         var receivedMessage = ""
         
         let sut = makeSUT { 
             .live * {
                 $0.vcs.get = { _ in (dir: "/mock/repo", type: "git") }
                 $0.vcs.commit = { msg, _, _ in 
-                    commitCalled = true
                     receivedMessage = msg
                 }
                 $0.editor = { tmpPath in
@@ -313,7 +308,6 @@ let testVersionControlIntegration: () = {
         try! sut.execute(["add", "Original task text"])
         try! sut.execute(["commit", "editor", "1"])
         
-        assert(commitCalled == true)
         assert(receivedMessage == "Custom commit message from editor")
         
         sut.tearDown()
