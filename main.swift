@@ -28,6 +28,9 @@ let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { defaultTodoPath, donePa
     }
 }
 
+// Preparsing decorator
+// Allows global project manipulation
+// Ej: t project cristian add "new todo" -> Adds todo in ~/cristian/.todo if exists.
 let projectPreparsing: (Effects.IO, @escaping Parser) -> Parser = { fx, parser in
     return { args, defaultTodoPath throws(T.Error) in
         guard args.first == "project" else { return try parser(args, defaultTodoPath) }
