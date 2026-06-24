@@ -316,8 +316,8 @@ let test_integration: () = {
      
     let sut = makeSUT(.live * { 
         $0.now = { now }
-        $0.editor = editor }
-    )
+        $0.editor = { editor($0) }
+    })
     
     // 1. Añadir tareas
     do {
