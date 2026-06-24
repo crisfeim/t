@@ -1,23 +1,21 @@
 import Foundation
 
-struct IO {
-    private init() {}
-    static let shared = IO()
+enum IO {
     
-    let read = { path throws in
+    static let read = { path throws in
         let content = try String(contentsOfFile: path, encoding: .utf8)
         let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         return lines.last == "" ? lines.dropLast().map { $0 } : lines
     }
     
-    let write: ([String], String) throws -> Void = { lines, path throws in
+    static let write: ([String], String) throws -> Void = { lines, path throws in
         let content = lines.isEmpty ? "" : lines.joined(separator: "\n")
         try content.write(toFile: path, atomically: true, encoding: .utf8)
     }
     
-    let delete = { path in try FileManager.default.removeItem(atPath: path) }
+    static let delete = { path in try FileManager.default.removeItem(atPath: path) }
     
-    let all = { () throws -> [String] in
+    static let all = { () throws -> [String] in
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/find")
         let homeDir = NSHomeDirectory()
@@ -39,14 +37,12 @@ struct IO {
     }
 }
 
-struct VCS {
-    private init() {}
-    static let shared = VCS()
+enum VCS {
     typealias Path   = String
     typealias System = String
     typealias t = (dir: String, type: System)
     
-    let get = { (current: Path) -> t? in
+    static let get = { (current: Path) -> t? in
         let fm = FileManager.default
         var current = current
         var fossilRoot: String? = nil
@@ -71,7 +67,7 @@ struct VCS {
         case commit(String)
     }
     
-    let commit: (String, System, Path) throws(Error) -> Void = { message, type, dir throws(Error) in
+    static let commit: (String, System, Path) throws(Error) -> Void = { message, type, dir throws(Error) in
         let commands: [[String]] = switch type {
             case "git": [["git", "add", "-A"], ["git", "commit", "-m", message]]
             case "fossil": [["fossil", "addremove"], ["fossil", "commit", "-m", message] ]

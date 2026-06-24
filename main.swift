@@ -90,14 +90,14 @@ let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath
 
 let liveFx = Effects.All(
     io: (
-        read  : IO.shared.read   |> rethrow(T.Error.fs),
-        write : IO.shared.write  |> rethrow(T.Error.fs),
-        delete: IO.shared.delete |> rethrow(T.Error.fs),
-        all   : IO.shared.all    |> rethrow(T.Error.fsUnknown)
+        read  : IO.read   |> rethrow(T.Error.fs),
+        write : IO.write  |> rethrow(T.Error.fs),
+        delete: IO.delete |> rethrow(T.Error.fs),
+        all   : IO.all    |> rethrow(T.Error.fsUnknown)
     ),
     vcs: (
-        get:    VCS.shared.get, 
-        commit: VCS.shared.commit |> rethrow(T.Error.vcs)
+        get:    VCS.get, 
+        commit: VCS.commit |> rethrow(T.Error.vcs)
     ),
     put: { text in print(text) },
     currentDirectory: { FileManager.default.currentDirectoryPath },
