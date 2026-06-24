@@ -141,9 +141,10 @@ enum T {
 }
 
 extension T.Error {
-    static let fs  = { T.Error.fileSystem(ErrorMapper.map($0)) }
+    static let fs  =       { T.Error.fileSystem(ErrorMapper.map($0)) }
     static let fsUnknown = { (e: Error) in T.Error.fileSystem(.unknownIO(e.localizedDescription)) }
-    static let vcs = { (e: Error) in T.Error.vcs(e.localizedDescription) }
+    static let vcs =       { (e: Error) in T.Error.vcs(e.localizedDescription) }
+    static let editor =    { T.Error.editor(ErrorMapper.map($0)) } 
 }
 
 extension T.Error:            Equatable {}

@@ -108,3 +108,17 @@ extension VCS.Error: LocalizedError {
         }
     }
 }
+
+enum Editor {
+    static let run = { tmpPath throws in
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/vi")
+        process.arguments = [tmpPath]
+        try process.run()
+        tcsetpgrp(STDIN_FILENO, process.processIdentifier)
+        process.waitUntilExit()
+        signal(SIGTTOU, SIG_IGN)
+        tcsetpgrp(STDIN_FILENO, getpgrp())
+        signal(SIGTTOU, SIG_DFL)
+    }
+}

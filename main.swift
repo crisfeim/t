@@ -102,17 +102,7 @@ extension Effects {
         put: { text in print(text) },
         currentDirectory: { FileManager.default.currentDirectoryPath },
         now: { Date() },
-        editor: { tmpPath throws(T.Error) in
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/vi")
-            process.arguments = [tmpPath]
-            do { try process.run() } catch { throw .editor(ErrorMapper.map(error)) }
-            tcsetpgrp(STDIN_FILENO, process.processIdentifier)
-            process.waitUntilExit()
-            signal(SIGTTOU, SIG_IGN)
-            tcsetpgrp(STDIN_FILENO, getpgrp())
-            signal(SIGTTOU, SIG_DFL)
-        }
+        editor: Editor.run |> rethrow(T.Error.editor)
     )
 }
 
