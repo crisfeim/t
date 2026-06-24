@@ -16,7 +16,7 @@ typealias Parser = (Args, TodoPath) throws(T.Error) -> Command
 
 let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { defaultTodoPath, donePath, fx in
     return { args throws(T.Error) in 
-        switch try projectPreparsing(fx, parse)(args, defaultTodoPath) {
+        switch try projectPreparsing(fx.io, parse)(args, defaultTodoPath) {
             case let .list(path):               try runList(path, fx)
             case let .add(path, todo):          try runAdd(path, todo, fx)
             case let .remove(path, lines):      try runRemove(path, lines, fx)
@@ -28,14 +28,14 @@ let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { defaultTodoPath, donePa
     }
 }
 
-let projectPreparsing: (Effects.All, @escaping Parser) -> Parser = { fx, parser in
+let projectPreparsing: (Effects.IO, @escaping Parser) -> Parser = { fx, parser in
     return { args, defaultTodoPath throws(T.Error) in
         guard args.first == "project" else { return try parser(args, defaultTodoPath) }
         
         guard args.count >= 2 else { throw .conflictingFlags }
         let projectName = args[1]
         
-        let todoFiles = try fx.io.all()
+        let todoFiles = try fx.all()
         
         guard let projectTodoPath = todoFiles.filter({ $0.contains(projectName) }) |> sortMatches |> first else {
             throw .notFound(projectName, available: todoFiles)
