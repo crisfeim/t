@@ -47,7 +47,7 @@ let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath
         guard args.count == 2 else { throw .conflictingFlags }
         return .add(args[1])
         
-        case "remove":
+        case "remove", "rm":
         let lines = args.dropFirst().compactMap { Int($0) }
         guard lines.count == args.count - 1 else { throw .conflictingFlags }
         return .remove(lines)
