@@ -203,29 +203,29 @@ let getOutput: (() -> Void) -> [String] = { block in
 let test_parserErrors: () = {
     let sut = makeSUT({.live})
     
-    assertThrows(T.Error.unhandledFlag, { () throws(T.Error) in try sut.execute(["invalid_command"]) })
+    assertThrows(.unhandledFlag, { () throws(T.Error) in try sut.execute(["invalid_command"]) })
     
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["list", "fichero.txt", "extra"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["list", "fichero.txt", "extra"]) })
     
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["add"]) })
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["add", "tarea", "extra"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["add"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["add", "tarea", "extra"]) })
     
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["remove", "1", "abc", "3"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["remove", "1", "abc", "3"]) })
     
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["complete"]) })
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["complete", "abc"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["complete"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["complete", "abc"]) })
     
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["edit"]) })
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["edit", "abc"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["edit"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["edit", "abc"]) })
     
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["all", "extra"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["all", "extra"]) })
     
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["project"]) })
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["project", "mi_proyecto", "extra"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["project"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["project", "mi_proyecto", "extra"]) })
     
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit"]) })
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit", "wrong_flag", "1"]) })
-    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit", "editor", "abc"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit", "wrong_flag", "1"]) })
+    assertThrows(.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit", "editor", "abc"]) })
     
     sut.tearDown()
 }()
@@ -234,14 +234,14 @@ let test_lineBounds: () = {
     let sut = makeSUT({.live})
     try! sut.execute(["add", "Single task"])
     
-    assertThrows(T.Error.wrongLine(0), { () throws(T.Error) in try sut.execute(["complete", "0"]) })
-    assertThrows(T.Error.wrongLine(2), { () throws(T.Error) in try sut.execute(["complete", "2"]) })
+    assertThrows(.wrongLine(0), { () throws(T.Error) in try sut.execute(["complete", "0"]) })
+    assertThrows(.wrongLine(2), { () throws(T.Error) in try sut.execute(["complete", "2"]) })
     
-    assertThrows(T.Error.wrongLine(0), { () throws(T.Error) in try sut.execute(["edit", "0"]) })
-    assertThrows(T.Error.wrongLine(2), { () throws(T.Error) in try sut.execute(["edit", "2"]) })
+    assertThrows(.wrongLine(0), { () throws(T.Error) in try sut.execute(["edit", "0"]) })
+    assertThrows(.wrongLine(2), { () throws(T.Error) in try sut.execute(["edit", "2"]) })
     
-    assertThrows(T.Error.wrongLine(0), { () throws(T.Error) in try sut.execute(["commit", "0"]) })
-    assertThrows(T.Error.wrongLine(2), { () throws(T.Error) in try sut.execute(["commit", "2"]) })
+    assertThrows(.wrongLine(0), { () throws(T.Error) in try sut.execute(["commit", "0"]) })
+    assertThrows(.wrongLine(2), { () throws(T.Error) in try sut.execute(["commit", "2"]) })
     
     sut.tearDown()
 }()
@@ -250,7 +250,7 @@ let test_versionControlIntegration: () = {
     // CASE 1: Not a repository error
     do {
         let sut = makeSUT { .live * { $0.vcs.get = { _ in nil } } }
-        assertThrows(T.Error.vcs("Not a repository"), { () throws(T.Error) in try sut.execute(["commit", "1"]) })
+        assertThrows(.vcs("Not a repository"), { () throws(T.Error) in try sut.execute(["commit", "1"]) })
         sut.tearDown()
     }
     
