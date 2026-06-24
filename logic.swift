@@ -3,29 +3,26 @@ typealias TodoPath = String
 typealias DonePath = String
 
 // MARK: - Effects
-struct Effects {
-    typealias Path = String
-    
-    let fs: FileSystem
-    var vcs: VersionControl
-    let put: (String) -> Void
-    let currentDirectory: () -> String
-    var now: () -> Date
-    var editor: (Path) throws(T.Error) -> Void
-    var date: String { yyyyMMddHHmmss.string(from: now()) }
-    
-    typealias FileSystem = (
-        read: (Path) throws(T.Error) -> [String],
-        write: ([String], Path) throws(T.Error) -> Void,
-        delete: (Path) throws(T.Error) -> Void,
-        all: () throws(T.Error) -> [Path],
-    )
+typealias Effects = (
+    fs: FileSystem,
+    vcs: VersionControl,
+    put: (String) -> Void,
+    currentDirectory: () -> String,
+    now: () -> Date,
+    editor: (String) throws(T.Error) -> Void,
+)
 
-    typealias VersionControl = (
-        get: (Path) -> (dir: String, type: String)?,
-        commit: (String, String, Path) throws(T.Error) -> Void
-    )
-}
+typealias FileSystem = (
+    read: (String) throws(T.Error) -> [String],
+    write: ([String], String) throws(T.Error) -> Void,
+    delete: (String) throws(T.Error) -> Void,
+    all: () throws(T.Error) -> [String],
+)
+
+typealias VersionControl = (
+    get: (String) -> (dir: String, type: String)?,
+    commit: (String, String, String) throws(T.Error) -> Void
+)
 
 // MARK: - Logic
 
@@ -53,7 +50,7 @@ let runComplete: (TodoPath, DonePath, Int, Effects) throws(T.Error) -> Void = { 
     let todos = try fx.fs.read(todoPath)
     guard let (removed, rest) = todos.removing(at: line - 1) else { throw .wrongLine(line) }
     let done = (try? fx.fs.read(donePath)) ?? []
-    try fx.fs.write(done + [fx.date + " " + removed], donePath)
+    try fx.fs.write(done + [yyyyMMddHHmmss.string(from: fx.now())  + " " + removed], donePath)
     try fx.fs.write(rest, todoPath)
     fx.put("Todo completed")
 }
@@ -112,7 +109,7 @@ let runCommit: (Int, TodoPath, DonePath, Bool, Effects) throws(T.Error) -> Void 
     
     try fx.vcs.commit(finalMessage, repo.type, repo.dir)
     let done = (try? fx.fs.read(donePath)) ?? []
-    try fx.fs.write(done + [fx.date + " " + removedTodo], donePath)
+    try fx.fs.write(done + [yyyyMMddHHmmss.string(from: fx.now())  + " " + removedTodo], donePath)
     try fx.fs.write(rest, todoPath)
     fx.put("Todo completed and committed successfully via \(repo.type)")
 }

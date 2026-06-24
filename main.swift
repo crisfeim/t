@@ -87,24 +87,24 @@ let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath
     }
 }
 
-extension Effects {
-    static let live = Effects(
-        fs: (
-            read  : IO.shared.read   |> rethrow(T.Error.fs),
-            write : IO.shared.write  |> rethrow(T.Error.fs),
-            delete: IO.shared.delete |> rethrow(T.Error.fs),
-            all   : IO.shared.all    |> rethrow(T.Error.fsUnknown)
-        ),
-        vcs: (
-            get:    VCS.shared.get, 
-            commit: VCS.shared.commit |> rethrow(T.Error.vcs)
-        ),
-        put: { text in print(text) },
-        currentDirectory: { FileManager.default.currentDirectoryPath },
-        now: { Date() },
-        editor: Editor.run |> rethrow(T.Error.editor)
-    )
-}
+
+let liveFx = Effects(
+    fs: (
+        read  : IO.shared.read   |> rethrow(T.Error.fs),
+        write : IO.shared.write  |> rethrow(T.Error.fs),
+        delete: IO.shared.delete |> rethrow(T.Error.fs),
+        all   : IO.shared.all    |> rethrow(T.Error.fsUnknown)
+    ),
+    vcs: (
+        get:    VCS.shared.get, 
+        commit: VCS.shared.commit |> rethrow(T.Error.vcs)
+    ),
+    put: { text in print(text) },
+    currentDirectory: { FileManager.default.currentDirectoryPath },
+    now: { Date() },
+    editor: Editor.run |> rethrow(T.Error.editor)
+)
+
 
 
 // MARK: - CLI
@@ -114,7 +114,7 @@ extension T {
         let doneFile = FileManager.default.currentDirectoryPath + "/.done"
         let arguments = Array(CommandLine.arguments.dropFirst())
         
-        let t = make(todoFile, doneFile, .live)
+        let t = make(todoFile, doneFile, liveFx)
         do {
             try t(arguments)
         } catch {
@@ -191,7 +191,7 @@ let getOutput: (() -> Void) -> [String] = { block in
 
 
 let test_parserErrors: () = {
-    let sut = makeSUT(.live)
+    let sut = makeSUT(liveFx)
     
     assertThrows(.unhandledFlag, { () throws(T.Error) in try sut.execute(["invalid_command"]) })
     
@@ -221,7 +221,7 @@ let test_parserErrors: () = {
 }()
 
 let test_lineBounds: () = {
-    let sut = makeSUT(.live)
+    let sut = makeSUT(liveFx)
     try! sut.execute(["add", "Single task"])
     
     assertThrows(.wrongLine(0), { () throws(T.Error) in try sut.execute(["complete", "0"]) })
@@ -239,7 +239,7 @@ let test_lineBounds: () = {
 let test_versionControlIntegration: () = {    
     // CASE 1: Not a repository error
     do {
-        let sut = makeSUT(.live * { $0.vcs.get = { _ in nil } })
+        let sut = makeSUT(liveFx * { $0.vcs.get = { _ in nil } })
         assertThrows(.vcs("Not a repository"), { () throws(T.Error) in try sut.execute(["commit", "1"]) })
         sut.tearDown()
     }
@@ -250,7 +250,7 @@ let test_versionControlIntegration: () = {
         var receivedSystem = ""
         
         let sut = makeSUT(
-            .live * {
+            liveFx * {
                 $0.vcs.get = { _ in (dir: "/mock/repo", type: "fossil") }
                 $0.vcs.commit = { msg, sys, _ in 
                     receivedMessage = msg
@@ -278,7 +278,7 @@ let test_versionControlIntegration: () = {
         var receivedMessage = ""
         
         let sut = makeSUT(
-            .live * {
+            liveFx * {
                 $0.vcs.get = { _ in (dir: "/mock/repo", type: "git") }
                 $0.vcs.commit = { msg, _, _ in 
                     receivedMessage = msg
@@ -304,7 +304,7 @@ let test_integration: () = {
     
     var editor = { (p: String) in try! "tarea editada".write(toFile: p, atomically: true, encoding: .utf8) }
      
-    let sut = makeSUT(.live * { 
+    let sut = makeSUT(liveFx * { 
         $0.now = { now }
         $0.editor = { editor($0) }
     })
