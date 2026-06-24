@@ -116,7 +116,7 @@ enum T {
         case unhandledFlag
         case fileSystem(FileSystem)
         case editor(FileSystem)
-        case unexistentProject(wrongProject: String, available: [String])
+        case notFound(_ projectName: String, available: [String])
         case vcs(String)
         
         enum FileSystem {
@@ -190,7 +190,7 @@ extension T.Error {
             return "editor permission denied"
             case let .editor(.unknownIO(description)):
             return "editor failed: \(description)"
-            case let .unexistentProject(wrongProject, available):
+            case let .notFound(wrongProject, available):
             return "Project doesn't exist: \(wrongProject), available locations: \(available.reduce("") { acc, next in acc + "\n  " + next })"
             case let .vcs(description): 
             return "Commit error: \(description)"

@@ -36,10 +36,9 @@ let projectPreparsing: (Effects.All, @escaping Parser) -> Parser = { fx, parser 
         let projectName = args[1]
         
         let todoFiles = try fx.io.all()
-        let sortedMatches = todoFiles.filter { $0.contains(projectName) } |> sortMatches
         
-        guard let projectTodoPath = sortedMatches.first else {
-            throw .unexistentProject(wrongProject: projectName, available: todoFiles)
+        guard let projectTodoPath = todoFiles.filter({ $0.contains(projectName) }) |> sortMatches |> first else {
+            throw .notFound(projectName, available: todoFiles)
         }
         
         let remainingArgs = args.dropFirst(2)
@@ -49,36 +48,36 @@ let projectPreparsing: (Effects.All, @escaping Parser) -> Parser = { fx, parser 
     }
 }
 
-let parse: Parser = { args, defaultTodoPath throws(T.Error) in
-    guard let first = args.first else { return .list(defaultTodoPath) }
+let parse: Parser = { args, todoPath throws(T.Error) in
+    guard let first = args.first else { return .list(todoPath) }
     
     switch first {
         case "list":
         guard args.count >= 1, args.count <= 2 else { throw .conflictingFlags }
         if args.count == 1 {
-            return .list(defaultTodoPath)
+            return .list(todoPath)
         } else {
             return .list(args[1])
         }
         
         case "add", "new":
         guard args.count == 2 else { throw .conflictingFlags }
-        return .add(defaultTodoPath, args[1])
+        return .add(todoPath, args[1])
         
         case "remove", "rm":
         let lines = args.dropFirst().compactMap { Int($0) }
         guard lines.count == args.count - 1 else { throw .conflictingFlags }
-        return .remove(defaultTodoPath, lines)
+        return .remove(todoPath, lines)
         
         case "complete":
         guard args.count == 2, let line = Int(args[1])
         else { throw .conflictingFlags }
-        return .complete(defaultTodoPath, line)
+        return .complete(todoPath, line)
         
         case "edit":
         guard args.count == 2, let line = Int(args[1])
         else { throw .conflictingFlags }
-        return .edit(defaultTodoPath, line)
+        return .edit(todoPath, line)
         
         case "all":
         guard args.count == 1 else { throw .conflictingFlags }
@@ -87,11 +86,11 @@ let parse: Parser = { args, defaultTodoPath throws(T.Error) in
         case "commit":
         if args.count == 3, let line = Int(args[2]) {
             guard args[1] == "editor" else { throw .conflictingFlags }
-            return .commit(defaultTodoPath, line: line, editMsg: true)
+            return .commit(todoPath, line: line, editMsg: true)
         }
         
         if args.count == 2, let line = Int(args[1]) {
-            return .commit(defaultTodoPath, line: line, editMsg: false)
+            return .commit(todoPath, line: line, editMsg: false)
         }
         
         throw .conflictingFlags
@@ -154,6 +153,8 @@ func rethrow<each T, R, E: Error>(
         }
     }
 }
+
+func first<T>(array: Array<T>) -> T? { array.first }
 
 // Filter to show more relevant folder 
 // (ej. "t project cristian"  --> /Users/cristian before that /Users/cristian/💻/t)
@@ -390,7 +391,7 @@ let test_remoteProjectManagement: () = {
         let mockFx = liveFx * { $0.io.all = { ["/proyectos/otro/.todo"] } }
         let sut = makeSUT(mockFx)
         
-        assertThrows(.unexistentProject(wrongProject: "cristian", available: ["/proyectos/otro/.todo"]), { () throws(T.Error) in
+        assertThrows(.notFound("cristian", available: ["/proyectos/otro/.todo"]), { () throws(T.Error) in
             try sut.execute(["project", "cristian"])
         })
         
