@@ -131,7 +131,6 @@ let liveFx = Effects.All(
         commit: VCS.commit |> rethrow(T.Error.vcs)
     ),
     put: { text in print(text) },
-    currentDirectory: { FileManager.default.currentDirectoryPath },
     now: { Date() },
     editor: Editor.run |> rethrow(T.Error.editor),
     copyToClipboard: Clipboard.copy
@@ -254,7 +253,10 @@ let test_parserErrors: () = {
 }()
 
 let test_lineBounds: () = {
-    let sut = makeSUT(liveFx)
+    let sut = makeSUT(liveFx * {
+        $0.vcs.get = { _ in (dir: "/Users/some/fossil", type: "fossil") }
+        $0.io.read = { _ in return [] }
+    })
     try! sut.execute(["add", "Single task"])
     
     assertThrows(.wrongLines([0]), { () throws(T.Error) in try sut.execute(["complete", "0"]) })
