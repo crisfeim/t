@@ -239,6 +239,25 @@ let testParserErrors: () = {
     sut.tearDown()
 }()
 
+let testLineBounds: () = {
+    let sut = makeSUT({.live})
+    try! sut.execute(["add", "Single task"])
+    
+    // 1. complete out of bounds (0 and superior)
+    assertThrows(T.Error.wrongLine(0), { () throws(T.Error) in try sut.execute(["complete", "0"]) })
+    assertThrows(T.Error.wrongLine(2), { () throws(T.Error) in try sut.execute(["complete", "2"]) })
+    
+    // 2. edit out of bounds
+    assertThrows(T.Error.wrongLine(0), { () throws(T.Error) in try sut.execute(["edit", "0"]) })
+    assertThrows(T.Error.wrongLine(2), { () throws(T.Error) in try sut.execute(["edit", "2"]) })
+    
+    // 3. commit out of bounds
+    assertThrows(T.Error.wrongLine(0), { () throws(T.Error) in try sut.execute(["commit", "0"]) })
+    assertThrows(T.Error.wrongLine(2), { () throws(T.Error) in try sut.execute(["commit", "2"]) })
+    
+    sut.tearDown()
+}()
+
 let integrationTest: () = {
     
     let now = Calendar.current.date(from: DateComponents(year: 2016, month: 1, day: 1))!
