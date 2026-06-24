@@ -9,6 +9,7 @@ enum Command {
     case all
     case commit(TodoPath, line: Int, editMsg: Bool)
     case projectsAll
+    case copy(TodoPath, _ line: Int)
 }
 
 typealias Args   = [String]
@@ -24,6 +25,7 @@ let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { todoPath, donePath, fx 
             case let .complete(path, line):     try runComplete(path, donePath, line, fx)
             case let .edit(path, line):         try runEdit(path, line, fx)
             case let .commit(path, line, edit): try runCommit(line, path, donePath, edit, fx)
+            case let .copy(path, line):         try runCopy(path, line, fx)
             case .all:                          try runAll(fx)
             case .projectsAll: try runProjectsList(fx)
         }
@@ -104,6 +106,10 @@ let parse: Parser = { args, todoPath throws(T.Error) in
         guard args.count == 1 else { throw .conflictingFlags }
         return .projectsAll
         
+        case "copy":
+        guard args.count == 2, let line = Int(args[1]) else { throw .conflictingFlags }
+        return .copy(todoPath, line)
+            
         default:
         throw .unhandledFlag
     }
@@ -123,7 +129,8 @@ let liveFx = Effects.All(
     put: { text in print(text) },
     currentDirectory: { FileManager.default.currentDirectoryPath },
     now: { Date() },
-    editor: Editor.run |> rethrow(T.Error.editor)
+    editor: Editor.run |> rethrow(T.Error.editor),
+    copyToClipboard: Clipboard.copy
 )
 
 
@@ -452,6 +459,24 @@ let test_projectsCommand: () = {
         
         sut.tearDown()
     }
+}()
+
+let test_copyCommand: () = {
+    var textCopiedToClipboard = ""
+    
+    let mockFx = liveFx * {
+        $0.io.read = { _ in ["Mi tarea para el portapapeles"] }
+        $0.copyToClipboard = { text in textCopiedToClipboard = text }
+    }
+    
+    let sut = makeSUT(mockFx)
+    let output = getOutput { try! sut.execute(["copy", "1"]) }
+    
+    assert(output.count == 1)
+    assert(output[0] == "Copied to clipboard: Mi tarea para el portapapeles")
+    assert(textCopiedToClipboard == "Mi tarea para el portapapeles")
+    
+    sut.tearDown()
 }()
 
 let test_integration: () = {
