@@ -43,7 +43,7 @@ let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath
             return .list(args[1])
         }
         
-        case "add":
+        case "add", "new":
         guard args.count == 2 else { throw .conflictingFlags }
         return .add(args[1])
         
