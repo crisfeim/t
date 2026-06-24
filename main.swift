@@ -15,7 +15,7 @@ typealias Args = [String]
 typealias Path = String
 
 
-let make: (TodoPath, DonePath, Effects) -> T.CLI = { todoPath, donePath, fx in
+let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { todoPath, donePath, fx in
     return { args throws(T.Error) in 
         switch try parse(args, todoPath) {
             case let .list(todoPath):    try runList(todoPath, fx)
@@ -88,7 +88,7 @@ let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath
 }
 
 
-let liveFx = Effects(
+let liveFx = Effects.All(
     fs: (
         read  : IO.shared.read   |> rethrow(T.Error.fs),
         write : IO.shared.write  |> rethrow(T.Error.fs),
@@ -152,7 +152,7 @@ typealias SUT = (
     tearDown: () -> Void
 )
 
-let makeSUT: (Effects) -> SUT = { fx in
+let makeSUT: (Effects.All) -> SUT = { fx in
     let tempDir = NSTemporaryDirectory()
     let uuid = UUID().uuidString
     let todo = tempDir + "todo_\(uuid).txt"

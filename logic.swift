@@ -3,50 +3,52 @@ typealias TodoPath = String
 typealias DonePath = String
 
 // MARK: - Effects
-typealias Effects = (
-    fs: FileSystem,
-    vcs: VersionControl,
-    put: (String) -> Void,
-    currentDirectory: () -> String,
-    now: () -> Date,
-    editor: (String) throws(T.Error) -> Void,
-)
-
-typealias FileSystem = (
-    read: (String) throws(T.Error) -> [String],
-    write: ([String], String) throws(T.Error) -> Void,
-    delete: (String) throws(T.Error) -> Void,
-    all: () throws(T.Error) -> [String],
-)
-
-typealias VersionControl = (
-    get: (String) -> (dir: String, type: String)?,
-    commit: (String, String, String) throws(T.Error) -> Void
-)
+enum Effects {
+    typealias All = (
+        fs: IO,
+        vcs: VCS,
+        put: (String) -> Void,
+        currentDirectory: () -> String,
+        now: () -> Date,
+        editor: (String) throws(T.Error) -> Void,
+    )
+    
+    typealias IO = (
+        read: (String) throws(T.Error) -> [String],
+        write: ([String], String) throws(T.Error) -> Void,
+        delete: (String) throws(T.Error) -> Void,
+        all: () throws(T.Error) -> [String],
+    )
+    
+    typealias VCS = (
+        get: (String) -> (dir: String, type: String)?,
+        commit: (String, String, String) throws(T.Error) -> Void
+    )
+}
 
 // MARK: - Logic
 
-let runList: (TodoPath, Effects) throws(T.Error) -> Void = { todoPath, fx  in
+let runList: (TodoPath, Effects.All) throws(T.Error) -> Void = { todoPath, fx  in
     try fx.fs.read(todoPath).enumerated()
     .map { idx, content in (idx + 1).description + " " + content }
     .forEach(fx.put)
 }
 
-let runAdd: (TodoPath, String, Effects) throws(T.Error) -> Void = { todoPath, todo, fx in
+let runAdd: (TodoPath, String, Effects.All) throws(T.Error) -> Void = { todoPath, todo, fx in
     let todos = try fx.fs.read(todoPath)
     let updated = todos + [todo]
     try fx.fs.write(updated, todoPath)
     fx.put(updated.count.description + " " + todo)
 }
 
-let runRemove: (TodoPath, [Int], Effects) throws(T.Error) -> Void = { todoPath, lines, fx throws(T.Error) in
+let runRemove: (TodoPath, [Int], Effects.All) throws(T.Error) -> Void = { todoPath, lines, fx throws(T.Error) in
     let todos = try fx.fs.read(todoPath)
     let rest = todos.enumerated().filter { offset, _ in !lines.contains(offset + 1) }.map(\.element)
     try fx.fs.write(rest, todoPath)
     fx.put("Todo removed")
 }
 
-let runComplete: (TodoPath, DonePath, Int, Effects) throws(T.Error) -> Void = { todoPath, donePath, line, fx throws(T.Error) in
+let runComplete: (TodoPath, DonePath, Int, Effects.All) throws(T.Error) -> Void = { todoPath, donePath, line, fx throws(T.Error) in
     let todos = try fx.fs.read(todoPath)
     guard let (removed, rest) = todos.removing(at: line - 1) else { throw .wrongLine(line) }
     let done = (try? fx.fs.read(donePath)) ?? []
@@ -55,7 +57,7 @@ let runComplete: (TodoPath, DonePath, Int, Effects) throws(T.Error) -> Void = { 
     fx.put("Todo completed")
 }
 
-let runEdit: (TodoPath, Int, Effects) throws(T.Error) -> Void = { todoPath, line, fx throws(T.Error) in
+let runEdit: (TodoPath, Int, Effects.All) throws(T.Error) -> Void = { todoPath, line, fx throws(T.Error) in
     let todos = try fx.fs.read(todoPath)
     let idx = line - 1
     guard todos.indices.contains(idx) else { throw .wrongLine(line) }
@@ -73,13 +75,13 @@ let runEdit: (TodoPath, Int, Effects) throws(T.Error) -> Void = { todoPath, line
 }
 
 
-let runAll: (Effects) throws(T.Error) -> Void = { fx throws(T.Error) in
+let runAll: (Effects.All) throws(T.Error) -> Void = { fx throws(T.Error) in
     try fx.fs.all().enumerated().forEach { idx, path in
         fx.put("\(idx + 1) \(path)")
     }
 }
 
-let runListByProject: (String, Effects) throws(T.Error) -> Void = { projectName, fx throws(T.Error) in
+let runListByProject: (String, Effects.All) throws(T.Error) -> Void = { projectName, fx throws(T.Error) in
     let todoFiles = try fx.fs.all()
     
     guard let first = todoFiles.first(where: { $0.contains(projectName) }) else {
@@ -89,7 +91,7 @@ let runListByProject: (String, Effects) throws(T.Error) -> Void = { projectName,
     try runList(first, fx)
 }
 
-let runCommit: (Int, TodoPath, DonePath, Bool, Effects) throws(T.Error) -> Void = { id, todoPath, donePath, editMsg, fx throws(T.Error) in
+let runCommit: (Int, TodoPath, DonePath, Bool, Effects.All) throws(T.Error) -> Void = { id, todoPath, donePath, editMsg, fx throws(T.Error) in
     
     guard let repo = fx.vcs.get(fx.currentDirectory()) else { throw .vcs("Not a repository") }
     let todos = try fx.fs.read(todoPath)
@@ -237,7 +239,7 @@ func |><A, B>(lhs: A, rhs: (A) -> B) -> B {
     rhs(lhs)
 }
 
-func withTempFile<R>(prefix: String, content: [String], fx: Effects, block: (String) throws(T.Error) -> R) throws(T.Error) -> R {
+func withTempFile<R>(prefix: String, content: [String], fx: Effects.All, block: (String) throws(T.Error) -> R) throws(T.Error) -> R {
     let tmpPath = NSTemporaryDirectory() + "\(prefix)_\(UUID().uuidString).txt"
     defer { try? fx.fs.delete(tmpPath) }
     try fx.fs.write(content, tmpPath)
