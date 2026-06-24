@@ -3,69 +3,91 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/crisfeim/t)
 [![CI](https://github.com/crisfeim/t/actions/workflows/ci.yml/badge.svg)](https://github.com/crisfeim/t/actions/workflows/ci.yml)
 
-A minimalist CLI todo manager written in Swift, inspired by [Steve Losh's `t`](https://github.com/sjl/t), but built with explicit support for direct Version Control System (Git/Fossil) commits and sequential line-based IDs.
+A minimalist CLI todo manager written in Swift, inspired by [Steve Losh's `t`](https://github.com/sjl/t), but built with explicit support for direct Version Control System (Git/Fossil) commits, global project multi-scoping, and sequential line-based IDs.
 
-> ! This is a mirror of a fossil repo. Original code lives in https://chiselapp.com/user/crisfeim/repository/t/timeline
+> ! This is a mirror of a fossil repo. Original code lives in [https://chiselapp.com/user/crisfeim/repository/t/timeline](https://chiselapp.com/user/crisfeim/repository/t/timeline)
 
 ## Rationale
 
 Unlike the original `t` which uses unique alphanumeric hashes for todo identification, this implementation uses the raw file line number as the ID. 
 
-* Ergonomics: It keeps commands short ("t complete 1") and matches the visual layout exactly.
-* Interoperability: Because todos are just lines in a plaintext file, you can open `.todo` in any standard editor (or todoPaper) to reorder, add, or delete lines manually without breaking external IDs.
-* Integrated Workflow: It allows you to complete and commit a todo to your repository in a single atomic operation ("t commit 1"), avoiding context switching.
+* **Interoperability:** Because todos are just lines in a plaintext file, opening `.todo` in any standard editor (ex.: TaskPaper) allows reordering, adding, or deleting lines manually without breaking external IDs.
+* **Integrated Workflow:** The completion and commitment of a todo to the repository occurs in a single operation (`t commit 1`), avoiding context switching.
 
 ## Requirements
 
 * macOS / Linux
-* find, vi
+* `find`, `vi`
 * Git or Fossil (optional, for VCS tracking)
 
 ## Installation
 
-Use make to compile & move to `./local/bin`.
+Use make to compile & move to `~/.local/bin`.
 
 ## Usage
 
-Data persists locally in `.todo` and `.done` files relative to the current directory.
+By default, data persists locally in `.todo` and `.done` files relative to the current working directory. Targeting specific external projects from any location is possible using the `project` modifier.
 
-* List pending todos:
-```bash
-t list
-```
+### Basic Commands
 
-* Add a new todo:
-```bash
-t add "Buy milk"
-```
+* **List pending todos:**
 
-* Complete a todo (moves it to `.done` with a timestamp prefix):
-```bash
-t complete 1
-```
+    t list
 
-* Edit a todo (opens the line inside `vi`):
-```bash
-t edit 1
-```
+* **Add a new todo:**
 
-* Remove a todo (hard deletion without archiving to `.done`):
-```bash
-t remove 1
-```
+    t add "Buy milk"
 
-* Locate all todo files in the home directory system:
-```bash
-t all
-```
+* **Complete a todo** (moves the task to `.done` with a `yyyyMMddHHmmss` timestamp prefix):
 
-* List todos from a specific project file:
-```bash
-t project <name>
-```
+    t complete 1
 
-* Complete and commit via VCS:
-```bash
-t commit 1
-t commit editor 1
-```
+* **Edit a todo** (opens the specific line inside `vi`):
+
+    t edit 1
+
+* **Remove todos** (supports bulk hard deletion without archiving to `.done`):
+
+    t remove 1 2 3
+
+* **Copy a todo content** directly to the system clipboard:
+
+    t copy 1
+
+---
+
+### Global Project Management
+
+Querying or manipulating `.todo` files across the entire home directory is supported using the folder name of the project. The tool resolves paths by matching exact directory names, filtering out false positives (like sub-strings in `dotfiles`).
+
+* **List all `.todo` paths discovered in the system:**
+
+    t all
+
+* **Inspect all projects and respective lines simultaneously:**
+
+    t projects
+
+* **Scope any command to a specific project directory:**
+
+    t project <project_dir_name> list
+    t project <project_dir_name> add "Fix compiler warning"
+    t project <project_dir_name> remove 3 2 1
+
+*(If no command is provided, execution defaults to `list`)*
+
+---
+
+### Integrated Version Control (VCS)
+
+The tool walks up the directory tree starting from the parent folder of the active `.todo` file to detect a repository, ensuring operations work when executed via the global `project` router.
+
+* **Complete and commit using the task content as the message:**
+
+    t commit 1
+
+* **Complete and edit the commit message before submitting** (opens `vi` with the task text):
+
+    t commit editor 1
+
+*Supports both Git (`git add -A && commit`) and Fossil (`fossil addremove && commit`) automatically based on repository detection.*
