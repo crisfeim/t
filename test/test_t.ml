@@ -1,25 +1,43 @@
 type error = FileSystem
+type todo = string
+type path = string
 
 type effects = {
-	read: string -> (string list, error) result;
+	read : path -> (string list, error) result;
+	write: todo list -> path -> (unit, error) result;
 }
 
 let ( let* ) = Result.bind
 
 let run_list todo_path fx =
-	let* lines = fx.read todo_path in
-	Ok lines
+	let* todos = fx.read todo_path in
+	let formatted = todos |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
+	Ok formatted
 
-(* run list returns error on read error *)
+(* run list fails on read error *)
 let () =
-	let fx = { read = fun path -> Error FileSystem } in
+	let fx = { read = (fun _ -> Error FileSystem) ; write = (fun _ _ -> Ok()) } in
 	match run_list "any path" fx with
 	| Error FileSystem -> ()
 	| _ -> assert false
 
-(* run list returns list on successful read *)
+(* run list succeeds on successful read *)
 let () =
-	let fx = { read = fun path -> Ok ["todo 1"] } in
+	let fx = { read = (fun _ -> Ok ["todo 1"]) ; write = (fun _ _ -> Ok()) } in
 	match run_list "any path" fx with
 	| Error FileSystem -> assert false
-	| Ok list -> assert (list == ["todo 1"])
+	| Ok list -> assert (list = ["1 todo 1"])
+
+
+let run_add todo todo_path fx =
+	let* todos = fx.read todo_path in
+	let updated = todos @ [todo] in
+	let* _ = fx.write updated todo_path in
+	Ok()
+
+(* run add fails on writing failure *)
+let () =
+	let fx = { read = (fun _ -> Ok []) ; write = (fun _ _ -> Error FileSystem) } in
+	match run_add "any todo" "any path" fx with
+	| Error FileSystem -> ()
+	| _ -> assert false
