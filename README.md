@@ -5,7 +5,7 @@
 
 A minimalist CLI todo manager written in Swift, inspired by [Steve Losh's `t`](https://github.com/sjl/t), but built with explicit support for direct Version Control System (Git/Fossil) commits, global project multi-scoping, and sequential line-based IDs.
 
-> ! This is a mirror of a fossil repo. Original code lives in [https://chiselapp.com/user/crisfeim/repository/t/timeline](https://chiselapp.com/user/crisfeim/repository/t/timeline)
+> ! This is a mirror of a fossil repo. Original code lives in https://chiselapp.com/user/crisfeim/repository/t/timeline
 
 ## Rationale
 
@@ -31,28 +31,34 @@ By default, data persists locally in `.todo` and `.done` files relative to the c
 ### Basic Commands
 
 * **List pending todos:**
-
-    t list
+```bash
+t list
+```
 
 * **Add a new todo:**
-
-    t add "Buy milk"
+```bash
+t add "Buy milk"
+```
 
 * **Complete a todo** (moves the task to `.done` with a `yyyyMMddHHmmss` timestamp prefix):
-
-    t complete 1
+```bash
+t complete 1
+```
 
 * **Edit a todo** (opens the specific line inside `vi`):
-
-    t edit 1
+```bash
+t edit 1
+```
 
 * **Remove todos** (supports bulk hard deletion without archiving to `.done`):
-
-    t remove 1 2 3
+```bash
+t remove 1 2 3
+```
 
 * **Copy a todo content** directly to the system clipboard:
-
-    t copy 1
+```bash
+t copy 1
+```
 
 ---
 
@@ -61,19 +67,21 @@ By default, data persists locally in `.todo` and `.done` files relative to the c
 Querying or manipulating `.todo` files across the entire home directory is supported using the folder name of the project. The tool resolves paths by matching exact directory names, filtering out false positives (like sub-strings in `dotfiles`).
 
 * **List all `.todo` paths discovered in the system:**
-
-    t all
+```bash
+t all
+```
 
 * **Inspect all projects and respective lines simultaneously:**
-
-    t projects
+```bash
+t projects
+```
 
 * **Scope any command to a specific project directory:**
-
-    t project <project_dir_name> list
-    t project <project_dir_name> add "Fix compiler warning"
-    t project <project_dir_name> remove 3 2 1
-
+```bash
+t project <project_dir_name> list
+t project <project_dir_name> add "Fix compiler warning"
+t project <project_dir_name> remove 3 2 1
+```
 *(If no command is provided, execution defaults to `list`)*
 
 ---
@@ -83,11 +91,13 @@ Querying or manipulating `.todo` files across the entire home directory is suppo
 The tool walks up the directory tree starting from the parent folder of the active `.todo` file to detect a repository, ensuring operations work when executed via the global `project` router.
 
 * **Complete and commit using the task content as the message:**
-
-    t commit 1
+```bash
+t commit 1
+```
 
 * **Complete and edit the commit message before submitting** (opens `vi` with the task text):
-
-    t commit editor 1
+```bash
+t commit editor 1
+```
 
 *Supports both Git (`git add -A && commit`) and Fossil (`fossil addremove && commit`) automatically based on repository detection.*
