@@ -106,6 +106,24 @@ let runCommit: (Int, TodoPath, DonePath, Bool, Effects.All) throws(T.Error) -> V
     fx.put("Todo completed and committed successfully via \(repo.type)")
 }
 
+
+let runProjectsList: (Effects.All) throws(T.Error) -> Void = { fx in
+    let todoFiles = try fx.io.all()
+    let sortedFiles = todoFiles |> sortMatches
+    
+    for path in sortedFiles {
+        fx.put(path)
+        
+        let lines = try fx.io.read(path)
+        guard !lines.isEmpty else { continue }
+        
+        for (index, line) in lines.enumerated() {
+            fx.put("    \(index + 1) \(line)")
+        }
+    }
+}
+
+
 // MARK: - Error
 enum T {
     typealias CLI = ([String]) throws(T.Error) -> Void
@@ -234,4 +252,19 @@ func withTempFile<R>(prefix: String, content: [String], fx: Effects.All, block: 
     defer { try? fx.io.delete(tmpPath) }
     try fx.io.write(content, tmpPath)
     return try block(tmpPath)
+}
+
+
+// Filter to show more relevant folder 
+// (ej. "t project cristian"  --> /Users/cristian before that /Users/cristian/💻/t)
+let sortMatches: ([String]) -> [String] = { todoFiles in 
+    todoFiles.sorted { path1, path2 in
+        let count1 = path1.components(separatedBy: "/").count
+        let count2 = path2.components(separatedBy: "/").count
+        if count1 != count2 {
+            return count1 < count2
+        }
+        if path1.count != path2.count { return path1.count < path2.count }
+        return path1 < path2
+    }
 }

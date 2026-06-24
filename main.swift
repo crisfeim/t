@@ -30,22 +30,6 @@ let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { todoPath, donePath, fx 
     }
 }
 
-let runProjectsList: (Effects.All) throws(T.Error) -> Void = { fx in
-    let todoFiles = try fx.io.all()
-    let sortedFiles = todoFiles |> sortMatches
-    
-    for path in sortedFiles {
-        fx.put(path)
-        
-        let lines = try fx.io.read(path)
-        guard !lines.isEmpty else { continue }
-        
-        for (index, line) in lines.enumerated() {
-            fx.put("    \(index + 1) \(line)")
-        }
-    }
-}
-
 // Preparsing decorator
 // Allows global project manipulation
 // Ej: t project cristian add "new todo" -> Adds todo in ~/cristian/.todo if exists.
@@ -181,19 +165,6 @@ func rethrow<each T, R, E: Error>(
 
 func first<T>(array: Array<T>) -> T? { array.first }
 
-// Filter to show more relevant folder 
-// (ej. "t project cristian"  --> /Users/cristian before that /Users/cristian/💻/t)
-let sortMatches: ([String]) -> [String] = { todoFiles in 
-    todoFiles.sorted { path1, path2 in
-        let count1 = path1.components(separatedBy: "/").count
-        let count2 = path2.components(separatedBy: "/").count
-        if count1 != count2 {
-            return count1 < count2
-        }
-        if path1.count != path2.count { return path1.count < path2.count }
-        return path1 < path2
-    }
-}
 
 // MARK: - Tests
 #if DEBUG
