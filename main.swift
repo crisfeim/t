@@ -311,12 +311,13 @@ let test_versionControlIntegration: () = {
 let test_integration: () = {
     
     let now = Calendar.current.date(from: DateComponents(year: 2016, month: 1, day: 1))!
-    var effects = Effects.live * { 
-        $0.now = { now }
-        $0.editor = { try! "tarea editada".write(toFile: $0, atomically: true, encoding: .utf8) }
-    }
     
-    let sut = makeSUT({ effects })
+    var editor = { (p: String) in try! "tarea editada".write(toFile: p, atomically: true, encoding: .utf8) }
+     
+    let sut = makeSUT({ .live * { 
+        $0.now = { now }
+        $0.editor = editor }
+    })
     
     // 1. Añadir tareas
     do {
@@ -385,9 +386,7 @@ let test_integration: () = {
     // 7. Ediing ede cases
     do {
         do {
-            effects = effects * { 
-                $0.editor = { try! "".write(toFile: $0, atomically: true, encoding: .utf8) }
-            }
+            editor = { try! "".write(toFile: $0, atomically: true, encoding: .utf8) }
             let output = getOutput { try! sut.execute(["edit", "1"])}
             let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
             assert(disk == "tarea editada")
@@ -395,9 +394,7 @@ let test_integration: () = {
         }
         
         do {
-            effects = effects * { 
-                $0.editor = { try! "tarea editada".write(toFile: $0, atomically: true, encoding: .utf8) }
-            }
+            editor = { try! "tarea editada".write(toFile: $0, atomically: true, encoding: .utf8) }
             let output = getOutput { try! sut.execute(["edit", "1"])}
             let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
             assert(disk == "tarea editada")
