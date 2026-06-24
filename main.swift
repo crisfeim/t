@@ -89,7 +89,7 @@ let parse: (Args, TodoPath) throws(T.Error) -> Command = { args, defaultTodoPath
 
 
 let liveFx = Effects.All(
-    fs: (
+    io: (
         read  : IO.shared.read   |> rethrow(T.Error.fs),
         write : IO.shared.write  |> rethrow(T.Error.fs),
         delete: IO.shared.delete |> rethrow(T.Error.fs),
