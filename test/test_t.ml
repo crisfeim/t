@@ -14,14 +14,14 @@ let run_list todo_path fx =
 	let formatted = todos |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
 	Ok formatted
 
-(* run list fails on read error *)
+(* Run list fails on read error *)
 let () =
 	let fx = { read = (fun _ -> Error FileSystem) ; write = (fun _ _ -> Ok()) } in
 	match run_list "any path" fx with
 	| Error FileSystem -> ()
 	| _ -> assert false
 
-(* run list succeeds on successful read *)
+(* Run list succeeds on successful read *)
 let () =
 	let fx = { read = (fun _ -> Ok ["todo 1"]) ; write = (fun _ _ -> Ok()) } in
 	match run_list "any path" fx with
@@ -35,7 +35,14 @@ let run_add todo todo_path fx =
 	let* _ = fx.write updated todo_path in
 	Ok()
 
-(* run add fails on writing failure *)
+(* Run add fails on read failure *)
+let () =
+		let fx = { read = (fun _ -> Error FileSystem) ; write = (fun _ _ -> Ok() ) } in
+		match run_add "any todo" "any path" fx with
+		| Error FileSystem -> ()
+		| _ -> assert false
+
+(* Run add fails on writing failure *)
 let () =
 	let fx = { read = (fun _ -> Ok []) ; write = (fun _ _ -> Error FileSystem) } in
 	match run_add "any todo" "any path" fx with
