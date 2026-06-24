@@ -8,6 +8,7 @@ enum Command {
     case edit(TodoPath, Int)
     case all
     case commit(TodoPath, line: Int, editMsg: Bool)
+    case projectsAll
 }
 
 typealias Args   = [String]
@@ -24,6 +25,23 @@ let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { todoPath, donePath, fx 
             case let .edit(path, line):         try runEdit(path, line, fx)
             case let .commit(path, line, edit): try runCommit(line, path, donePath, edit, fx)
             case .all:                          try runAll(fx)
+            case .projectsAll: try runProjectsList(fx)
+        }
+    }
+}
+
+let runProjectsList: (Effects.All) throws(T.Error) -> Void = { fx in
+    let todoFiles = try fx.io.all()
+    let sortedFiles = todoFiles |> sortMatches
+    
+    for path in sortedFiles {
+        fx.put(path)
+        
+        let lines = try fx.io.read(path)
+        guard !lines.isEmpty else { continue }
+        
+        for (index, line) in lines.enumerated() {
+            fx.put("    \(index + 1) \(line)")
         }
     }
 }
@@ -97,6 +115,10 @@ let parse: Parser = { args, todoPath throws(T.Error) in
         }
         
         throw .conflictingFlags
+        
+        case "projects":
+        guard args.count == 1 else { throw .conflictingFlags }
+        return .projectsAll
         
         default:
         throw .unhandledFlag
@@ -396,6 +418,65 @@ let test_remoteProjectManagement: () = {
         
         assertThrows(.notFound("cristian", available: ["/proyectos/otro/.todo"]), { () throws(T.Error) in
             try sut.execute(["project", "cristian"])
+        })
+        
+        sut.tearDown()
+    }
+}()
+
+let test_projectsCommand: () = {
+    // Escenario 1: Listar múltiples proyectos con ordenación e indentación correcta
+    do {
+        let mockFx = liveFx * {
+            $0.io.all = { [
+                "/Users/cristian/b/.todo",
+                "/Users/cristian/a/.todo"
+            ] }
+            $0.io.read = { path in
+                if path.contains("a/.todo") {
+                    return ["Comprar leche","Estudiar Swift"]
+                } else {
+                    return ["Fossil task"]
+                }
+            }
+        }
+        
+        let sut = makeSUT(mockFx)
+        
+        let output = getOutput { try! sut.execute(["projects"]) }
+        
+        // Verifica que ordena primero por 'a/.todo' debido al desempate alfabético
+        assert(output[0] == "/Users/cristian/a/.todo")
+        assert(output[1] == "    1 Comprar leche")
+        assert(output[2] == "    2 Estudiar Swift")
+        assert(output[3] == "/Users/cristian/b/.todo")
+        assert(output[4] == "    1 Fossil task")
+        
+        sut.tearDown()
+    }
+    
+    // Escenario 2: Proyectos vacíos no deben listar tareas indentadas
+    do {
+        let mockFx = liveFx * {
+            $0.io.all = { ["/Users/cristian/empty/.todo"] }
+            $0.io.read = { _ in [] }
+        }
+        
+        let sut = makeSUT(mockFx)
+        let output = getOutput { try! sut.execute(["projects"]) }
+        
+        assert(output.count == 1)
+        assert(output[0] == "/Users/cristian/empty/.todo")
+        
+        sut.tearDown()
+    }
+    
+    // Escenario 3: Pasar argumentos extra a 'projects' debe lanzar .conflictingFlags
+    do {
+        let sut = makeSUT(liveFx)
+        
+        assertThrows(.conflictingFlags, { () throws(T.Error) in 
+            try sut.execute(["projects", "extra_arg"]) 
         })
         
         sut.tearDown()
