@@ -383,7 +383,7 @@ let test_integration: () = {
         assert(output.first == "Todo updated: tarea editada")
     }
     
-    // 7. Ediing ede cases
+    // 7. Ediing edge cases
     do {
         do {
             editor = { try! "".write(toFile: $0, atomically: true, encoding: .utf8) }
