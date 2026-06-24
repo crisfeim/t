@@ -200,7 +200,7 @@ let getOutput: (() -> Void) -> [String] = { block in
 
 
 
-let test_ParserErrors: () = {
+let test_parserErrors: () = {
     let sut = makeSUT({.live})
     
     assertThrows(T.Error.unhandledFlag, { () throws(T.Error) in try sut.execute(["invalid_command"]) })
@@ -230,7 +230,7 @@ let test_ParserErrors: () = {
     sut.tearDown()
 }()
 
-let test_LineBounds: () = {
+let test_lineBounds: () = {
     let sut = makeSUT({.live})
     try! sut.execute(["add", "Single task"])
     
@@ -246,7 +246,7 @@ let test_LineBounds: () = {
     sut.tearDown()
 }()
 
-let test_VersionControlIntegration: () = {    
+let test_versionControlIntegration: () = {    
     // CASE 1: Not a repository error
     do {
         let sut = makeSUT { .live * { $0.vcs.get = { _ in nil } } }
