@@ -203,35 +203,26 @@ let getOutput: (() -> Void) -> [String] = { block in
 let testParserErrors: () = {
     let sut = makeSUT({.live})
     
-    // 1. Comando desconocido
     assertThrows(T.Error.unhandledFlag, { () throws(T.Error) in try sut.execute(["invalid_command"]) })
     
-    // 2. Errores en 'list'
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["list", "fichero.txt", "extra"]) })
     
-    // 3. Errores en 'add'
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["add"]) })
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["add", "tarea", "extra"]) })
     
-    // 4. Errores en 'remove'
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["remove", "1", "abc", "3"]) })
     
-    // 5. Errores en 'complete'
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["complete"]) })
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["complete", "abc"]) })
     
-    // 6. Errores en 'edit'
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["edit"]) })
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["edit", "abc"]) })
     
-    // 7. Errores en 'all'
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["all", "extra"]) })
     
-    // 8. Errores en 'project'
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["project"]) })
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["project", "mi_proyecto", "extra"]) })
     
-    // 9. Errores en 'commit'
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit"]) })
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit", "wrong_flag", "1"]) })
     assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit", "editor", "abc"]) })
@@ -243,15 +234,12 @@ let testLineBounds: () = {
     let sut = makeSUT({.live})
     try! sut.execute(["add", "Single task"])
     
-    // 1. complete out of bounds (0 and superior)
     assertThrows(T.Error.wrongLine(0), { () throws(T.Error) in try sut.execute(["complete", "0"]) })
     assertThrows(T.Error.wrongLine(2), { () throws(T.Error) in try sut.execute(["complete", "2"]) })
     
-    // 2. edit out of bounds
     assertThrows(T.Error.wrongLine(0), { () throws(T.Error) in try sut.execute(["edit", "0"]) })
     assertThrows(T.Error.wrongLine(2), { () throws(T.Error) in try sut.execute(["edit", "2"]) })
     
-    // 3. commit out of bounds
     assertThrows(T.Error.wrongLine(0), { () throws(T.Error) in try sut.execute(["commit", "0"]) })
     assertThrows(T.Error.wrongLine(2), { () throws(T.Error) in try sut.execute(["commit", "2"]) })
     
