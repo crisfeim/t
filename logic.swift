@@ -8,7 +8,6 @@ enum Effects {
         io: IO,
         vcs: VCS,
         put: (String) -> Void,
-        currentDirectory: () -> String,
         now: () -> Date,
         editor: (String) throws(T.Error) -> Void,
         copyToClipboard: (String) -> Void
