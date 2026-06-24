@@ -8,6 +8,7 @@ enum Command {
     case edit(TodoPath, Int)
     case all
     case commit(TodoPath, line: Int, editMsg: Bool)
+    case projectsAll
 }
 
 typealias Args   = [String]
@@ -24,6 +25,7 @@ let make: (TodoPath, DonePath, Effects.All) -> T.CLI = { todoPath, donePath, fx 
             case let .edit(path, line):         try runEdit(path, line, fx)
             case let .commit(path, line, edit): try runCommit(line, path, donePath, edit, fx)
             case .all:                          try runAll(fx)
+            case .projectsAll: try runProjectsList(fx)
         }
     }
 }
@@ -98,6 +100,10 @@ let parse: Parser = { args, todoPath throws(T.Error) in
         
         throw .conflictingFlags
         
+        case "projects":
+        guard args.count == 1 else { throw .conflictingFlags }
+        return .projectsAll
+        
         default:
         throw .unhandledFlag
     }
@@ -159,19 +165,6 @@ func rethrow<each T, R, E: Error>(
 
 func first<T>(array: Array<T>) -> T? { array.first }
 
-// Filter to show more relevant folder 
-// (ej. "t project cristian"  --> /Users/cristian before that /Users/cristian/💻/t)
-let sortMatches: ([String]) -> [String] = { todoFiles in 
-    todoFiles.sorted { path1, path2 in
-        let count1 = path1.components(separatedBy: "/").count
-        let count2 = path2.components(separatedBy: "/").count
-        if count1 != count2 {
-            return count1 < count2
-        }
-        if path1.count != path2.count { return path1.count < path2.count }
-        return path1 < path2
-    }
-}
 
 // MARK: - Tests
 #if DEBUG
@@ -396,6 +389,65 @@ let test_remoteProjectManagement: () = {
         
         assertThrows(.notFound("cristian", available: ["/proyectos/otro/.todo"]), { () throws(T.Error) in
             try sut.execute(["project", "cristian"])
+        })
+        
+        sut.tearDown()
+    }
+}()
+
+let test_projectsCommand: () = {
+    // Escenario 1: Listar múltiples proyectos con ordenación e indentación correcta
+    do {
+        let mockFx = liveFx * {
+            $0.io.all = { [
+                "/Users/cristian/b/.todo",
+                "/Users/cristian/a/.todo"
+            ] }
+            $0.io.read = { path in
+                if path.contains("a/.todo") {
+                    return ["Comprar leche","Estudiar Swift"]
+                } else {
+                    return ["Fossil task"]
+                }
+            }
+        }
+        
+        let sut = makeSUT(mockFx)
+        
+        let output = getOutput { try! sut.execute(["projects"]) }
+        
+        // Verifica que ordena primero por 'a/.todo' debido al desempate alfabético
+        assert(output[0] == "/Users/cristian/a/.todo")
+        assert(output[1] == "    1 Comprar leche")
+        assert(output[2] == "    2 Estudiar Swift")
+        assert(output[3] == "/Users/cristian/b/.todo")
+        assert(output[4] == "    1 Fossil task")
+        
+        sut.tearDown()
+    }
+    
+    // Escenario 2: Proyectos vacíos no deben listar tareas indentadas
+    do {
+        let mockFx = liveFx * {
+            $0.io.all = { ["/Users/cristian/empty/.todo"] }
+            $0.io.read = { _ in [] }
+        }
+        
+        let sut = makeSUT(mockFx)
+        let output = getOutput { try! sut.execute(["projects"]) }
+        
+        assert(output.count == 1)
+        assert(output[0] == "/Users/cristian/empty/.todo")
+        
+        sut.tearDown()
+    }
+    
+    // Escenario 3: Pasar argumentos extra a 'projects' debe lanzar .conflictingFlags
+    do {
+        let sut = makeSUT(liveFx)
+        
+        assertThrows(.conflictingFlags, { () throws(T.Error) in 
+            try sut.execute(["projects", "extra_arg"]) 
         })
         
         sut.tearDown()
