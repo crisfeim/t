@@ -266,15 +266,16 @@ let testVersionControlIntegration: () = {
         var receivedMessage = ""
         var receivedSystem = ""
         
-        let fx = Effects.live * {
-            $0.vcs.get = { _ in (dir: "/mock/repo", type: "fossil") }
-            $0.vcs.commit = { msg, sys, _ in 
-                commitCalled = true
-                receivedMessage = msg
-                receivedSystem = sys
+        let sut = makeSUT { 
+            .live * {
+                $0.vcs.get = { _ in (dir: "/mock/repo", type: "fossil") }
+                $0.vcs.commit = { msg, sys, _ in 
+                    commitCalled = true
+                    receivedMessage = msg
+                    receivedSystem = sys
+                }
             }
         }
-        let sut = makeSUT { fx }
         
         try! sut.execute(["add", "Fossil task"])
         try! sut.execute(["commit", "1"])
@@ -296,17 +297,18 @@ let testVersionControlIntegration: () = {
         var commitCalled = false
         var receivedMessage = ""
         
-        let fx = Effects.live * {
-            $0.vcs.get = { _ in (dir: "/mock/repo", type: "git") }
-            $0.vcs.commit = { msg, _, _ in 
-                commitCalled = true
-                receivedMessage = msg
-            }
-            $0.editor = { tmpPath in
-                try! "Custom commit message from editor".write(toFile: tmpPath, atomically: true, encoding: .utf8)
+        let sut = makeSUT { 
+            .live * {
+                $0.vcs.get = { _ in (dir: "/mock/repo", type: "git") }
+                $0.vcs.commit = { msg, _, _ in 
+                    commitCalled = true
+                    receivedMessage = msg
+                }
+                $0.editor = { tmpPath in
+                    try! "Custom commit message from editor".write(toFile: tmpPath, atomically: true, encoding: .utf8)
+                }
             }
         }
-        let sut = makeSUT { fx }
         
         try! sut.execute(["add", "Original task text"])
         try! sut.execute(["commit", "editor", "1"])
