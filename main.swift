@@ -201,6 +201,45 @@ let getOutput: (() -> Void) -> [String] = { block in
     return output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init).dropLast()
 }
 
+let testParserErrors: () = {
+    let sut = makeSUT({ Date() }) { _ in }
+    
+    // 1. Comando desconocido
+    assertThrows(T.Error.unhandledFlag, { () throws(T.Error) in try sut.execute(["invalid_command"]) })
+    
+    // 2. Errores en 'list'
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["list", "fichero.txt", "extra"]) })
+    
+    // 3. Errores en 'add'
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["add"]) })
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["add", "tarea", "extra"]) })
+    
+    // 4. Errores en 'remove'
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["remove", "1", "abc", "3"]) })
+    
+    // 5. Errores en 'complete'
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["complete"]) })
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["complete", "abc"]) })
+    
+    // 6. Errores en 'edit'
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["edit"]) })
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["edit", "abc"]) })
+    
+    // 7. Errores en 'all'
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["all", "extra"]) })
+    
+    // 8. Errores en 'project'
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["project"]) })
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["project", "mi_proyecto", "extra"]) })
+    
+    // 9. Errores en 'commit'
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit"]) })
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit", "wrong_flag", "1"]) })
+    assertThrows(T.Error.conflictingFlags, { () throws(T.Error) in try sut.execute(["commit", "editor", "abc"]) })
+    
+    sut.tearDown()
+}()
+
 let integrationTest: () = {
     
     let now = Calendar.current.date(from: DateComponents(year: 2016, month: 1, day: 1))!

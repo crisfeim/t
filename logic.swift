@@ -146,6 +146,9 @@ extension T.Error {
     static let vcs = { (e: Error) in T.Error.vcs(e.localizedDescription) }
 }
 
+extension T.Error:            Equatable {}
+extension T.Error.FileSystem: Equatable {}
+
 // MARK: - Error Mapper
 import Foundation
 
