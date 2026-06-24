@@ -258,6 +258,78 @@ let testLineBounds: () = {
     sut.tearDown()
 }()
 
+let testVersionControlIntegration: () = {    
+    // CASE 1: Not a repository error
+    do {
+        let fx = Effects.live * {
+            $0.vcs.get = { _ in nil }
+        }
+        let sut = makeSUT { fx }
+        
+        try! sut.execute(["add", "Task"])
+        assertThrows(T.Error.vcs("Not a repository"), { () throws(T.Error) in try sut.execute(["commit", "1"]) })
+        
+        sut.tearDown()
+    }
+    
+    // CASE 2: Fossil integration
+    do {
+        var commitCalled = false
+        var receivedMessage = ""
+        var receivedSystem = ""
+        
+        let fx = Effects.live * {
+            $0.vcs.get = { _ in (dir: "/mock/repo", type: "fossil") }
+            $0.vcs.commit = { msg, sys, _ in 
+                commitCalled = true
+                receivedMessage = msg
+                receivedSystem = sys
+            }
+        }
+        let sut = makeSUT { fx }
+        
+        try! sut.execute(["add", "Fossil task"])
+        try! sut.execute(["commit", "1"])
+        
+        assert(commitCalled == true)
+        assert(receivedMessage == "Fossil task")
+        assert(receivedSystem == "fossil")
+        
+        let todoDisk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+        let doneDisk = try! String(contentsOfFile: sut.done, encoding: .utf8)
+        assert(todoDisk.isEmpty)
+        assert(doneDisk.contains("Fossil task"))
+        
+        sut.tearDown()
+    }
+    
+    // CASE 3: Commit via Editor modifications
+    do {
+        var commitCalled = false
+        var receivedMessage = ""
+        
+        let fx = Effects.live * {
+            $0.vcs.get = { _ in (dir: "/mock/repo", type: "git") }
+            $0.vcs.commit = { msg, _, _ in 
+                commitCalled = true
+                receivedMessage = msg
+            }
+            $0.editor = { tmpPath in
+                try! "Custom commit message from editor".write(toFile: tmpPath, atomically: true, encoding: .utf8)
+            }
+        }
+        let sut = makeSUT { fx }
+        
+        try! sut.execute(["add", "Original task text"])
+        try! sut.execute(["commit", "editor", "1"])
+        
+        assert(commitCalled == true)
+        assert(receivedMessage == "Custom commit message from editor")
+        
+        sut.tearDown()
+    }
+}()
+
 let integrationTest: () = {
     
     let now = Calendar.current.date(from: DateComponents(year: 2016, month: 1, day: 1))!

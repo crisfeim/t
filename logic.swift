@@ -7,7 +7,7 @@ struct Effects {
     typealias Path = String
     
     let fs: FileSystem
-    let vcs: VersionControl
+    var vcs: VersionControl
     let put: (String) -> Void
     let currentDirectory: () -> String
     var now: () -> Date
@@ -23,8 +23,8 @@ struct Effects {
     
     struct VersionControl {
         typealias System = String
-        let get: (Path) -> (dir: String, type: System)?
-        let commit: (String, System, Path) throws(T.Error) -> Void
+        var get: (Path) -> (dir: String, type: System)?
+        var commit: (String, System, Path) throws(T.Error) -> Void
     }
 }
 
