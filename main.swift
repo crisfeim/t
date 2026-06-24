@@ -242,10 +242,12 @@ let testParserErrors: () = {
 let integrationTest: () = {
     
     let now = Calendar.current.date(from: DateComponents(year: 2016, month: 1, day: 1))!
-    let sut = makeSUT({.live * { 
+    var effects = Effects.live * { 
         $0.now = { now }
-        $0.editor = { tmpPath in try! "tarea editada".write(toFile: tmpPath, atomically: true, encoding: .utf8) }
-    }})
+        $0.editor = { try! "tarea editada".write(toFile: $0, atomically: true, encoding: .utf8) }
+    }
+    
+    let sut = makeSUT({ effects })
     
     // 1. Añadir tareas
     do {
@@ -309,6 +311,29 @@ let integrationTest: () = {
         
         assert(disk == "tarea editada")
         assert(output.first == "Todo updated: tarea editada")
+    }
+    
+    // 7. Ediing ede cases
+    do {
+        do {
+            effects = effects * { 
+                $0.editor = { try! "".write(toFile: $0, atomically: true, encoding: .utf8) }
+            }
+            let output = getOutput { try! sut.execute(["edit", "1"])}
+            let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+            assert(disk == "tarea editada")
+            assert(output.first == "No changes")
+        }
+        
+        do {
+            effects = effects * { 
+                $0.editor = { try! "tarea editada".write(toFile: $0, atomically: true, encoding: .utf8) }
+            }
+            let output = getOutput { try! sut.execute(["edit", "1"])}
+            let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+            assert(disk == "tarea editada")
+            assert(output.first == "No changes")
+        }
     }
     
     sut.tearDown()
