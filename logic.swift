@@ -43,15 +43,17 @@ let runAdd: (TodoPath, String, Effects.All) throws(T.Error) -> Void = { todoPath
 }
 
 let runRemove: (TodoPath, [Int], Effects.All) throws(T.Error) -> Void = { todoPath, lines, fx throws(T.Error) in
-    let todos = try fx.io.read(todoPath)
-    let rest = todos.enumerated().filter { offset, _ in !lines.contains(offset + 1) }.map(\.element)
+    let todos = try fx.io.read(todoPath).enumerated()
+    let shouldRemove = !lines.map { todos.map { offset, _ in offset + 1 }.contains($0) }.contains(false)
+    guard shouldRemove else { throw .wrongLines(lines) }
+    let rest = todos.filter { offset, _ in !lines.contains(offset + 1) }.map(\.element)
     try fx.io.write(rest, todoPath)
     fx.put("Todo removed")
 }
 
 let runComplete: (TodoPath, DonePath, Int, Effects.All) throws(T.Error) -> Void = { todoPath, donePath, line, fx throws(T.Error) in
     let todos = try fx.io.read(todoPath)
-    guard let (removed, rest) = todos.removing(at: line - 1) else { throw .wrongLine(line) }
+    guard let (removed, rest) = todos.removing(at: line - 1) else { throw .wrongLines([line]) }
     let done = (try? fx.io.read(donePath)) ?? []
     try fx.io.write(done + [yyyyMMddHHmmss.string(from: fx.now())  + " " + removed], donePath)
     try fx.io.write(rest, todoPath)
@@ -61,7 +63,7 @@ let runComplete: (TodoPath, DonePath, Int, Effects.All) throws(T.Error) -> Void 
 let runEdit: (TodoPath, Int, Effects.All) throws(T.Error) -> Void = { todoPath, line, fx throws(T.Error) in
     let todos = try fx.io.read(todoPath)
     let idx = line - 1
-    guard todos.indices.contains(idx) else { throw .wrongLine(line) }
+    guard todos.indices.contains(idx) else { throw .wrongLines([line]) }
     let original = todos[idx]
     
     let updated = try withTempFile(prefix: "todo_edit", content: [original], fx: fx) { tmpPath throws(T.Error) in
@@ -86,7 +88,7 @@ let runCommit: (Int, TodoPath, DonePath, Bool, Effects.All) throws(T.Error) -> V
     
     guard let repo = fx.vcs.get(fx.currentDirectory()) else { throw .vcs("Not a repository") }
     let todos = try fx.io.read(todoPath)
-    guard let (removedTodo, rest) = todos.removing(at: id - 1) else { throw .wrongLine(id) }
+    guard let (removedTodo, rest) = todos.removing(at: id - 1) else { throw .wrongLines([id]) }
     
     let finalMessage = if editMsg {
         try withTempFile(prefix: "t_commit", content: [removedTodo], fx: fx) { tmpPath throws(T.Error) in
@@ -127,7 +129,7 @@ let runProjectsList: (Effects.All) throws(T.Error) -> Void = { fx in
 let runCopy: (TodoPath, Int, Effects.All) throws(T.Error) -> Void = { todoPath, line, fx throws(T.Error) in 
     let todos = try fx.io.read(todoPath)
     let idx = line - 1
-    guard todos.indices.contains(line - 1) else { throw .wrongLine(line) }
+    guard todos.indices.contains(line - 1) else { throw .wrongLines([line]) }
     
     let todoToCopy = todos[idx]
     
@@ -141,7 +143,7 @@ enum T {
     typealias CLI = ([String]) throws(T.Error) -> Void
     
     enum Error: Swift.Error {
-        case wrongLine(Int)
+        case wrongLines([Int])
         case conflictingFlags
         case unhandledFlag
         case fileSystem(FileSystem)
@@ -200,8 +202,8 @@ enum ErrorMapper {
 extension T.Error {
     var message: String {
         switch self {
-            case let .wrongLine(line):
-            return "line \(line) does not exist"
+            case let .wrongLines(lines):
+            return "lines \(lines.map(\.description).joined(separator: ", ")) does not exist"
             case .conflictingFlags:
             return "invalid arguments"
             case .unhandledFlag:

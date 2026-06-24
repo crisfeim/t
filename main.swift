@@ -44,7 +44,11 @@ let projectPreparsing: (Effects.IO, @escaping Parser) -> Parser = { fx, parser i
         
         let todoFiles = try fx.all()
         
-        guard let projectTodoPath = todoFiles.filter({ $0.contains(projectName) }) |> sortMatches |> first else {
+        guard let projectTodoPath = todoFiles.filter({ path in
+            let components = path.split(separator: "/")
+            return components.contains { $0 == projectName }
+        }) |> sortMatches |> first
+        else {
             throw .notFound(projectName, available: todoFiles)
         }
         
@@ -253,16 +257,35 @@ let test_lineBounds: () = {
     let sut = makeSUT(liveFx)
     try! sut.execute(["add", "Single task"])
     
-    assertThrows(.wrongLine(0), { () throws(T.Error) in try sut.execute(["complete", "0"]) })
-    assertThrows(.wrongLine(2), { () throws(T.Error) in try sut.execute(["complete", "2"]) })
+    assertThrows(.wrongLines([0]), { () throws(T.Error) in try sut.execute(["complete", "0"]) })
+    assertThrows(.wrongLines([2]), { () throws(T.Error) in try sut.execute(["complete", "2"]) })
     
-    assertThrows(.wrongLine(0), { () throws(T.Error) in try sut.execute(["edit", "0"]) })
-    assertThrows(.wrongLine(2), { () throws(T.Error) in try sut.execute(["edit", "2"]) })
+    assertThrows(.wrongLines([0]), { () throws(T.Error) in try sut.execute(["edit", "0"]) })
+    assertThrows(.wrongLines([2]), { () throws(T.Error) in try sut.execute(["edit", "2"]) })
     
-    assertThrows(.wrongLine(0), { () throws(T.Error) in try sut.execute(["commit", "0"]) })
-    assertThrows(.wrongLine(2), { () throws(T.Error) in try sut.execute(["commit", "2"]) })
+    assertThrows(.wrongLines([0]), { () throws(T.Error) in try sut.execute(["commit", "0"]) })
+    assertThrows(.wrongLines([2]), { () throws(T.Error) in try sut.execute(["commit", "2"]) })
     
     sut.tearDown()
+    
+    let test_lineBoundsRemove: () = {
+        let sut = makeSUT(liveFx)
+        
+        try! sut.execute(["add", "Task 1"])
+        try! sut.execute(["add", "Task 2"])
+        
+        assertThrows(.wrongLines([0]), { () throws(T.Error) in try sut.execute(["remove", "0"])  })
+        assertThrows(.wrongLines([5, 3]), { () throws(T.Error) in try sut.execute(["remove", "5", "3"]) })
+        
+        // Reversal order
+        do {
+            try! sut.execute(["remove", "2", "1"])
+            let disk = try! String(contentsOfFile: sut.todo, encoding: .utf8)
+            assert(disk.isEmpty)
+        }
+        
+        sut.tearDown()
+    }()
 }()
 
 let test_versionControlIntegration: () = {    
