@@ -250,10 +250,7 @@ let testVersionControlIntegration: () = {
     // CASE 1: Not a repository error
     do {
         let sut = makeSUT { .live * { $0.vcs.get = { _ in nil } } }
-        
-        try! sut.execute(["add", "Task"])
         assertThrows(T.Error.vcs("Not a repository"), { () throws(T.Error) in try sut.execute(["commit", "1"]) })
-        
         sut.tearDown()
     }
     
