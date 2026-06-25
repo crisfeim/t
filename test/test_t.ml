@@ -6,9 +6,9 @@ type todo = string
 type path = string
 
 type effects = {
-	read : path -> (string list, error) result;
-	write: todo list -> path -> (unit, error) result;
-	now : unit -> string
+	read  : path -> (string list, error) result;
+	write : todo list -> path -> (unit, error) result;
+	now   : unit -> string
 }
 
 let ( let* ) = Result.bind
@@ -68,9 +68,9 @@ let () =
 		(Ok[]						 , Ok()					   , Ok()            )
 	] |> List.iter (fun (read, write, expected) ->
 		assert (add "any todo path" "any done path" {
-			read = (fun _ -> read) ;
+			read 	= (fun _ -> read);
 			write = (fun _ _ -> write);
-			now  = (fun _ -> "any date")
+			now   = (fun _ -> "any date")
 		} = expected)
 	)
 
@@ -83,9 +83,9 @@ let () =
 		(Ok ["any todo"]   , 1 , Ok()            , Ok[] 							)
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (remove line "todo path" {
-			read = (fun _ -> read) ;
+			read  = (fun _ -> read);
 			write = (fun _ _ -> write);
-			now = (fun _ -> "any date")
+			now   = (fun _ -> "any date")
 		} = expected)
 	)
 
@@ -98,9 +98,9 @@ let () =
 		(Ok["todo"]			 , 1, Ok()						, Ok[]							 )
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (complete line "todo path" "done path" {
-			read = (fun _ -> read);
+			read  = (fun _ -> read);
 			write = (fun _ _ -> write);
-			now = (fun _ -> "any date")
+			now   = (fun _ -> "any date")
 		} = expected)
 	)
 
