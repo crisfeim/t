@@ -8,6 +8,7 @@ type path = string
 type effects = {
 	read : path -> (string list, error) result;
 	write: todo list -> path -> (unit, error) result;
+	now : unit -> string
 }
 
 let ( let* ) = Result.bind
@@ -41,6 +42,7 @@ let () =
 			assert (list "any todo path" {
      		read  = (fun _ -> read);
        	write = (fun _ _ -> Ok ());
+        now   = (fun _ -> "any date")
    			} = expected
 			)
   )
@@ -54,7 +56,8 @@ let () =
 	] |> List.iter (fun (read, write, expected) ->
 		assert (add "any todo path" "any done path" {
 			read = (fun _ -> read) ;
-			write = (fun _ _ -> write)
+			write = (fun _ _ -> write);
+			now  = (fun _ -> "any date")
 		} = expected)
 	)
 
@@ -68,7 +71,8 @@ let () =
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (remove line "todo path" {
 			read = (fun _ -> read) ;
-			write = (fun _ _ -> write)
+			write = (fun _ _ -> write);
+			now = (fun _ -> "any date")
 		} = expected)
 	)
 
@@ -79,7 +83,8 @@ let complete line todo_path done_path effects =
 	let updated = todos |> List.filteri (fun idx _ -> idx <> line - 1) in
 	let todo = List.nth todos (line - 1) in
 	let* done_todos = effects.read done_path in
-	let* _ = effects.write (todo :: done_todos) done_path in
+	let done_formated = effects.now() ^ " " ^ todo in
+	let* _ = effects.write (done_formated :: done_todos) done_path in
 	let* _ = effects.write updated todo_path in
 	Ok updated
 
@@ -92,16 +97,22 @@ let () =
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (complete line "todo path" "done path" {
 			read = (fun _ -> read);
-			write = (fun _ _ -> write)
+			write = (fun _ _ -> write);
+			now = (fun _ -> "any date")
 		} = expected)
 	)
 
 (* Complete writes to done_path before updating todo_path *)
 let () =
   let history = ref [] in
-  let fx = {
-    read  = (fun _ -> Ok ["tarea"]);
-    write = (fun _ path -> history := !history @ [path]; Ok ())
-  } in
-  let _ = complete 1 "todo path" "done path" fx in
-  assert (!history = ["done path"; "todo path"])
+
+  let _ = complete 1 "todo_path" "done_path" {
+    read  = (fun path -> if path = "done_path" then Ok[] else Ok ["tarea"]);
+    write = (fun data path -> history := !history @ [(path, data)]; Ok ());
+    now   = (fun () -> "202606252301")
+  }  in
+
+  assert (!history = [
+    ("done_path", ["202606252301 tarea"]);
+    ("todo_path", [])
+  ])
