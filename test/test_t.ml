@@ -128,9 +128,10 @@ let () =
   ])
 
 let edit line todo_path effects =
-	let* (todos, todo, _) = extract line todo_path effects in
+	let* (todos, todo, updated) = extract line todo_path effects in
 	let* edited = effects.editor todo in
-	let* _ = effects.write [] todo_path in
+	let updated = todos |> List.mapi (fun idx content -> if idx = line - 1 then edited else content) in
+	let* _ = effects.write updated todo_path in
 	Ok()
 
 (* Edit *)
@@ -139,7 +140,8 @@ let () =
 		(Error FileSystem, 1, Ok "edited" , Ok()            , Error FileSystem   );
 		(Ok ["any todo"] , 2, Ok "edited" , Ok()            , Error (WrongLine 2));
 		(Ok ["any todo"] , 1, Error Editor, Ok()            , Error Editor       );
-		(Ok ["any todo"] , 1, Ok "edited" , Error FileSystem, Error FileSystem   )
+		(Ok ["any todo"] , 1, Ok "edited" , Error FileSystem, Error FileSystem   );
+		(Ok ["any todo"] , 1, Ok "edited" , Ok()            , Ok()               )
 	] |> List.iter (fun (read, line, editor, write, expected) ->
 		assert (edit line "todo path" {
 			read   = (fun _ -> read);
@@ -148,3 +150,15 @@ let () =
 			editor = (fun _ -> editor)
 		} = expected)
 	)
+
+(* Edit writes edited data *)
+let () =
+	let history = ref "" in
+	let _ = edit 1 "todo path" {
+		read = (fun _ -> Ok ["todo"]);
+		write = (fun todos _ -> history := List.nth todos (0); Ok());
+		now = (fun () -> "any date");
+		editor = (fun _ -> Ok "edited")
+	} in
+
+	assert (!history = "edited")
