@@ -1,6 +1,7 @@
 type error =
 	| FileSystem
 	| WrongLine of int
+	| Editor
 
 type todo = string
 type path = string
@@ -118,3 +119,19 @@ let () =
     ("done_path", ["202606252301 tarea"]);
     ("todo_path", [])
   ])
+
+let edit line todo_path effects =
+	let* _ = effects.read todo_path in
+	Ok()
+
+(* Edit *)
+let () =
+	[
+		(Error FileSystem, 1, Ok(), Ok(), Error FileSystem)
+	] |> List.iter (fun (read, line, editor, write, expected) ->
+		assert (edit line "todo path" {
+			read  = (fun _ -> read);
+			write = (fun _ _ -> write);
+			now = (fun () -> "any date")
+		} = expected)
+	)
