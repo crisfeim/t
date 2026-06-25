@@ -73,10 +73,13 @@ let () =
 	)
 
 (* Complete *)
-let complete line todo_path effects =
+let complete line todo_path done_path effects =
 	let* todos = effects.read todo_path in
 	if line < 1 || line > List.length todos then Error (WrongLine line) else
 	let updated = todos |> List.filteri (fun idx _ -> idx <> line - 1) in
+	let todo = List.nth todos (line - 1) in
+	let* done_todos = effects.read done_path in
+	let* _ = effects.write (todo :: done_todos) done_path in
 	let* _ = effects.write updated todo_path in
 	Ok updated
 
@@ -87,8 +90,18 @@ let () =
 		(Ok["todo"]			 , 1, Error FileSystem, Error FileSystem	 );
 		(Ok["todo"]			 , 1, Ok()						, Ok[]							 )
 	] |> List.iter (fun (read, line, write, expected) ->
-		assert (complete line "todo_path" {
+		assert (complete line "todo path" "done path" {
 			read = (fun _ -> read);
 			write = (fun _ _ -> write)
 		} = expected)
 	)
+
+(* Complete writes to done_path before updating todo_path *)
+let () =
+  let history = ref [] in
+  let fx = {
+    read  = (fun _ -> Ok ["tarea"]);
+    write = (fun _ path -> history := !history @ [path]; Ok ())
+  } in
+  let _ = complete 1 "todo path" "done path" fx in
+  assert (!history = ["done path"; "todo path"])
