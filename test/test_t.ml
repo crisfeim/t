@@ -53,16 +53,16 @@ let () =
 (* Run remove *)
 let remove line todo_path effects =
 	let* todos = effects.read todo_path in
-	if line < 1 || line > List.length todos then
-		Error (WrongLine line)
-	else
+	if line < 1 || line > List.length todos then Error (WrongLine line) else
+	let* _ = effects.write [] todo_path in
 	Ok()
 
 
 let () =
 	[
-		(Error FileSystem, 1 , Ok() , Error FileSystem);
-		(Ok ["todo 1"]   , 2 , Ok() , Error (WrongLine 2))
+		(Error FileSystem  , 1 , Ok() 					 , Error FileSystem   );
+		(Ok ["any todo"]   , 2 , Ok()						 , Error (WrongLine 2));
+		(Ok ["any todo"]   , 1,  Error FileSystem, Error FileSystem		)
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (remove line "todo path" {
 			read = (fun _ -> read) ;
