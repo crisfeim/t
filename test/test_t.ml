@@ -1,4 +1,7 @@
-type error = FileSystem
+type error =
+	| FileSystem
+	| WrongLine of int
+
 type todo = string
 type path = string
 
@@ -50,12 +53,16 @@ let () =
 (* Run remove *)
 let remove line todo_path effects =
 	let* todos = effects.read todo_path in
+	if line < 1 || line > List.length todos then
+		Error (WrongLine line)
+	else
 	Ok()
 
 
 let () =
 	[
-		(Error FileSystem, 1 , Ok(), Error FileSystem)
+		(Error FileSystem, 1 , Ok() , Error FileSystem);
+		(Ok ["todo 1"]   , 2 , Ok() , Error (WrongLine 2))
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (remove line "todo path" {
 			read = (fun _ -> read) ;
