@@ -85,6 +85,13 @@ t project <project_dir_name> add "Fix compiler warning"
 t project <project_dir_name> remove 3 2 1
 ```
 
+
+* **Scope commiting from anywhere in the fileystem:**
+
+```bash
+t project <project_dir_name> commit 1
+```
+
 *(If no command is provided, execution defaults to `list`)*
 
 *(When multiple `.todo` files match a project name, the tool picks the one whose containing folder is closest to the roo)*

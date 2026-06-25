@@ -131,7 +131,7 @@ let liveFx = Effects.All(
         commit: VCS.commit |> rethrow(T.Error.vcs)
     ),
     put: { text in print(text) },
-    now: { Date() },
+    now: Date.init,
     editor: Editor.run |> rethrow(T.Error.editor),
     copyToClipboard: Clipboard.copy
 )
