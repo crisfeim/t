@@ -37,7 +37,6 @@ let () =
 (* Add *)
 let () =
 	[
-		(* read *)       (* write *)       (* expected *)
 		(Error FileSystem, Ok()            , Error FileSystem);
 		(Ok[]            , Error FileSystem, Error FileSystem);
 		(Ok[]						 , Ok()					   , Ok()            )
