@@ -32,15 +32,15 @@ let extract line todo_path effects =
 	if line < 1 || line > List.length todos then Error (WrongLine line) else
 	let updated = todos |> List.filteri (fun idx _ -> idx <> line - 1) in
 	let extracted = List.nth todos (line - 1) in
-	Ok(extracted, updated)
+	Ok(todos, extracted, updated)
 
 let remove line todo_path effects =
-  let* (_, updated) = extract line todo_path effects in
+  let* (_, _, updated) = extract line todo_path effects in
 	let* _ = effects.write updated todo_path in
 	Ok updated
 
 let complete line todo_path done_path effects =
-	let* (todo, updated) = extract line todo_path effects in
+	let* (_, todo, updated) = extract line todo_path effects in
 	let* done_todos = effects.read done_path in
 	let done_formated = effects.now() ^ " " ^ todo in
 	let* _ = effects.write (done_formated :: done_todos) done_path in
@@ -128,16 +128,18 @@ let () =
   ])
 
 let edit line todo_path effects =
-	let* (todo, _) = extract line todo_path effects in
+	let* (todos, todo, _) = extract line todo_path effects in
 	let* edited = effects.editor todo in
+	let* _ = effects.write [] todo_path in
 	Ok()
 
 (* Edit *)
 let () =
 	[
-		(Error FileSystem, 1, Ok "edited" , Ok(), Error FileSystem   );
-		(Ok ["any todo"],  2, Ok "edited" , Ok(), Error (WrongLine 2));
-		(Ok ["any todo"],  1, Error Editor, Ok(), Error Editor       );
+		(Error FileSystem, 1, Ok "edited" , Ok()            , Error FileSystem   );
+		(Ok ["any todo"] , 2, Ok "edited" , Ok()            , Error (WrongLine 2));
+		(Ok ["any todo"] , 1, Error Editor, Ok()            , Error Editor       );
+		(Ok ["any todo"] , 1, Ok "edited" , Error FileSystem, Error FileSystem   )
 	] |> List.iter (fun (read, line, editor, write, expected) ->
 		assert (edit line "todo path" {
 			read   = (fun _ -> read);
