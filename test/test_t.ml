@@ -132,7 +132,7 @@ let () =
   ])
 
 let edit line todo_path effects =
-	let* (todos, todo, updated) = extract line todo_path effects.read in
+	let* (todos, todo, _) = extract line todo_path effects.read in
 	let* edited = effects.editor todo in
 	if edited = "" || edited = todo then Ok() else
 	let updated = todos |> List.mapi (fun idx content -> if idx = line - 1 then edited else content) in
