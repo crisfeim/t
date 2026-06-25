@@ -71,3 +71,18 @@ let () =
 			write = (fun _ _ -> write)
 		} = expected)
 	)
+
+(* Complete *)
+let complete line todo_path effects =
+	let* _ = effects.read todo_path in
+	Ok()
+
+let () =
+	[
+		(Error FileSystem, 1, Ok() , Error FileSystem);
+	] |> List.iter (fun (read, line, write, expected) ->
+		assert (complete line "todo_path" {
+			read = (fun _ -> read);
+			write = (fun _ _ -> write)
+		} = expected)
+	)
