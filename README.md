@@ -30,6 +30,8 @@ By default, data persists locally in `.todo` and `.done` files relative to the c
 
 ### Basic Commands
 
+Commands have no short form for now.
+
 * **List pending todos:**
 ```bash
 t list
@@ -83,7 +85,7 @@ t project <project_dir_name> add "Fix compiler warning"
 t project <project_dir_name> remove 3 2 1
 ```
 *(If no command is provided, execution defaults to `list`)*
-
+*(When multiple `.todo` files match a project name, the tool picks the one whose containing folder is closest to the roo)*
 ---
 
 ### Integrated Version Control (VCS)
