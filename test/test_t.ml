@@ -132,6 +132,6 @@ let () =
 		assert (edit line "todo path" {
 			read  = (fun _ -> read);
 			write = (fun _ _ -> write);
-			now = (fun () -> "any date")
+			now   = (fun () -> "any date")
 		} = expected)
 	)
