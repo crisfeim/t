@@ -121,13 +121,15 @@ let () =
   ])
 
 let edit line todo_path effects =
-	let* _ = effects.read todo_path in
+	let* todos = effects.read todo_path in
+	if line < 1 || line > List.length todos then Error (WrongLine line) else
 	Ok()
 
 (* Edit *)
 let () =
 	[
-		(Error FileSystem, 1, Ok(), Ok(), Error FileSystem)
+		(Error FileSystem, 1, Ok(), Ok(), Error FileSystem);
+		(Ok ["any todo"],  2, Ok(), Ok(), Error (WrongLine 2) )
 	] |> List.iter (fun (read, line, editor, write, expected) ->
 		assert (edit line "todo path" {
 			read  = (fun _ -> read);
