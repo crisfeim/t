@@ -3,13 +3,15 @@ type error =
 	| WrongLine of int
 	| Editor
 
-type todo = string
-type path = string
+type todo    = string
+type path    = string
+type content = string
 
 type effects = {
-	read  : path -> (string list, error) result;
-	write : todo list -> path -> (unit, error) result;
-	now   : unit -> string
+	read   : path -> (string list, error) result;
+	write  : todo list -> path -> (unit, error) result;
+	now    : unit -> string;
+	editor : content -> (string, error) result
 }
 
 let ( let* ) = Result.bind
@@ -54,9 +56,10 @@ let () =
 	]
 	|> List.iter (fun (read, expected) ->
 			assert (list "any todo path" {
-     		read  = (fun _ -> read);
-       	write = (fun _ _ -> Ok ());
-        now   = (fun _ -> "any date")
+     		read   = (fun _ -> read);
+      	write  = (fun _ _ -> Ok ());
+        now    = (fun _ -> "any date");
+        editor = (fun _ -> Ok "")
    			} = expected
 			)
   )
@@ -69,9 +72,10 @@ let () =
 		(Ok[]						 , Ok()					   , Ok()            )
 	] |> List.iter (fun (read, write, expected) ->
 		assert (add "any todo path" "any done path" {
-			read 	= (fun _ -> read);
-			write = (fun _ _ -> write);
-			now   = (fun _ -> "any date")
+			read 	 = (fun _ -> read);
+			write  = (fun _ _ -> write);
+			now    = (fun _ -> "any date");
+		  editor = (fun _ -> Ok "")
 		} = expected)
 	)
 
@@ -84,9 +88,10 @@ let () =
 		(Ok ["any todo"]   , 1 , Ok()            , Ok[] 							)
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (remove line "todo path" {
-			read  = (fun _ -> read);
-			write = (fun _ _ -> write);
-			now   = (fun _ -> "any date")
+			read   = (fun _ -> read);
+			write  = (fun _ _ -> write);
+			now    = (fun _ -> "any date");
+			editor = (fun _ -> Ok "")
 		} = expected)
 	)
 
@@ -99,9 +104,10 @@ let () =
 		(Ok["todo"]			 , 1, Ok()						, Ok[]							 )
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (complete line "todo path" "done path" {
-			read  = (fun _ -> read);
-			write = (fun _ _ -> write);
-			now   = (fun _ -> "any date")
+			read   = (fun _ -> read);
+			write  = (fun _ _ -> write);
+			now    = (fun _ -> "any date");
+			editor = (fun _ -> Ok "")
 		} = expected)
 	)
 
@@ -110,9 +116,10 @@ let () =
   let history = ref [] in
 
   let _ = complete 1 "todo_path" "done_path" {
-    read  = (fun path -> if path = "done_path" then Ok[] else Ok ["tarea"]);
-    write = (fun data path -> history := !history @ [(path, data)]; Ok ());
-    now   = (fun () -> "202606252301")
+    read   = (fun path -> if path = "done_path" then Ok[] else Ok ["tarea"]);
+    write  = (fun data path -> history := !history @ [(path, data)]; Ok ());
+    now    = (fun () -> "202606252301");
+    editor = (fun _ -> Ok "")
   }  in
 
   assert (!history = [
@@ -121,19 +128,21 @@ let () =
   ])
 
 let edit line todo_path effects =
-	let* todos = effects.read todo_path in
-	if line < 1 || line > List.length todos then Error (WrongLine line) else
+	let* (todo, _) = extract line todo_path effects in
+	let* edited = effects.editor todo in
 	Ok()
 
 (* Edit *)
 let () =
 	[
-		(Error FileSystem, 1, Ok(), Ok(), Error FileSystem);
-		(Ok ["any todo"],  2, Ok(), Ok(), Error (WrongLine 2) )
+		(Error FileSystem, 1, Ok "edited" , Ok(), Error FileSystem   );
+		(Ok ["any todo"],  2, Ok "edited" , Ok(), Error (WrongLine 2));
+		(Ok ["any todo"],  1, Error Editor, Ok(), Error Editor       );
 	] |> List.iter (fun (read, line, editor, write, expected) ->
 		assert (edit line "todo path" {
-			read  = (fun _ -> read);
-			write = (fun _ _ -> write);
-			now   = (fun () -> "any date")
+			read   = (fun _ -> read);
+			write  = (fun _ _ -> write);
+			now    = (fun () -> "any date");
+			editor = (fun _ -> editor)
 		} = expected)
 	)
