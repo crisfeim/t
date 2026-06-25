@@ -9,15 +9,15 @@ type effects = {
 
 let ( let* ) = Result.bind
 
-let list todo_path fx =
-	let* todos = fx.read todo_path in
+let list todo_path effects =
+	let* todos = effects.read todo_path in
 	let formatted = todos |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
 	Ok formatted
 
-let add todo todo_path fx =
-	let* todos = fx.read todo_path in
+let add todo todo_path effects =
+	let* todos = effects.read todo_path in
 	let updated = todos @ [todo] in
-	let* _ = fx.write updated todo_path in
+	let* _ = effects.write updated todo_path in
 	Ok()
 
 (* List *)
@@ -48,3 +48,17 @@ let () =
 	)
 
 (* Run remove *)
+let remove line todo_path effects =
+	let* todos = effects.read todo_path in
+	Ok()
+
+
+let () =
+	[
+		(Error FileSystem, 1 , Ok(), Error FileSystem)
+	] |> List.iter (fun (read, line, write, expected) ->
+		assert (remove line "todo path" {
+			read = (fun _ -> read) ;
+			write = (fun _ _ -> write)
+		} = expected)
+	)
