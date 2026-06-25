@@ -47,6 +47,10 @@ let complete line todo_path done_path effects =
 	let* _ = effects.write updated todo_path in
 	Ok updated
 
+(* Test helpers *)
+let any_write  = (fun _ _ -> Ok())
+let any_now    = (fun _ -> "any date")
+let any_editor = (fun _ -> Ok "")
 
 (* List *)
 let () =
@@ -57,9 +61,9 @@ let () =
 	|> List.iter (fun (read, expected) ->
 			assert (list "any todo path" {
      		read   = (fun _ -> read);
-      	write  = (fun _ _ -> Ok ());
-        now    = (fun _ -> "any date");
-        editor = (fun _ -> Ok "")
+      	write  = any_write;
+        now    = any_now;
+        editor = any_editor
    			} = expected
 			)
   )
@@ -71,11 +75,11 @@ let () =
 		(Ok[]            , Error FileSystem, Error FileSystem);
 		(Ok[]						 , Ok()					   , Ok()            )
 	] |> List.iter (fun (read, write, expected) ->
-		assert (add "any todo path" "any done path" {
+		assert (add "any todo" "any todo path" {
 			read 	 = (fun _ -> read);
 			write  = (fun _ _ -> write);
-			now    = (fun _ -> "any date");
-		  editor = (fun _ -> Ok "")
+      now    = any_now;
+      editor = any_editor
 		} = expected)
 	)
 
@@ -87,11 +91,11 @@ let () =
 		(Ok ["any todo"]   , 1 , Error FileSystem, Error FileSystem		);
 		(Ok ["any todo"]   , 1 , Ok()            , Ok[] 							)
 	] |> List.iter (fun (read, line, write, expected) ->
-		assert (remove line "todo path" {
+		assert (remove line "any todo path" {
 			read   = (fun _ -> read);
 			write  = (fun _ _ -> write);
-			now    = (fun _ -> "any date");
-			editor = (fun _ -> Ok "")
+			now    = any_now;
+			editor = any_editor
 		} = expected)
 	)
 
@@ -99,15 +103,15 @@ let () =
 let () =
 	[
 		(Error FileSystem, 1, Ok() 						, Error FileSystem	 );
-		(Ok["todo"]      , 2, Ok()				    , Error (WrongLine 2));
-		(Ok["todo"]			 , 1, Error FileSystem, Error FileSystem	 );
-		(Ok["todo"]			 , 1, Ok()						, Ok[]							 )
+		(Ok["any todo"]  , 2, Ok()				    , Error (WrongLine 2));
+		(Ok["any todo"]	 , 1, Error FileSystem, Error FileSystem	 );
+		(Ok["any todo"]	 , 1, Ok()						, Ok[]							 )
 	] |> List.iter (fun (read, line, write, expected) ->
-		assert (complete line "todo path" "done path" {
+		assert (complete line "any todo path" "any done path" {
 			read   = (fun _ -> read);
 			write  = (fun _ _ -> write);
-			now    = (fun _ -> "any date");
-			editor = (fun _ -> Ok "")
+			now    = any_now;
+			editor = any_editor
 		} = expected)
 	)
 
@@ -115,16 +119,16 @@ let () =
 let () =
   let history = ref [] in
 
-  let _ = complete 1 "todo_path" "done_path" {
-    read   = (fun path -> if path = "done_path" then Ok[] else Ok ["tarea"]);
+  let _ = complete 1 "any todo path" "any done path" {
+    read   = (fun path -> if path = "any done path" then Ok[] else Ok ["tarea"]);
     write  = (fun data path -> history := !history @ [(path, data)]; Ok ());
     now    = (fun () -> "202606252301");
-    editor = (fun _ -> Ok "")
+    editor = any_editor
   }  in
 
   assert (!history = [
-    ("done_path", ["202606252301 tarea"]);
-    ("todo_path", [])
+    ("any done path", ["202606252301 tarea"]);
+    ("any todo path", [])
   ])
 
 let edit line todo_path effects =
@@ -144,10 +148,10 @@ let () =
 		(Ok ["any todo"] , 1, Ok "edited" , Error FileSystem, Error FileSystem   );
 		(Ok ["any todo"] , 1, Ok "edited" , Ok()            , Ok()               )
 	] |> List.iter (fun (read, line, editor, write, expected) ->
-		assert (edit line "todo path" {
+		assert (edit line "any todo path" {
 			read   = (fun _ -> read);
 			write  = (fun _ _ -> write);
-			now    = (fun () -> "any date");
+			now    = any_now;
 			editor = (fun _ -> editor)
 		} = expected)
 	)
@@ -155,10 +159,10 @@ let () =
 (* Edit writes edited data *)
 let () =
 	let history = ref "" in
-	let _ = edit 1 "todo path" {
+	let _ = edit 1 "any todo path" {
 		read = (fun _ -> Ok ["todo"]);
 		write = (fun todos _ -> history := List.nth todos (0); Ok());
-		now = (fun () -> "any date");
+		now = any_now;
 		editor = (fun _ -> Ok "edited")
 	} in
 
@@ -168,14 +172,14 @@ let () =
 let () =
 	let assertion edited original =
 		let did_wrote = ref false in
-		let _ = edit 1 "todo path" {
-			read = (fun _ -> Ok [original]);
-			write = (fun todos _ -> did_wrote := true ; Ok());
-			now = (fun () -> "any date");
+		let _ = edit 1 "any todo path" {
+			read   = (fun _ -> Ok [original]);
+			write  = (fun todos _ -> did_wrote := true ; Ok());
+			now    = any_now;
 			editor = (fun _ -> Ok edited)
 		} in
 
 		assert (!did_wrote = false) in
 
-	assertion "" "original" ;
+	assertion ""         "original" ;
 	assertion "original" "original"
