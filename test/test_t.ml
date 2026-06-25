@@ -48,3 +48,27 @@ let () =
 	match run_add "any todo" "any path" fx with
 	| Error FileSystem -> ()
 	| _ -> assert false
+
+
+let run_list_matrix = [
+  (* Caso 1: Error en la lectura -> Debe propagar el error *)
+  (Error FileSystem, Error FileSystem);
+  (* Caso 2: Lectura exitosa vacía -> Lista vacía *)
+  (Ok [], Ok []);
+  (* Caso 3: Lectura exitosa con datos -> Lista formateada *)
+  (Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"])
+]
+
+(* 3. El Ejecutor de la Matriz *)
+let () =
+  run_list_matrix |> List.iter (fun (effect_behaviour, expected_result) ->
+    (* Configurar el SUT (System Under Test) dinámicamente basado en la fila *)
+    let fx = {
+      read =  (fun _ -> effect_behaviour);
+      write = (fun _ _ -> Ok ());
+    } in
+
+    (* Ejecutar y asegurar la coincidencia absoluta *)
+    let actual_result = run_list "any_path" fx in
+    assert (actual_result = expected_result)
+  )

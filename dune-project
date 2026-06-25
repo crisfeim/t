@@ -2,8 +2,6 @@
 
 (name t)
 
-(generate_opam_files true)
-
 (source
  (github username/reponame))
 
