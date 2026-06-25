@@ -24,18 +24,20 @@ let add todo todo_path effects =
 	let* _ = effects.write updated todo_path in
 	Ok()
 
-let remove line todo_path effects =
+let extract line todo_path effects =
 	let* todos = effects.read todo_path in
 	if line < 1 || line > List.length todos then Error (WrongLine line) else
-  let updated = todos |> List.filteri (fun idx _ -> idx <> line - 1) in
+	let updated = todos |> List.filteri (fun idx _ -> idx <> line - 1) in
+	let extracted = List.nth todos (line - 1) in
+	Ok(extracted, updated)
+
+let remove line todo_path effects =
+  let* (_, updated) = extract line todo_path effects in
 	let* _ = effects.write updated todo_path in
 	Ok updated
 
 let complete line todo_path done_path effects =
-	let* todos = effects.read todo_path in
-	if line < 1 || line > List.length todos then Error (WrongLine line) else
-	let updated = todos |> List.filteri (fun idx _ -> idx <> line - 1) in
-	let todo = List.nth todos (line - 1) in
+	let* (todo, updated) = extract line todo_path effects in
 	let* done_todos = effects.read done_path in
 	let done_formated = effects.now() ^ " " ^ todo in
 	let* _ = effects.write (done_formated :: done_todos) done_path in
