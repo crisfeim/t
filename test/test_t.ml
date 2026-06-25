@@ -76,12 +76,15 @@ let () =
 let complete line todo_path effects =
 	let* todos = effects.read todo_path in
 	if line < 1 || line > List.length todos then Error (WrongLine line) else
+	let updated = [] in
+	let* _ = effects.write updated todo_path in
 	Ok()
 
 let () =
 	[
-		(Error FileSystem, 1, Ok() , Error FileSystem);
-		(Ok["todo"]      , 2, Ok() , Error (WrongLine 2))
+		(Error FileSystem, 1, Ok() 						, Error FileSystem	 );
+		(Ok["todo"]      , 2, Ok()				    , Error (WrongLine 2));
+		(Ok["todo"]			 , 1, Error FileSystem, Error FileSystem	 )
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (complete line "todo_path" {
 			read = (fun _ -> read);
