@@ -27,20 +27,20 @@ let add todo todo_path effects =
 	let* _ = effects.write updated todo_path in
 	Ok()
 
-let extract line todo_path effects =
-	let* todos = effects.read todo_path in
+let extract line todo_path read =
+	let* todos = read todo_path in
 	if line < 1 || line > List.length todos then Error (WrongLine line) else
 	let updated = todos |> List.filteri (fun idx _ -> idx <> line - 1) in
 	let extracted = List.nth todos (line - 1) in
 	Ok(todos, extracted, updated)
 
 let remove line todo_path effects =
-  let* (_, _, updated) = extract line todo_path effects in
+  let* (_, _, updated) = extract line todo_path effects.read in
 	let* _ = effects.write updated todo_path in
 	Ok updated
 
 let complete line todo_path done_path effects =
-	let* (_, todo, updated) = extract line todo_path effects in
+	let* (_, todo, updated) = extract line todo_path effects.read in
 	let* done_todos = effects.read done_path in
 	let done_formated = effects.now() ^ " " ^ todo in
 	let* _ = effects.write (done_formated :: done_todos) done_path in
@@ -128,8 +128,9 @@ let () =
   ])
 
 let edit line todo_path effects =
-	let* (todos, todo, updated) = extract line todo_path effects in
+	let* (todos, todo, updated) = extract line todo_path effects.read in
 	let* edited = effects.editor todo in
+	if edited = "" || edited = todo then Ok() else
 	let updated = todos |> List.mapi (fun idx content -> if idx = line - 1 then edited else content) in
 	let* _ = effects.write updated todo_path in
 	Ok()
@@ -162,3 +163,19 @@ let () =
 	} in
 
 	assert (!history = "edited")
+
+(* Edit avoids unnecessary I/O when no changes or empty *)
+let () =
+	let assertion edited original =
+		let did_wrote = ref false in
+		let _ = edit 1 "todo path" {
+			read = (fun _ -> Ok [original]);
+			write = (fun todos _ -> did_wrote := true ; Ok());
+			now = (fun () -> "any date");
+			editor = (fun _ -> Ok edited)
+		} in
+
+		assert (!did_wrote = false) in
+
+	assertion "" "original" ;
+	assertion "original" "original"
