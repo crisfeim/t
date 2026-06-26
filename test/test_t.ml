@@ -142,11 +142,11 @@ let edit line todo_path effects =
 (* Edit *)
 let () =
 	[
-		(Error FileSystem, 1, Ok "edited" , Ok()            , Error FileSystem   );
-		(Ok ["any todo"] , 2, Ok "edited" , Ok()            , Error (WrongLine 2));
-		(Ok ["any todo"] , 1, Error Editor, Ok()            , Error Editor       );
-		(Ok ["any todo"] , 1, Ok "edited" , Error FileSystem, Error FileSystem   );
-		(Ok ["any todo"] , 1, Ok "edited" , Ok()            , Ok()               )
+		(Error FileSystem, 1, Ok "any edition" , Ok()            , Error FileSystem   );
+		(Ok ["any todo"] , 2, Ok "any edition" , Ok()            , Error (WrongLine 2));
+		(Ok ["any todo"] , 1, Error Editor     , Ok()            , Error Editor       );
+		(Ok ["any todo"] , 1, Ok "any edition" , Error FileSystem, Error FileSystem   );
+		(Ok ["any todo"] , 1, Ok "any edition" , Ok()            , Ok()               )
 	] |> List.iter (fun (read, line, editor, write, expected) ->
 		assert (edit line "any todo path" {
 			read   = (fun _ -> read);
