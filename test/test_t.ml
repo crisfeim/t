@@ -158,15 +158,15 @@ let () =
 
 (* Edit writes edited data *)
 let () =
-	let history = ref "" in
+	let write_calls = ref [] in
 	let _ = edit 1 "any todo path" {
 		read = (fun _ -> Ok ["todo"]);
-		write = (fun todos _ -> history := List.nth todos (0); Ok());
+		write = (fun todos _ -> write_calls := todos :: !write_calls; Ok());
 		now = any_now;
 		editor = (fun _ -> Ok "edited")
 	} in
 
-	assert (!history = "edited")
+	assert (!write_calls = [["edited"]])
 
 (* Edit avoids unnecessary I/O when no changes or empty *)
 let () =
