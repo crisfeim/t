@@ -117,16 +117,16 @@ let () =
 
 (* Complete writes to done_path before updating todo_path *)
 let () =
-  let history = ref [] in
+  let write_calls = ref [] in
 
   let _ = complete 1 "any todo path" "any done path" {
     read   = (fun path -> if path = "any done path" then Ok[] else Ok ["tarea"]);
-    write  = (fun data path -> history := !history @ [(path, data)]; Ok ());
+    write  = (fun data path -> write_calls := (path, data) :: !write_calls; Ok ());
     now    = (fun () -> "202606252301");
     editor = any_editor
   }  in
 
-  assert (!history = [
+  assert (!write_calls = [
     ("any done path", ["202606252301 tarea"]);
     ("any todo path", [])
   ])
