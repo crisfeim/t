@@ -125,7 +125,7 @@ These are the core technical decisions:
 
 ### 2. Dependency Inversion via Effect Tuples & `rethrow` Composition
 * **Effects Isolation:** Side effects (Disk I/O, VCS, Clipboard) are decoupled into standard primitive tuples (`Effects.All`). The logic tier remains completely pure and decoupled from Application Errors (`T.Error`).
-* **Error Composition:** To keep effects independent, they throw generic errors. `main.swift` uses a generic `rethrow` helper combined with the pipe operator to map and compose those generic system errors into strongly typed domain errors (`throws(T.Error)`).
+* **Error Composition & Scope Constraints:** Because subfiles cannot access the main module's `T.Error` type, concrete effect implementations are strictly decoupled and throw generic errors. To avoid verbose `do-catch` boilerplate when assembling the `liveFx` instance, `main.swift` uses a generic `rethrow` helper combined with the pipe forward operator (`|>`) to transform and compose these primitive errors into strongly typed domain errors (`throws(T.Error)`) in place.
 
 ### 3. Compilations and Zero-Dependency Testing Architecture
 * **Single-Module Compilation:** The project bypasses Swift Package Manager (SPM) in favor of direct `swiftc` multi-file compilation (`main.swift` alongside subfolders) to achieve instantaneous cold compile times.
