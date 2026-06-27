@@ -78,6 +78,16 @@ let any_commit  = (fun _ -> Ok ())
 let any_is_repo = (fun _ -> true)
 let any_projects = (fun () -> Ok ["any project path"])
 
+let effects () = {
+	projects = any_projects;
+	read     = any_read;
+	write    = any_write;
+	now      = any_now;
+	editor   = any_editor;
+	commit   = any_commit;
+	is_repo  = any_is_repo;
+}
+
 let ((*List*)) =
 	[
 	  (Error FileSystem			 , Error FileSystem					);
@@ -85,13 +95,7 @@ let ((*List*)) =
 	]
 	|> List.iter (fun (read, expected) ->
 			assert (list "any todo path" {
-				projects = any_projects;
-     		read   = (fun _ -> read);
-      	write  = any_write;
-        now    = any_now;
-        editor = any_editor;
-        commit = any_commit;
-        is_repo = any_is_repo;
+				(effects()) with read = (fun _ -> read)
    			} = expected
 			)
   )
@@ -103,13 +107,9 @@ let ((*Add*)) =
 		(Ok[]						 , Ok()					   , Ok()            )
 	] |> List.iter (fun (read, write, expected) ->
 		assert (add "any todo" "any todo path" {
-			projects = any_projects;
+			(effects()) with
 			read 	 = (fun _ -> read);
 			write  = (fun _ _ -> write);
-      now    = any_now;
-      editor = any_editor;
-      commit = any_commit;
-      is_repo = any_is_repo;
 		} = expected)
 	)
 
@@ -121,13 +121,9 @@ let ((*Remove*)) =
 		(Ok ["any todo"]   , 1 , Ok()            , Ok[] 							)
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (remove line "any todo path" {
-			projects = any_projects;
+			(effects()) with
 			read   = (fun _ -> read);
 			write  = (fun _ _ -> write);
-			now    = any_now;
-			editor = any_editor;
-			commit = any_commit;
-      is_repo = any_is_repo;
 		} = expected)
 	)
 
@@ -139,13 +135,9 @@ let ((*Complete*)) =
 		(Ok["any todo"]	 , 1, Ok()						, Ok[]							 )
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (complete line "any todo path" "any done path" {
-			projects = any_projects;
+			(effects()) with
 			read   = (fun _ -> read);
 			write  = (fun _ _ -> write);
-			now    = any_now;
-			editor = any_editor;
-			commit = any_commit;
-      is_repo = any_is_repo;
 		} = expected)
 	)
 
@@ -153,13 +145,10 @@ let ((* Complete writes to done_path before updating todo_path *)) =
   let write_calls = ref [] in
 
   let _ = complete 1 "any todo path" "any done path" {
-  	projects = any_projects;
+ 		(effects()) with
     read   = (fun path -> if path = "any done path" then Ok[] else Ok ["tarea"]);
     write  = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
     now    = (fun () -> "202606252301");
-    editor = any_editor;
-    commit = any_commit;
-    is_repo = any_is_repo;
   }  in
 
   assert (!write_calls = [
@@ -185,13 +174,10 @@ let ((*Edit*)) =
 		(Ok ["any todo"] , 1, Ok "any edition" , Ok()            , Ok()               )
 	] |> List.iter (fun (read, line, editor, write, expected) ->
 		assert (edit line "any todo path" {
-			projects = any_projects;
+			(effects()) with
 			read   = (fun _ -> read);
 			write  = (fun _ _ -> write);
-			now    = any_now;
 			editor = (fun _ -> editor);
-			commit = any_commit;
-      is_repo = any_is_repo;
 		} = expected)
 	)
 
@@ -199,13 +185,10 @@ let ((*Edit*)) =
 let ((* Edit writes edited data *)) =
 	let write_calls = ref [] in
 	let _ = edit 1 "any todo path" {
-		projects = any_projects;
+		(effects()) with
 		read = (fun _ -> Ok ["todo"]);
 		write = (fun todos _ -> write_calls := todos :: !write_calls; Ok());
-		now = any_now;
 		editor = (fun _ -> Ok "edited");
-		commit = any_commit;
-		is_repo = any_is_repo;
 	} in
 
 	assert (!write_calls = [["edited"]])
@@ -214,13 +197,10 @@ let ((* Edit avoids unnecessary I/O when no changes or empty *)) =
 	let assertion edited original =
 		let did_wrote = ref false in
 		let _ = edit 1 "any todo path" {
-			projects = any_projects;
+			(effects()) with
 			read   = (fun _ -> Ok [original]);
 			write  = (fun todos _ -> did_wrote := true ; Ok());
-			now    = any_now;
 			editor = (fun _ -> Ok edited);
-			commit = any_commit;
-      is_repo = any_is_repo;
 		} in
 
 		assert (!did_wrote = false) in
@@ -241,10 +221,9 @@ let ((*Commit*)) =
 (true , Ok ["todo"]     , 1, Ok "edited"   , Ok ()                          , Ok ()           , Ok ()              )
 ] |> List.iter (fun (is_repo, read, line, editor, commit_r, write, expected) ->
 		assert (commit line "any todo path" "any done path" {
-			projects = any_projects;
+			(effects()) with
 			read    = (fun _ -> read);
 			write   = (fun _ _ -> write);
-			now     = any_now;
 			editor  = (fun _ -> editor);
 			commit  = (fun _ -> commit_r);
 			is_repo = (fun _ -> is_repo)
@@ -254,12 +233,11 @@ let ((*Commit*)) =
 let ((* Run commit archives todo in correct order on success *)) =
 	let write_calls = ref [] in
 	let _ = commit 1 "any todo path" "any done path" {
-		projects = any_projects;
+		(effects()) with
 		read    = (fun path -> if path = "any done path" then Ok ["20260625 some"] else Ok ["todo"]);
 		write   = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
 		now     = (fun () -> "20260627");
 		editor  = (fun _ -> Ok "edited");
-		commit  = any_commit;
 		is_repo = (fun _ -> true)
 	} in
 
@@ -274,12 +252,7 @@ let ((*Projects*)) =
 		(Ok ["p1"; "p2"] , Ok ["p1"; "p2"])
 	] |> List.iter (fun (projects_r, expected) ->
 		assert (projects {
+			(effects()) with
 			projects = (fun () -> projects_r);
-			read     = any_read;
-			write    = any_write;
-			now      = any_now;
-			editor   = any_editor;
-			commit   = any_commit;
-			is_repo  = any_is_repo;
 		} = expected)
 	)
