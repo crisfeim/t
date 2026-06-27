@@ -52,8 +52,7 @@ let any_write  = (fun _ _ -> Ok())
 let any_now    = (fun _ -> "any date")
 let any_editor = (fun _ -> Ok "")
 
-(* List *)
-let () =
+let ((*List*)) =
 	[
 	  (Error FileSystem			 , Error FileSystem					);
 	  (Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"])
@@ -68,8 +67,7 @@ let () =
 			)
   )
 
-(* Add *)
-let () =
+let ((*Add*)) =
 	[
 		(Error FileSystem, Ok()            , Error FileSystem);
 		(Ok[]            , Error FileSystem, Error FileSystem);
@@ -83,8 +81,7 @@ let () =
 		} = expected)
 	)
 
-(* Remove *)
-let () =
+let ((*Remove*)) =
 	[
 		(Error FileSystem  , 1 , Ok() 					 , Error FileSystem   );
 		(Ok ["any todo"]   , 2 , Ok()						 , Error (WrongLine 2));
@@ -99,8 +96,7 @@ let () =
 		} = expected)
 	)
 
-(* Complete *)
-let () =
+let ((*Complete*)) =
 	[
 		(Error FileSystem, 1, Ok() 						, Error FileSystem	 );
 		(Ok["any todo"]  , 2, Ok()				    , Error (WrongLine 2));
@@ -115,8 +111,7 @@ let () =
 		} = expected)
 	)
 
-(* Complete writes to done_path before updating todo_path *)
-let () =
+let ((* Complete writes to done_path before updating todo_path *)) =
   let write_calls = ref [] in
 
   let _ = complete 1 "any todo path" "any done path" {
@@ -140,8 +135,7 @@ let edit line todo_path effects =
 	let* _ = effects.write updated todo_path in
 	Ok()
 
-(* Edit *)
-let () =
+let ((*Edit*)) =
 	[
 		(Error FileSystem, 1, Ok "any edition" , Ok()            , Error FileSystem   );
 		(Ok ["any todo"] , 2, Ok "any edition" , Ok()            , Error (WrongLine 2));
@@ -157,8 +151,8 @@ let () =
 		} = expected)
 	)
 
-(* Edit writes edited data *)
-let () =
+
+let ((* Edit writes edited data *)) =
 	let write_calls = ref [] in
 	let _ = edit 1 "any todo path" {
 		read = (fun _ -> Ok ["todo"]);
@@ -169,8 +163,7 @@ let () =
 
 	assert (!write_calls = [["edited"]])
 
-(* Edit avoids unnecessary I/O when no changes or empty *)
-let () =
+let ((* Edit avoids unnecessary I/O when no changes or empty *)) =
 	let assertion edited original =
 		let did_wrote = ref false in
 		let _ = edit 1 "any todo path" {
