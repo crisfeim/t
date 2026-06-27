@@ -2,16 +2,21 @@ type error =
 	| FileSystem
 	| WrongLine of int
 	| Editor
+	| NoRepository
+  | CommitError of string
 
 type todo    = string
 type path    = string
 type content = string
+type message = string
 
 type effects = {
 	read   : path -> (string list, error) result;
 	write  : todo list -> path -> (unit, error) result;
 	now    : unit -> string;
-	editor : content -> (string, error) result
+	editor : content -> (string, error) result;
+	commit : message -> (unit, error) result;
+  is_repo: path -> bool
 }
 
 let ( let* ) = Result.bind
@@ -47,10 +52,24 @@ let complete line todo_path done_path effects =
 	let* _ = effects.write updated todo_path in
 	Ok updated
 
+let commit line todo_path done_path effects =
+	if not (effects.is_repo todo_path) then Error NoRepository else
+	let* (todos, todo, updated) = extract line todo_path effects.read in
+	let* msg = effects.editor todo in
+	if msg = "" then Error (CommitError "Commit aborted due to empty message") else
+	let* _ = effects.commit msg in
+	let* done_todos = effects.read done_path in
+	let done_formatted = effects.now () ^ " " ^ msg in
+	let* _ = effects.write (done_formatted :: done_todos) done_path in
+	let* _ = effects.write updated todo_path in
+	Ok ()
+
 (* Test helpers *)
 let any_write  = (fun _ _ -> Ok())
 let any_now    = (fun _ -> "any date")
 let any_editor = (fun _ -> Ok "")
+let any_commit  = (fun _ -> Ok ())
+let any_is_repo = (fun _ -> true)
 
 let ((*List*)) =
 	[
@@ -62,7 +81,9 @@ let ((*List*)) =
      		read   = (fun _ -> read);
       	write  = any_write;
         now    = any_now;
-        editor = any_editor
+        editor = any_editor;
+        commit = any_commit;
+        is_repo = any_is_repo;
    			} = expected
 			)
   )
@@ -77,7 +98,9 @@ let ((*Add*)) =
 			read 	 = (fun _ -> read);
 			write  = (fun _ _ -> write);
       now    = any_now;
-      editor = any_editor
+      editor = any_editor;
+      commit = any_commit;
+      is_repo = any_is_repo;
 		} = expected)
 	)
 
@@ -92,7 +115,9 @@ let ((*Remove*)) =
 			read   = (fun _ -> read);
 			write  = (fun _ _ -> write);
 			now    = any_now;
-			editor = any_editor
+			editor = any_editor;
+			commit = any_commit;
+      is_repo = any_is_repo;
 		} = expected)
 	)
 
@@ -107,7 +132,9 @@ let ((*Complete*)) =
 			read   = (fun _ -> read);
 			write  = (fun _ _ -> write);
 			now    = any_now;
-			editor = any_editor
+			editor = any_editor;
+			commit = any_commit;
+      is_repo = any_is_repo;
 		} = expected)
 	)
 
@@ -116,14 +143,16 @@ let ((* Complete writes to done_path before updating todo_path *)) =
 
   let _ = complete 1 "any todo path" "any done path" {
     read   = (fun path -> if path = "any done path" then Ok[] else Ok ["tarea"]);
-    write  = (fun data path -> write_calls := [(path, data)] @ !write_calls; Ok ());
+    write  = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
     now    = (fun () -> "202606252301");
-    editor = any_editor
+    editor = any_editor;
+    commit = any_commit;
+    is_repo = any_is_repo;
   }  in
 
   assert (!write_calls = [
-    ("any todo path", []);
-    ("any done path", ["202606252301 tarea"])
+  	("any done path", ["202606252301 tarea"]);
+    ("any todo path", [])
   ])
 
 
@@ -147,7 +176,9 @@ let ((*Edit*)) =
 			read   = (fun _ -> read);
 			write  = (fun _ _ -> write);
 			now    = any_now;
-			editor = (fun _ -> editor)
+			editor = (fun _ -> editor);
+			commit = any_commit;
+      is_repo = any_is_repo;
 		} = expected)
 	)
 
@@ -158,7 +189,9 @@ let ((* Edit writes edited data *)) =
 		read = (fun _ -> Ok ["todo"]);
 		write = (fun todos _ -> write_calls := todos :: !write_calls; Ok());
 		now = any_now;
-		editor = (fun _ -> Ok "edited")
+		editor = (fun _ -> Ok "edited");
+		commit = any_commit;
+		is_repo = any_is_repo;
 	} in
 
 	assert (!write_calls = [["edited"]])
@@ -170,10 +203,50 @@ let ((* Edit avoids unnecessary I/O when no changes or empty *)) =
 			read   = (fun _ -> Ok [original]);
 			write  = (fun todos _ -> did_wrote := true ; Ok());
 			now    = any_now;
-			editor = (fun _ -> Ok edited)
+			editor = (fun _ -> Ok edited);
+			commit = any_commit;
+      is_repo = any_is_repo;
 		} in
 
 		assert (!did_wrote = false) in
 
 	assertion ""         "original" ;
 	assertion "original" "original"
+
+let ((*Commit*)) =
+[
+(false, Ok ["todo"]     , 1, Ok "msg"      , Ok ()                          , Ok ()           , Error NoRepository );
+(true , Error FileSystem, 1, Ok "msg"      , Ok ()                          , Ok ()           , Error FileSystem   );
+(true , Ok ["todo"] 		, 2, Ok "msg"      , Ok ()                          , Ok ()           , Error (WrongLine 2));
+(true , Ok ["todo"] 		, 1, Error Editor  , Ok ()                          , Ok ()           , Error Editor       );
+(true , Ok ["todo"]	   	, 1, Ok ""         , Ok ()                          , Ok ()           , Error (CommitError "Commit aborted due to empty message"));
+(true , Ok ["todo"]     , 1, Ok "msg"      , Error (CommitError "any error"), Ok ()           , Error (CommitError "any error")  );
+(true , Ok ["todo"]     , 1, Ok "msg"      , Ok ()                          , Error FileSystem, Error FileSystem   );
+(true , Ok ["unchanged"], 1, Ok "unchanged", Ok ()                          , Ok ()           , Ok ()              );
+(true , Ok ["todo"]     , 1, Ok "edited"   , Ok ()                          , Ok ()           , Ok ()              )
+] |> List.iter (fun (is_repo, read, line, editor, commit_r, write, expected) ->
+		assert (commit line "any todo path" "any done path" {
+			read    = (fun _ -> read);
+			write   = (fun _ _ -> write);
+			now     = any_now;
+			editor  = (fun _ -> editor);
+			commit  = (fun _ -> commit_r);
+			is_repo = (fun _ -> is_repo)
+		} = expected)
+	)
+
+let ((* Run commit archives todo in correct order on success *)) =
+	let write_calls = ref [] in
+	let _ = commit 1 "any todo path" "any done path" {
+		read    = (fun path -> if path = "any done path" then Ok ["20260625 some"] else Ok ["todo"]);
+		write   = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
+		now     = (fun () -> "20260627");
+		editor  = (fun _ -> Ok "edited");
+		commit  = any_commit;
+		is_repo = (fun _ -> true)
+	} in
+
+	assert (!write_calls = [
+		("any done path", ["20260627 edited"; "20260625 some"]);
+		("any todo path", [])
+	])
