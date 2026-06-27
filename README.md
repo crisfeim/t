@@ -128,7 +128,8 @@ These are the core technical decisions:
 * **Error Composition & Scope Constraints:** Because subfiles cannot access the main module's `T.Error` type, concrete effect implementations are strictly decoupled and throw generic errors. To avoid verbose `do-catch` boilerplate when assembling the `liveFx` instance, `main.swift` uses a generic `rethrow` helper combined with the pipe forward operator (`|>`) to transform and compose these primitive errors into strongly typed domain errors (`throws(T.Error)`) in place.
 
 ### 3. Compilations and Zero-Dependency Testing Architecture
-* **Single-Module Compilation:** The project bypasses Swift Package Manager (SPM) in favor of direct `swiftc` multi-file compilation (`main.swift` alongside subfolders) to achieve instantaneous cold compile times.
+* **Single-Module Compilation:** The project bypasses Swift Package Manager (SPM) in favor of direct `swiftc` multi-file compilation (`main.swift` alongside neighbour files) to achieve instantaneous cold compile times.
+
 * **In-File Testing Harness:** Instead of pulling in XCTest or Swift Testing infrastructure—which severely slow down cold builds—tests are written natively using a basic `assertThrows` helper. The entire test suite is embedded inside `main.swift` and fully stripped in release builds using `#if DEBUG`.
 
 * **In-Place Test Execution:** Tests are declared as Immediately Invoked Closures (`let test_name: () = { ... }()`). This pattern executes the test suite instantly upon evaluation at startup, eliminating the overhead of maintaining a separate test runner or manually managing an invocation list. You may 
