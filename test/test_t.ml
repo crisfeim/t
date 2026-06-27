@@ -121,7 +121,7 @@ let () =
 
   let _ = complete 1 "any todo path" "any done path" {
     read   = (fun path -> if path = "any done path" then Ok[] else Ok ["tarea"]);
-    write  = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
+    write  = (fun data path -> write_calls := [(path, data)] @ !write_calls; Ok ());
     now    = (fun () -> "202606252301");
     editor = any_editor
   }  in
@@ -130,6 +130,7 @@ let () =
     ("any todo path", []);
     ("any done path", ["202606252301 tarea"])
   ])
+
 
 let edit line todo_path effects =
 	let* (todos, todo, _) = extract line todo_path effects.read in
