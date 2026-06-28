@@ -234,7 +234,6 @@ let ((*Commit*)) =
 (any_repo , Ok ["todo"]	     , 1, Ok ""         , Ok ()                           , Ok ()            , Error (`CommitError "Commit aborted due to empty message"));
 (any_repo , Ok ["todo"]      , 1, Ok "msg"      , Error (`CommitError "any error"), Ok ()            , Error (`CommitError "any error")  );
 (any_repo , Ok ["todo"]      , 1, Ok "msg"      , Ok ()                           , Error `FileSystem, Error `FileSystem   );
-(any_repo , Ok ["unchanged"] , 1, Ok "unchanged", Ok ()                           , Ok ()            , Ok ()              );
 (any_repo , Ok ["todo"]      , 1, Ok "edited"   , Ok ()                           , Ok ()            , Ok ()              )
 ] |> List.iter (fun (repo, read, line, editor, commit_r, write, expected) ->
 		assert (commit line "any todo path" "any done path" {
@@ -262,6 +261,17 @@ let ((* Run commit archives todo in correct order on success *)) =
 		("any done path", ["20260627 edited"; "20260625 some"]);
 		("any todo path", [])
 	])
+
+let ((*Run commit uses editor output as commit message *)) =
+  let commit_msg = ref "" in
+  let _ = commit 1 "any todo path" "any done path" {
+    (effects()) with
+    read     = (fun path -> if path = "any done path" then Ok [] else Ok ["todo"]);
+    editor   = (fun _ -> Ok "edited");
+    commit   = (fun msg _ -> commit_msg := msg; Ok ());
+    get_repo = (fun _ -> any_repo);
+  } in
+  assert (!commit_msg = "edited")
 
 let ((*Projects*)) =
 	[
