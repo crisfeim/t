@@ -113,53 +113,56 @@ let effects () = {
 open Test
 
 let () = case "List" (fun test ->
-  [ (Error `FileSystem, Error `FileSystem);
+  [
+  (Error `FileSystem, Error `FileSystem);
   (Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"]);
-  ] |> List.iteri (fun i (read, expected) ->
+  ]
+  |> List.iteri (fun i (read, expected) ->
     test (string_of_int i) (fun expect ->
-      expect.equal expected
-        (list "any todo path" { (effects ()) with read = (fun _ -> read) })
-    ))
+      expect.equal expected (list "any todo path" { (effects ()) with read = (fun _ -> read) })))
 )
 
 let () = case "Add" (fun test ->
-  [ (Error `FileSystem, Ok (), Error `FileSystem);
+  [
+  (Error `FileSystem, Ok (), Error `FileSystem);
   (Ok [], Error `FileSystem, Error `FileSystem);
   (Ok [], Ok (), Ok "any todo");
-  ] |> List.iteri (fun i (read, write, expected) ->
+  ]
+  |> List.iteri (fun i (read, write, expected) ->
     test (string_of_int i) (fun expect ->
-      expect.equal expected
-        (add "any todo" "any todo path" { (effects ()) with
-          read = (fun _ -> read);
-          write = (fun _ _ -> write); })
+      expect.equal expected (add "any todo" "any todo path" { (effects ()) with
+        read = (fun _ -> read);
+        write = (fun _ _ -> write) })
     ))
 )
 
 let () = case "Remove" (fun test ->
-  [ (Error `FileSystem, 1, Ok (), Error `FileSystem);
+  [
+  (Error `FileSystem, 1, Ok (), Error `FileSystem);
   (Ok ["any todo"], 2, Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem);
   (Ok ["any todo"], 1, Ok (), Ok "any todo");
-  ] |> List.iteri (fun i (read, line, write, expected) ->
+  ]
+  |> List.iteri (fun i (read, line, write, expected) ->
     test (string_of_int i) (fun expect ->
-      expect.equal expected
-        (remove line "any todo path" { (effects ()) with
-          read = (fun _ -> read);
-          write = (fun _ _ -> write); })
+      expect.equal expected (remove line "any todo path" { (effects ()) with
+        read = (fun _ -> read);
+        write = (fun _ _ -> write) })
     ))
 )
 
 let () = case "Complete" (fun test ->
-  [ (Error `FileSystem, 1, Ok (), Error `FileSystem);
+  [
+  (Error `FileSystem, 1, Ok (), Error `FileSystem);
   (Ok ["any todo"], 2, Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem);
   (Ok ["any todo"], 1, Ok (), Ok "any todo");
-  ] |> List.iteri (fun i (read, line, write, expected) ->
+  ]
+  |> List.iteri (fun i (read, line, write, expected) ->
     test (string_of_int i) (fun expect ->
-      expect.equal expected
-        (complete line "any todo path" "any done path" { (effects ()) with
-          read = (fun _ -> read);
-          write = (fun _ _ -> write); })
+      expect.equal expected (complete line "any todo path" "any done path" { (effects ()) with
+        read = (fun _ -> read);
+        write = (fun _ _ -> write) })
     ));
 
   test "writes to done_path before updating todo_path" (fun expect ->
@@ -169,25 +172,28 @@ let () = case "Complete" (fun test ->
       write = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
       now = (fun () -> "202606252301");
     } in
-    expect.equal
-      [("any done path", ["202606252301 tarea"]); ("any todo path", [])]
-      !write_calls
+
+    expect.equal !write_calls [
+    ("any done path", ["202606252301 tarea"]);
+    ("any todo path", [])
+    ]
   )
 )
 
 let () = case "Edit" (fun test ->
-  [ (Error `FileSystem, 1, Ok "any edition", Ok (), Error `FileSystem);
+  [
+  (Error `FileSystem, 1, Ok "any edition", Ok (), Error `FileSystem);
   (Ok ["any todo"], 2, Ok "any edition", Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `Editor, Ok (), Error `Editor);
   (Ok ["any todo"], 1, Ok "any edition", Error `FileSystem, Error `FileSystem);
   (Ok ["any todo"], 1, Ok "any edition", Ok (), Ok ());
-  ] |> List.iteri (fun i (read, line, editor, write, expected) ->
+  ]
+  |> List.iteri (fun i (read, line, editor, write, expected) ->
     test (string_of_int i) (fun expect ->
-      expect.equal expected
-        (edit line "any todo path" { (effects ()) with
-          read = (fun _ -> read);
-          write = (fun _ _ -> write);
-          editor = (fun _ -> editor); })
+      expect.equal expected (edit line "any todo path" { (effects ()) with
+        read = (fun _ -> read);
+        write = (fun _ _ -> write);
+        editor = (fun _ -> editor); })
     ));
 
   test "writes edited data" (fun expect ->
@@ -197,7 +203,7 @@ let () = case "Edit" (fun test ->
       write = (fun todos _ -> write_calls := todos :: !write_calls; Ok ());
       editor = (fun _ -> Ok "edited");
     } in
-    expect.equal [["edited"]] !write_calls
+    expect.equal !write_calls [["edited"]]
   );
 
   test "avoids unnecessary I/O when editor returns empty" (fun expect ->
@@ -222,7 +228,8 @@ let () = case "Edit" (fun test ->
 )
 
 let () = case "Commit" (fun test ->
-  [ (None    , Ok ["any todo"]  , 1, Ok "any edition", Ok (), Ok (), Error `NoRepository);
+  [
+  (None    , Ok ["any todo"]  , 1, Ok "any edition", Ok (), Ok (), Error `NoRepository);
   (any_repo, Error `FileSystem, 1, Ok "any edition", Ok (), Ok (), Error `FileSystem);
   (any_repo, Ok ["any todo"], 2, Ok "any edition", Ok (), Ok (), Error (`WrongLine 2));
   (any_repo, Ok ["any todo"], 1, Error `Editor, Ok (), Ok (), Error `Editor);
@@ -230,7 +237,8 @@ let () = case "Commit" (fun test ->
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Error (`CommitError "any error"), Ok (), Error (`CommitError "any error"));
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Error `FileSystem, Error `FileSystem);
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Ok ());
-  ] |> List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
+  ]
+  |> List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
     test (string_of_int i) (fun expect ->
       expect.equal expected
         (commit line "any todo path" "any done path" { (effects ()) with
@@ -268,11 +276,12 @@ let () = case "Commit" (fun test ->
 )
 
 let () = case "Projects" (fun test ->
-  [ (Error `FileSystem, Error `FileSystem);
+  [
+  (Error `FileSystem, Error `FileSystem);
   (Ok ["p1"; "p2"], Ok ["p1"; "p2"]);
-  ] |> List.iteri (fun i (projects_r, expected) ->
+  ]
+  |> List.iteri (fun i (projects_r, expected) ->
     test (string_of_int i) (fun expect ->
-      expect.equal expected
-        (projects { (effects ()) with projects = (fun () -> projects_r) })
-    ))
+      expect.equal expected (projects { (effects ()) with projects = (fun () -> projects_r) }))
+  )
 )
