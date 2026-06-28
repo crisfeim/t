@@ -41,7 +41,7 @@ let add todo todo_path effects =
 	let* todos = effects.read todo_path in
 	let updated = todos @ [todo] in
 	let* _ = effects.write updated todo_path in
-	Ok()
+	Ok ()
 
 let extract line todo_path read =
 	let* todos = read todo_path in
@@ -85,7 +85,7 @@ let projects effects =
 
 (* Test helpers *)
 let any_read     = (fun _ -> Ok [])
-let any_write    = (fun _ _ -> Ok())
+let any_write    = (fun _ _ -> Ok ())
 let any_now      = (fun _ -> "any date")
 let any_editor   = (fun _ -> Ok "")
 let any_commit   = (fun _ _ -> Ok ())
@@ -113,9 +113,9 @@ let ((*List*)) =
 
 let ((*Add*)) =
 	[
-		(Error `FileSystem, Ok(), Error `FileSystem);
-		(Ok[], Error `FileSystem, Error `FileSystem);
-		(Ok[], Ok(), Ok())
+		(Error `FileSystem, Ok (), Error `FileSystem);
+		(Ok [], Error `FileSystem, Error `FileSystem);
+		(Ok [], Ok (), Ok ())
 	] |> List.iter (fun (read, write, expected) ->
 		assert (add "any todo" "any todo path" {
 			(effects()) with
@@ -126,8 +126,8 @@ let ((*Add*)) =
 
 let ((*Remove*)) =
 	[
-		(Error `FileSystem, 1, Ok(), Error `FileSystem);
-		(Ok ["any todo"], 2, Ok(), Error (`WrongLine 2));
+		(Error `FileSystem, 1, Ok (), Error `FileSystem);
+		(Ok ["any todo"], 2, Ok (), Error (`WrongLine 2));
 		(Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem);
 		(Ok ["any todo"], 1, Ok (), Ok [])
 	] |> List.iter (fun (read, line, write, expected) ->
@@ -140,10 +140,10 @@ let ((*Remove*)) =
 
 let ((*Complete*)) =
 	[
-		(Error `FileSystem, 1, Ok(), Error `FileSystem);
-		(Ok["any todo"], 2, Ok(), Error (`WrongLine 2));
-		(Ok["any todo"], 1, Error `FileSystem, Error `FileSystem);
-		(Ok["any todo"], 1, Ok(), Ok[])
+		(Error `FileSystem, 1, Ok (), Error `FileSystem);
+		(Ok ["any todo"], 2, Ok (), Error (`WrongLine 2));
+		(Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem);
+		(Ok ["any todo"], 1, Ok (), Ok [])
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (complete line "any todo path" "any done path" {
 			(effects()) with
@@ -157,7 +157,7 @@ let ((* Complete writes to done_path before updating todo_path *)) =
 
   let _ = complete 1 "any todo path" "any done path" {
  		(effects()) with
-    read   = (fun path -> if path = "any done path" then Ok[] else Ok ["tarea"]);
+    read   = (fun path -> if path = "any done path" then Ok [] else Ok ["tarea"]);
     write  = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
     now    = (fun () -> "202606252301");
   }  in
@@ -171,18 +171,18 @@ let ((* Complete writes to done_path before updating todo_path *)) =
 let edit line todo_path effects =
 	let* (todos, todo, _) = extract line todo_path effects.read in
 	let* edited = effects.editor todo in
-	if edited = "" || edited = todo then Ok() else
+	if edited = "" || edited = todo then Ok () else
 	let updated = todos |> List.mapi (fun idx content -> if idx = line - 1 then edited else content) in
 	let* _ = effects.write updated todo_path in
-	Ok()
+	Ok ()
 
 let ((*Edit*)) =
 	[
-		(Error `FileSystem, 1, Ok "any edition", Ok(), Error `FileSystem);
-		(Ok ["any todo"], 2, Ok "any edition", Ok(), Error (`WrongLine 2));
-		(Ok ["any todo"], 1, Error `Editor, Ok(), Error `Editor);
+		(Error `FileSystem, 1, Ok "any edition", Ok (), Error `FileSystem);
+		(Ok ["any todo"], 2, Ok "any edition", Ok (), Error (`WrongLine 2));
+		(Ok ["any todo"], 1, Error `Editor, Ok (), Error `Editor);
 		(Ok ["any todo"], 1, Ok "any edition", Error `FileSystem, Error `FileSystem);
-		(Ok ["any todo"], 1, Ok "any edition", Ok(), Ok())
+		(Ok ["any todo"], 1, Ok "any edition", Ok (), Ok ())
 	] |> List.iter (fun (read, line, editor, write, expected) ->
 		assert (edit line "any todo path" {
 			(effects()) with
@@ -198,7 +198,7 @@ let ((* Edit writes edited data *)) =
 	let _ = edit 1 "any todo path" {
 		(effects()) with
 		read = (fun _ -> Ok ["todo"]);
-		write = (fun todos _ -> write_calls := todos :: !write_calls; Ok());
+		write = (fun todos _ -> write_calls := todos :: !write_calls; Ok ());
 		editor = (fun _ -> Ok "edited");
 	} in
 
@@ -210,7 +210,7 @@ let ((* Edit avoids unnecessary I/O when no changes or empty *)) =
 		let _ = edit 1 "any todo path" {
 			(effects()) with
 			read   = (fun _ -> Ok [original]);
-			write  = (fun todos _ -> did_wrote := true ; Ok());
+			write  = (fun todos _ -> did_wrote := true ; Ok ());
 			editor = (fun _ -> Ok edited);
 		} in
 
