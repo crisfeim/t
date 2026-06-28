@@ -114,17 +114,14 @@ let ((*List*)) =
 	  (Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"] )
 	]
 	|> List.iter (fun (read, expected) ->
-			assert (list "any todo path" {
-				(effects()) with read = (fun _ -> read)
-   			} = expected
-			)
+			assert (list "any todo path" { (effects()) with read = (fun _ -> read) } = expected)
   )
 
 let ((*Add*)) =
 	[
-		(Error `FileSystem, Ok()            , Error `FileSystem);
-		(Ok[]            , Error `FileSystem, Error `FileSystem);
-		(Ok[]						 , Ok()					   , Ok()            )
+		(Error `FileSystem, Ok()             , Error `FileSystem);
+		(Ok[]             , Error `FileSystem, Error `FileSystem);
+		(Ok[]						  , Ok()					   , Ok()             )
 	] |> List.iter (fun (read, write, expected) ->
 		assert (add "any todo" "any todo path" {
 			(effects()) with
@@ -138,7 +135,7 @@ let ((*Remove*)) =
 		(Error `FileSystem , 1 , Ok() 					  , Error `FileSystem   );
 		(Ok ["any todo"]   , 2 , Ok()						  , Error (`WrongLine 2));
 		(Ok ["any todo"]   , 1 , Error `FileSystem, Error `FileSystem		);
-		(Ok ["any todo"]   , 1 , Ok()             , Ok[] 							)
+		(Ok ["any todo"]   , 1 , Ok()             , Ok[] 							  )
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (remove line "any todo path" {
 			(effects()) with
@@ -191,7 +188,7 @@ let ((*Edit*)) =
 		(Ok ["any todo"]  , 2, Ok "any edition" , Ok()             , Error (`WrongLine 2));
 		(Ok ["any todo"]  , 1, Error `Editor    , Ok()             , Error `Editor       );
 		(Ok ["any todo"]  , 1, Ok "any edition" , Error `FileSystem, Error `FileSystem   );
-		(Ok ["any todo"]  , 1, Ok "any edition" , Ok()             , Ok()               )
+		(Ok ["any todo"]  , 1, Ok "any edition" , Ok()             , Ok()                )
 	] |> List.iter (fun (read, line, editor, write, expected) ->
 		assert (edit line "any todo path" {
 			(effects()) with
@@ -271,8 +268,4 @@ let ((*Projects*)) =
 		(Error `FileSystem, Error `FileSystem);
 		(Ok ["p1"; "p2"]  , Ok ["p1"; "p2"]  )
 	] |> List.iter (fun (projects_r, expected) ->
-		assert (projects {
-			(effects()) with
-			projects = (fun () -> projects_r);
-		} = expected)
-	)
+		assert (projects { (effects()) with projects = (fun () -> projects_r);} = expected))
