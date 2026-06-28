@@ -1,3 +1,4 @@
 (test
  (name test_t)
- (libraries t))
+ (libraries t)
+ (modules test_t test))

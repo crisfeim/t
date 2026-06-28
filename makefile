@@ -3,4 +3,4 @@ build:
 
 .PHONY: test
 test:
-	dune test
+	dune test --force
