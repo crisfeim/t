@@ -90,7 +90,6 @@ let any_now      = (fun _ -> "any date")
 let any_editor   = (fun _ -> Ok "")
 let any_commit   = (fun _ _ -> Ok ())
 let any_repo     = Some { path = "any repo dir" ; system = "fossil" }
-let any_get_repo = (fun _ -> any_repo)
 let any_projects = (fun () -> Ok ["any project path"])
 
 let effects () = {
@@ -100,7 +99,7 @@ let effects () = {
 	now      = any_now;
 	editor   = any_editor;
 	commit   = any_commit;
-	get_repo = any_get_repo;
+	get_repo = (fun _ -> any_repo);
 }
 
 let ((*List*)) =
