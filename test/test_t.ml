@@ -63,11 +63,6 @@ let complete line todo_path done_path effects =
 	let* _ = effects.write updated todo_path in
 	Ok updated
 
-let (let*?) opt err =
-	match opt with
-	| Some v -> Ok v
-	| None -> err
-
 let commit line todo_path done_path effects =
 	let* repo =
 		match effects.get_repo todo_path with
