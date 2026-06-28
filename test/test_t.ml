@@ -220,16 +220,16 @@ let ((* Edit avoids unnecessary I/O when no changes or empty *)) =
 	assertion "original" "original"
 
 let ((*Commit*)) =
-[
-(None     , Ok ["todo"], 1, Ok "msg", Ok (), Ok (), Error `NoRepository );
-(any_repo , Error `FileSystem, 1, Ok "msg", Ok (), Ok (), Error `FileSystem);
-(any_repo , Ok ["todo"], 2, Ok "msg", Ok (), Ok (), Error (`WrongLine 2));
-(any_repo , Ok ["todo"], 1, Error `Editor , Ok (), Ok (), Error `Editor);
-(any_repo , Ok ["todo"], 1, Ok "", Ok (), Ok (), Error (`CommitError "Commit aborted due to empty message"));
-(any_repo , Ok ["todo"], 1, Ok "msg", Error (`CommitError "any error"), Ok (), Error (`CommitError "any error"));
-(any_repo , Ok ["todo"], 1, Ok "msg", Ok (), Error `FileSystem, Error `FileSystem);
-(any_repo , Ok ["todo"], 1, Ok "edited", Ok (), Ok (), Ok ())
-] |> List.iter (fun (repo, read, line, editor, commit_r, write, expected) ->
+	[
+	(None     , Ok ["todo"], 1, Ok "msg", Ok (), Ok (), Error `NoRepository );
+	(any_repo , Error `FileSystem, 1, Ok "msg", Ok (), Ok (), Error `FileSystem);
+	(any_repo , Ok ["todo"], 2, Ok "msg", Ok (), Ok (), Error (`WrongLine 2));
+	(any_repo , Ok ["todo"], 1, Error `Editor , Ok (), Ok (), Error `Editor);
+	(any_repo , Ok ["todo"], 1, Ok "", Ok (), Ok (), Error (`CommitError "Commit aborted due to empty message"));
+	(any_repo , Ok ["todo"], 1, Ok "msg", Error (`CommitError "any error"), Ok (), Error (`CommitError "any error"));
+	(any_repo , Ok ["todo"], 1, Ok "msg", Ok (), Error `FileSystem, Error `FileSystem);
+	(any_repo , Ok ["todo"], 1, Ok "edited", Ok (), Ok (), Ok ())
+	] |> List.iter (fun (repo, read, line, editor, commit_r, write, expected) ->
 		assert (commit line "any todo path" "any done path" {
 			(effects()) with
 			read     = (fun _ -> read);
