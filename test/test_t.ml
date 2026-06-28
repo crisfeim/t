@@ -110,7 +110,7 @@ let effects () = {
 
 let ((*List*)) =
 	[
-	  (Error `FileSystem		 , Error `FileSystem					);
+	  (Error `FileSystem, Error `FileSystem);
 	  (Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"] )
 	]
 	|> List.iter (fun (read, expected) ->
@@ -121,7 +121,7 @@ let ((*Add*)) =
 	[
 		(Error `FileSystem, Ok()             , Error `FileSystem);
 		(Ok[]             , Error `FileSystem, Error `FileSystem);
-		(Ok[]						  , Ok()					   , Ok()             )
+		(Ok[]						  , Ok()					   , Ok())
 	] |> List.iter (fun (read, write, expected) ->
 		assert (add "any todo" "any todo path" {
 			(effects()) with
@@ -132,10 +132,10 @@ let ((*Add*)) =
 
 let ((*Remove*)) =
 	[
-		(Error `FileSystem , 1 , Ok() 					  , Error `FileSystem   );
+		(Error `FileSystem , 1 , Ok() 					  , Error `FileSystem);
 		(Ok ["any todo"]   , 2 , Ok()						  , Error (`WrongLine 2));
-		(Ok ["any todo"]   , 1 , Error `FileSystem, Error `FileSystem		);
-		(Ok ["any todo"]   , 1 , Ok()             , Ok[] 							  )
+		(Ok ["any todo"]   , 1 , Error `FileSystem, Error `FileSystem);
+		(Ok ["any todo"]   , 1 , Ok()             , Ok[])
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (remove line "any todo path" {
 			(effects()) with
@@ -146,10 +146,10 @@ let ((*Remove*)) =
 
 let ((*Complete*)) =
 	[
-		(Error `FileSystem, 1, Ok() 					  , Error `FileSystem	 );
+		(Error `FileSystem, 1, Ok() 					  , Error `FileSystem);
 		(Ok["any todo"]   , 2, Ok()				      , Error (`WrongLine 2));
-		(Ok["any todo"]	  , 1, Error `FileSystem, Error `FileSystem	 );
-		(Ok["any todo"]	  , 1, Ok()					  	, Ok[]							 )
+		(Ok["any todo"]	  , 1, Error `FileSystem, Error `FileSystem);
+		(Ok["any todo"]	  , 1, Ok()					  	, Ok[])
 	] |> List.iter (fun (read, line, write, expected) ->
 		assert (complete line "any todo path" "any done path" {
 			(effects()) with
@@ -184,11 +184,11 @@ let edit line todo_path effects =
 
 let ((*Edit*)) =
 	[
-		(Error `FileSystem, 1, Ok "any edition" , Ok()             , Error `FileSystem   );
+		(Error `FileSystem, 1, Ok "any edition" , Ok()             , Error `FileSystem);
 		(Ok ["any todo"]  , 2, Ok "any edition" , Ok()             , Error (`WrongLine 2));
-		(Ok ["any todo"]  , 1, Error `Editor    , Ok()             , Error `Editor       );
-		(Ok ["any todo"]  , 1, Ok "any edition" , Error `FileSystem, Error `FileSystem   );
-		(Ok ["any todo"]  , 1, Ok "any edition" , Ok()             , Ok()                )
+		(Ok ["any todo"]  , 1, Error `Editor    , Ok()             , Error `Editor);
+		(Ok ["any todo"]  , 1, Ok "any edition" , Error `FileSystem, Error `FileSystem);
+		(Ok ["any todo"]  , 1, Ok "any edition" , Ok()             , Ok())
 	] |> List.iter (fun (read, line, editor, write, expected) ->
 		assert (edit line "any todo path" {
 			(effects()) with
@@ -228,13 +228,13 @@ let ((* Edit avoids unnecessary I/O when no changes or empty *)) =
 let ((*Commit*)) =
 [
 (None     , Ok ["todo"]      , 1, Ok "msg"      , Ok ()                           , Ok ()            , Error `NoRepository );
-(any_repo , Error `FileSystem, 1, Ok "msg"      , Ok ()                           , Ok ()            , Error `FileSystem   );
+(any_repo , Error `FileSystem, 1, Ok "msg"      , Ok ()                           , Ok ()            , Error `FileSystem);
 (any_repo , Ok ["todo"] 		 , 2, Ok "msg"      , Ok ()                           , Ok ()            , Error (`WrongLine 2));
-(any_repo , Ok ["todo"] 		 , 1, Error `Editor , Ok ()                           , Ok ()            , Error `Editor       );
+(any_repo , Ok ["todo"] 		 , 1, Error `Editor , Ok ()                           , Ok ()            , Error `Editor);
 (any_repo , Ok ["todo"]	     , 1, Ok ""         , Ok ()                           , Ok ()            , Error (`CommitError "Commit aborted due to empty message"));
-(any_repo , Ok ["todo"]      , 1, Ok "msg"      , Error (`CommitError "any error"), Ok ()            , Error (`CommitError "any error")  );
-(any_repo , Ok ["todo"]      , 1, Ok "msg"      , Ok ()                           , Error `FileSystem, Error `FileSystem   );
-(any_repo , Ok ["todo"]      , 1, Ok "edited"   , Ok ()                           , Ok ()            , Ok ()              )
+(any_repo , Ok ["todo"]      , 1, Ok "msg"      , Error (`CommitError "any error"), Ok ()            , Error (`CommitError "any error"));
+(any_repo , Ok ["todo"]      , 1, Ok "msg"      , Ok ()                           , Error `FileSystem, Error `FileSystem);
+(any_repo , Ok ["todo"]      , 1, Ok "edited"   , Ok ()                           , Ok ()            , Ok ())
 ] |> List.iter (fun (repo, read, line, editor, commit_r, write, expected) ->
 		assert (commit line "any todo path" "any done path" {
 			(effects()) with
