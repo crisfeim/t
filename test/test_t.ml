@@ -61,11 +61,6 @@ let complete line todo_path done_path effects =
   let* _ = effects.write updated todo_path in
   Ok updated
 
-let (let*?) opt err =
-  match opt with
-  | Some v -> Ok v
-  | None -> err
-
 let commit line todo_path done_path effects =
   let* repo =
     match effects.get_repo todo_path with
@@ -113,70 +108,60 @@ let effects () = {
   get_repo = (fun _ -> any_repo);
 }
 
-(* Helper algebraico para datos dinamicos (List y Projects) *)
-type 'a test_case = Data of 'a | Fail of error
-let to_res = function Data v -> Ok v | Fail e -> Error e
+(* Generic helpers *)
+let to_res v = function `Success -> Ok v | #error as e -> Error (e :> error)
+let to_unit  = to_res ()
+
+let read_res  = function `Success xs -> Ok xs | `FileSystem -> Error `FileSystem
+let write_res = function `Success -> Ok ()    | `FileSystem -> Error `FileSystem
+let editor_res = function `Success s -> Ok s  | `Editor -> Error `Editor
 
 let ((*List*)) =
-  [ (Fail `FileSystem     , Fail `FileSystem)
-  ; (Data ["compra"; "lavar"], Data ["1 compra"; "2 lavar"])
+  [ (`FileSystem             , `FileSystem                         )
+  ; (`Success ["compra";"lavar"], `Success ["1 compra"; "2 lavar"])
   ]
   |> List.iter (fun (read_in, expected_in) ->
-         let to_read_res = function
-           | Data v -> Ok v
-           | Fail `FileSystem -> Error `FileSystem
-           | Fail _ -> assert false
-         in
-         assert (list "any todo path" { (effects ()) with read = (fun _ -> to_read_res read_in) } = to_res expected_in))
+    assert (list "any todo path" {
+      (effects ()) with read = (fun _ -> read_res read_in)
+    } = read_res expected_in))
 
 let ((*Add*)) =
-  [ (`FileSystem, `Success   , `FileSystem)
-  ; (`Success   , `FileSystem, `FileSystem)
-  ; (`Success   , `Success   , `Success)
+  [ (`FileSystem, `Success, `FileSystem)
+  ; (`Success [], `FileSystem, `FileSystem)
+  ; (`Success [], `Success, `Success)
   ]
-  |> List.iter (fun (read_case, write_case, expected_case) ->
-         let to_unit_res = function `Success -> Ok () | `FileSystem -> Error `FileSystem in
-         assert (add "any todo" "any todo path" {
-           (effects ()) with
-           read  = (fun _ -> match read_case with `Success -> Ok [] | `FileSystem -> Error `FileSystem);
-           write = (fun _ _ -> to_unit_res write_case);
-         } = to_unit_res expected_case))
+  |> List.iter (fun (read_in, write_in, expected_in) ->
+    assert (add "any todo" "any todo path" {
+      (effects ()) with
+      read  = (fun _ -> read_res read_in);
+      write = (fun _ _ -> write_res write_in);
+    } = to_unit expected_in))
 
 let ((*Remove*)) =
-  [ (`FileSystem, 1, `Success   , `FileSystem)
-  ; (`Success   , 2, `Success   , `WrongLine 2)
+  [ (`FileSystem, 1, `Success, `FileSystem  )
+  ; (`Success   , 2, `Success, `WrongLine 2 )
   ; (`Success   , 1, `FileSystem, `FileSystem)
-  ; (`Success   , 1, `Success   , `Success)
+  ; (`Success   , 1, `Success, `Success     )
   ]
-  |> List.iter (fun (read_case, line, write_case, expected_case) ->
-         let to_write_res = function `Success -> Ok () | `FileSystem -> Error `FileSystem in
-         let expected = match expected_case with
-           | `Success -> Ok []
-           | #error as err -> Error (err :> error)
-         in
-         assert (remove line "any todo path" {
-           (effects ()) with
-           read  = (fun _ -> match read_case with `Success -> Ok ["any todo"] | `FileSystem -> Error `FileSystem);
-           write = (fun _ _ -> to_write_res write_case);
-         } = expected))
+  |> List.iter (fun (read_in, line, write_in, expected_in) ->
+    assert (remove line "any todo path" {
+      (effects ()) with
+      read  = (fun _ -> match read_in with `Success -> Ok ["any todo"] | `FileSystem -> Error `FileSystem);
+      write = (fun _ _ -> write_res write_in);
+    } = to_res [] expected_in))
 
 let ((*Complete*)) =
-  [ (`FileSystem, 1, `Success   , `FileSystem)
-  ; (`Success   , 2, `Success   , `WrongLine 2)
-  ; (`Success   , 1, `FileSystem, `FileSystem)
-  ; (`Success   , 1, `Success   , `Success)
+  [ (`FileSystem, 1, `Success   , `FileSystem  )
+  ; (`Success   , 2, `Success   , `WrongLine 2 )
+  ; (`Success   , 1, `FileSystem, `FileSystem  )
+  ; (`Success   , 1, `Success   , `Success     )
   ]
-  |> List.iter (fun (read_case, line, write_case, expected_case) ->
-         let to_write_res = function `Success -> Ok () | `FileSystem -> Error `FileSystem in
-         let expected = match expected_case with
-           | `Success -> Ok []
-           | #error as err -> Error (err :> error)
-         in
-         assert (complete line "any todo path" "any done path" {
-           (effects ()) with
-           read  = (fun _ -> match read_case with `Success -> Ok ["any todo"] | `FileSystem -> Error `FileSystem);
-           write = (fun _ _ -> to_write_res write_case);
-         } = expected))
+  |> List.iter (fun (read_in, line, write_in, expected_in) ->
+    assert (complete line "any todo path" "any done path" {
+      (effects ()) with
+      read  = (fun _ -> match read_in with `Success -> Ok ["any todo"] | `FileSystem -> Error `FileSystem);
+      write = (fun _ _ -> write_res write_in);
+    } = to_res [] expected_in))
 
 let ((* Complete writes to done_path before updating todo_path *)) =
   let write_calls = ref [] in
@@ -192,24 +177,19 @@ let ((* Complete writes to done_path before updating todo_path *)) =
   ])
 
 let ((*Edit*)) =
-  [ (`FileSystem, 1, Data "any edition", `Success   , `FileSystem)
-  ; (`Success   , 2, Data "any edition", `Success   , `WrongLine 2)
-  ; (`Success   , 1, Fail `Editor      , `Success   , `Editor)
-  ; (`Success   , 1, Data "any edition", `FileSystem, `FileSystem)
-  ; (`Success   , 1, Data "any edition", `Success   , `Success)
+  [ (`FileSystem, 1, `Success "any edition", `Success   , `FileSystem  )
+  ; (`Success   , 2, `Success "any edition", `Success   , `WrongLine 2 )
+  ; (`Success   , 1, `Editor               , `Success   , `Editor      )
+  ; (`Success   , 1, `Success "any edition", `FileSystem, `FileSystem  )
+  ; (`Success   , 1, `Success "any edition", `Success   , `Success     )
   ]
-  |> List.iter (fun (read_case, line, editor_case, write_case, expected_case) ->
-         let to_write_res = function `Success -> Ok () | `FileSystem -> Error `FileSystem in
-         let expected = match expected_case with
-           | `Success -> Ok ()
-           | #error as err -> Error (err :> error)
-         in
-         assert (edit line "any todo path" {
-           (effects ()) with
-           read   = (fun _ -> match read_case with `Success -> Ok ["any todo"] | `FileSystem -> Error `FileSystem);
-           write  = (fun _ _ -> to_write_res write_case);
-           editor = (fun _ -> match editor_case with Data v -> Ok v | Fail `Editor -> Error `Editor | Fail _ -> assert false);
-         } = expected))
+  |> List.iter (fun (read_in, line, editor_in, write_in, expected_in) ->
+    assert (edit line "any todo path" {
+      (effects ()) with
+      read   = (fun _ -> match read_in with `Success -> Ok ["any todo"] | `FileSystem -> Error `FileSystem);
+      write  = (fun _ _ -> write_res write_in);
+      editor = (fun _ -> editor_res editor_in);
+    } = to_unit expected_in))
 
 let ((* Edit writes edited data *)) =
   let write_calls = ref [] in
@@ -236,29 +216,25 @@ let ((* Edit avoids unnecessary I/O when no changes or empty *)) =
   assertion "original" "original"
 
 let ((*Commit*)) =
-  [ (None    , Data ["todo"]     , 1, Data "msg"      , `Success                , `Success   , `NoRepository)
-  ; (any_repo, Fail `FileSystem  , 1, Data "msg"      , `Success                , `Success   , `FileSystem)
-  ; (any_repo, Data ["todo"]     , 2, Data "msg"      , `Success                , `Success   , `WrongLine 2)
-  ; (any_repo, Data ["todo"]     , 1, Fail `Editor    , `Success                , `Success   , `Editor)
-  ; (any_repo, Data ["todo"]     , 1, Data ""         , `Success                , `Success   , `CommitError "Commit aborted due to empty message")
-  ; (any_repo, Data ["todo"]     , 1, Data "msg"      , `CommitError "any error", `Success   , `CommitError "any error")
-  ; (any_repo, Data ["todo"]     , 1, Data "msg"      , `Success                , `FileSystem, `FileSystem)
-  ; (any_repo, Data ["unchanged"], 1, Data "unchanged", `Success                , `Success   , `Success)
-  ; (any_repo, Data ["todo"] , 1, Data "edited"       , `Success                , `Success   , `Success)
+  [ (None    , `Success ["todo"]     , 1, `Success "msg"      , `Success                , `Success   , `NoRepository                          )
+  ; (any_repo, `FileSystem           , 1, `Success "msg"      , `Success                , `Success   , `FileSystem                            )
+  ; (any_repo, `Success ["todo"]     , 2, `Success "msg"      , `Success                , `Success   , `WrongLine 2                           )
+  ; (any_repo, `Success ["todo"]     , 1, `Editor             , `Success                , `Success   , `Editor                                )
+  ; (any_repo, `Success ["todo"]     , 1, `Success ""         , `Success                , `Success   , `CommitError "Commit aborted due to empty message")
+  ; (any_repo, `Success ["todo"]     , 1, `Success "msg"      , `CommitError "any error", `Success   , `CommitError "any error"               )
+  ; (any_repo, `Success ["todo"]     , 1, `Success "msg"      , `Success                , `FileSystem, `FileSystem                            )
+  ; (any_repo, `Success ["unchanged"], 1, `Success "unchanged", `Success                , `Success   , `Success                               )
+  ; (any_repo, `Success ["todo"]     , 1, `Success "edited"   , `Success                , `Success   , `Success                               )
   ]
-  |> List.iter (fun (repo, read_case, line, editor_case, commit_case, write_case, expected_case) ->
-         let expected = match expected_case with
-           | `Success -> Ok ()
-           | #error as err -> Error (err :> error)
-         in
-         assert (commit line "any todo path" "any done path" {
-           (effects ()) with
-           read     = (fun _ -> match read_case with Data v -> Ok v | Fail `FileSystem -> Error `FileSystem | Fail _ -> assert false);
-           write    = (fun _ _ -> match write_case with `Success -> Ok () | `FileSystem -> Error `FileSystem);
-           editor   = (fun _ -> match editor_case with Data v -> Ok v | Fail `Editor -> Error `Editor | Fail _ -> assert false);
-           commit   = (fun _ _ -> match commit_case with `Success -> Ok () | #error as err -> Error (err :> error));
-           get_repo = (fun _ -> repo);
-         } = expected))
+  |> List.iter (fun (repo, read_in, line, editor_in, commit_in, write_in, expected_in) ->
+    assert (commit line "any todo path" "any done path" {
+      (effects ()) with
+      read     = (fun _ -> read_res read_in);
+      write    = (fun _ _ -> write_res write_in);
+      editor   = (fun _ -> editor_res editor_in);
+      commit   = (fun _ _ -> match commit_in with `Success -> Ok () | #error as e -> Error (e :> error));
+      get_repo = (fun _ -> repo);
+    } = to_unit expected_in))
 
 let ((* Run commit archives todo in correct order on success *)) =
   let write_calls = ref [] in
@@ -276,13 +252,10 @@ let ((* Run commit archives todo in correct order on success *)) =
   ])
 
 let ((*Projects*)) =
-  [ (Fail `FileSystem , Fail `FileSystem)
-  ; (Data ["p1"; "p2"], Data ["p1"; "p2"])
+  [ (`FileSystem          , `FileSystem          )
+  ; (`Success ["p1"; "p2"], `Success ["p1"; "p2"])
   ]
-  |> List.iter (fun (projects_r, expected) ->
-         let to_proj_res = function
-           | Data v -> Ok v
-           | Fail `FileSystem -> Error `FileSystem
-           | Fail _ -> assert false
-         in
-         assert (projects { (effects ()) with projects = (fun () -> to_proj_res projects_r) } = to_res expected))
+  |> List.iter (fun (projects_in, expected_in) ->
+    assert (projects {
+      (effects ()) with projects = (fun () -> read_res projects_in)
+    } = read_res expected_in))
