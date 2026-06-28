@@ -113,21 +113,21 @@ let effects () = {
 open Test
 
 let () = case "List" (fun test ->
-  [ ("delivers error on read failure", Error `FileSystem, Error `FileSystem) ;
-    ("formats todos with line numbers", Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"]) ;
-  ] |> List.iter (fun (description, read, expected) ->
-    test description (fun expect ->
+  [ (Error `FileSystem, Error `FileSystem) ;
+    (Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"]) ;
+  ] |> List.iteri (fun i (read, expected) ->
+    test (string_of_int i) (fun expect ->
       expect.equal expected
         (list "any todo path" { (effects ()) with read = (fun _ -> read) })
     ))
 )
 
 let () = case "Add" (fun test ->
-  [ ("delivers error on read failure", Error `FileSystem, Ok (), Error `FileSystem) ;
-    ("delivers error on write failure", Ok [], Error `FileSystem, Error `FileSystem) ;
-    ("returns added todo on success", Ok [], Ok (), Ok "any todo") ;
-  ] |> List.iter (fun (description, read, write, expected) ->
-    test description (fun expect ->
+  [ (Error `FileSystem, Ok (), Error `FileSystem) ;
+    (Ok [], Error `FileSystem, Error `FileSystem) ;
+    (Ok [], Ok (), Ok "any todo") ;
+  ] |> List.iteri (fun i (read, write, expected) ->
+    test (string_of_int i) (fun expect ->
       expect.equal expected
         (add "any todo" "any todo path" { (effects ()) with
           read = (fun _ -> read);
@@ -136,12 +136,12 @@ let () = case "Add" (fun test ->
 )
 
 let () = case "Remove" (fun test ->
-  [ ("delivers error on read failure", Error `FileSystem, 1, Ok (), Error `FileSystem) ;
-    ("delivers error on wrong line", Ok ["any todo"], 2, Ok (), Error (`WrongLine 2)) ;
-    ("delivers error on write failure", Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem) ;
-    ("returns removed todo on success", Ok ["any todo"], 1, Ok (), Ok "any todo") ;
-  ] |> List.iter (fun (description, read, line, write, expected) ->
-    test description (fun expect ->
+  [ (Error `FileSystem, 1, Ok (), Error `FileSystem) ;
+    (Ok ["any todo"], 2, Ok (), Error (`WrongLine 2)) ;
+    (Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem) ;
+    (Ok ["any todo"], 1, Ok (), Ok "any todo") ;
+  ] |> List.iteri (fun i (read, line, write, expected) ->
+    test (string_of_int i) (fun expect ->
       expect.equal expected
         (remove line "any todo path" { (effects ()) with
           read = (fun _ -> read);
@@ -150,12 +150,12 @@ let () = case "Remove" (fun test ->
 )
 
 let () = case "Complete" (fun test ->
-  [ ("delivers error on read failure", Error `FileSystem, 1, Ok (), Error `FileSystem) ;
-    ("delivers error on wrong line", Ok ["any todo"], 2, Ok (), Error (`WrongLine 2)) ;
-    ("delivers error on write failure", Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem) ;
-    ("returns completed todo on success", Ok ["any todo"], 1, Ok (), Ok "any todo") ;
-  ] |> List.iter (fun (description, read, line, write, expected) ->
-    test description (fun expect ->
+  [ (Error `FileSystem, 1, Ok (), Error `FileSystem) ;
+    (Ok ["any todo"], 2, Ok (), Error (`WrongLine 2)) ;
+    (Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem) ;
+    (Ok ["any todo"], 1, Ok (), Ok "any todo") ;
+  ] |> List.iteri (fun i (read, line, write, expected) ->
+    test (string_of_int i) (fun expect ->
       expect.equal expected
         (complete line "any todo path" "any done path" { (effects ()) with
           read = (fun _ -> read);
@@ -176,13 +176,13 @@ let () = case "Complete" (fun test ->
 )
 
 let () = case "Edit" (fun test ->
-  [ ("delivers error on read failure", Error `FileSystem, 1, Ok "any edition", Ok (), Error `FileSystem) ;
-    ("delivers error on wrong line", Ok ["any todo"], 2, Ok "any edition", Ok (), Error (`WrongLine 2)) ;
-    ("delivers error on editor failure", Ok ["any todo"], 1, Error `Editor, Ok (), Error `Editor) ;
-    ("delivers error on write failure", Ok ["any todo"], 1, Ok "any edition", Error `FileSystem, Error `FileSystem) ;
-    ("succeeds", Ok ["any todo"], 1, Ok "any edition", Ok (), Ok ()) ;
-  ] |> List.iter (fun (description, read, line, editor, write, expected) ->
-    test description (fun expect ->
+  [ (Error `FileSystem, 1, Ok "any edition", Ok (), Error `FileSystem) ;
+    (Ok ["any todo"], 2, Ok "any edition", Ok (), Error (`WrongLine 2)) ;
+    (Ok ["any todo"], 1, Error `Editor, Ok (), Error `Editor) ;
+    (Ok ["any todo"], 1, Ok "any edition", Error `FileSystem, Error `FileSystem) ;
+    (Ok ["any todo"], 1, Ok "any edition", Ok (), Ok ()) ;
+  ] |> List.iteri (fun i (read, line, editor, write, expected) ->
+    test (string_of_int i) (fun expect ->
       expect.equal expected
         (edit line "any todo path" { (effects ()) with
           read = (fun _ -> read);
@@ -222,16 +222,16 @@ let () = case "Edit" (fun test ->
 )
 
 let () = case "Commit" (fun test ->
-  [ ("delivers error on missing repo", None, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Error `NoRepository) ;
-    ("delivers error on read failure", any_repo, Error `FileSystem, 1, Ok "any edition", Ok (), Ok (), Error `FileSystem) ;
-    ("delivers error on wrong line", any_repo, Ok ["any todo"], 2, Ok "any edition", Ok (), Ok (), Error (`WrongLine 2)) ;
-    ("delivers error on editor failure", any_repo, Ok ["any todo"], 1, Error `Editor, Ok (), Ok (), Error `Editor) ;
-    ("delivers error on empty message", any_repo, Ok ["any todo"], 1, Ok "", Ok (), Ok (), Error (`CommitError "Commit aborted due to empty message")) ;
-    ("delivers error on commit failure", any_repo, Ok ["any todo"], 1, Ok "any edition", Error (`CommitError "any error"), Ok (), Error (`CommitError "any error")) ;
-    ("delivers error on write failure", any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Error `FileSystem, Error `FileSystem) ;
-    ("succeeds", any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Ok ()) ;
-  ] |> List.iter (fun (description, repo, read, line, editor, commit_r, write, expected) ->
-    test description (fun expect ->
+  [ (None, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Error `NoRepository) ;
+    (any_repo, Error `FileSystem, 1, Ok "any edition", Ok (), Ok (), Error `FileSystem) ;
+    (any_repo, Ok ["any todo"], 2, Ok "any edition", Ok (), Ok (), Error (`WrongLine 2)) ;
+    (any_repo, Ok ["any todo"], 1, Error `Editor, Ok (), Ok (), Error `Editor) ;
+    (any_repo, Ok ["any todo"], 1, Ok "", Ok (), Ok (), Error (`CommitError "Commit aborted due to empty message")) ;
+    (any_repo, Ok ["any todo"], 1, Ok "any edition", Error (`CommitError "any error"), Ok (), Error (`CommitError "any error")) ;
+    (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Error `FileSystem, Error `FileSystem) ;
+    (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Ok ()) ;
+  ] |> List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
+    test (string_of_int i) (fun expect ->
       expect.equal expected
         (commit line "any todo path" "any done path" { (effects ()) with
           read = (fun _ -> read);
@@ -268,10 +268,10 @@ let () = case "Commit" (fun test ->
 )
 
 let () = case "Projects" (fun test ->
-  [ ("delivers error on filesystem failure", Error `FileSystem, Error `FileSystem) ;
-    ("returns project paths on success", Ok ["p1"; "p2"], Ok ["p1"; "p2"]) ;
-  ] |> List.iter (fun (description, projects_r, expected) ->
-    test description (fun expect ->
+  [ (Error `FileSystem, Error `FileSystem) ;
+    (Ok ["p1"; "p2"], Ok ["p1"; "p2"]) ;
+  ] |> List.iteri (fun i (projects_r, expected) ->
+    test (string_of_int i) (fun expect ->
       expect.equal expected
         (projects { (effects ()) with projects = (fun () -> projects_r) })
     ))
