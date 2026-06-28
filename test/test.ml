@@ -36,9 +36,13 @@ let case name fn =
         failed := !failed + 1;
   );
   if !failed > 0 then exit_code := 1;
-  Printf.printf "\u{001B}[1m%s\u{001B}[0m: \u{001B}[92mPassed: %d\u{001B}[0m | \u{001B}[91mFailed: %d\u{001B}[0m\n"
+  Printf.printf "\u{001B}[1m%s\u{001B}[0m: \u{001B}[92mPassed: %d\u{001B}[0m | \u{001B}[91mFailed: %d\u{001B}[0m"
     name !passed !failed;
-  List.iter print_endline (List.rev !errors);
-  print_newline ()
+  if !errors <> [] then begin
+    print_newline ();
+    List.iter print_endline (List.rev !errors);
+    print_newline ()
+  end else
+    print_newline ()
 
 let () = at_exit (fun () -> exit !exit_code)
