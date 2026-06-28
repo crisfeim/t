@@ -62,15 +62,20 @@ let complete line todo_path done_path effects =
 	let* _ = effects.write updated todo_path in
 	Ok todo
 
-let commit line todo_path done_path effects =
+let commit line todo_path done_path open_editor effects =
 	let* repo =
 		match effects.get_repo todo_path with
 		| Some info -> Ok info
 		| None -> Error `NoRepository
 	in
 	let* (todos, todo, updated) = extract line todo_path effects.read in
-	let* msg = effects.editor todo in
-	if msg = "" then Error (`CommitError "Commit aborted due to empty message") else
+
+	let* msg = if open_editor then
+		let* edited = effects.editor todo in
+		if edited = "" then Error (`CommitError "Commit aborted due to empty message") else Ok edited
+		else Ok todo
+	in
+
 	let* _ = effects.commit msg repo in
 	let* done_todos = effects.read done_path in
 	let done_formatted = effects.now () ^ " " ^ msg in
@@ -241,7 +246,7 @@ let () = case "Commit" (fun test ->
   |> List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
     test (string_of_int i) (fun expect ->
       expect.equal expected
-        (commit line "any todo path" "any done path" { (effects ()) with
+        (commit line "any todo path" "any done path" true { (effects ()) with
           read = (fun _ -> read);
           write = (fun _ _ -> write);
           editor = (fun _ -> editor);
@@ -251,7 +256,7 @@ let () = case "Commit" (fun test ->
 
   test "archives todo in correct order on success" (fun expect ->
     let write_calls = ref [] in
-    let _ = commit 1 "any todo path" "any done path" { (effects ()) with
+    let _ = commit 1 "any todo path" "any done path" true { (effects ()) with
       read = (fun path -> if path = "any done path" then Ok ["20260625 some"] else Ok ["any todo"]);
       write = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
       now = (fun () -> "20260627");
@@ -265,13 +270,23 @@ let () = case "Commit" (fun test ->
 
   test "uses editor output as commit message" (fun expect ->
     let commit_msg = ref "" in
-    let _ = commit 1 "any todo path" "any done path" { (effects ()) with
+    let _ = commit 1 "any todo path" "any done path" true { (effects ()) with
       read = (fun path -> if path = "any done path" then Ok [] else Ok ["any todo"]);
       editor = (fun _ -> Ok "edited");
       commit = (fun msg _ -> commit_msg := msg; Ok ());
       get_repo = (fun _ -> any_repo);
     } in
     expect.equal "edited" !commit_msg
+  );
+
+  test "uses todo as commit message when open_editor is false" (fun expect ->
+      let commit_msg = ref "" in
+      let _ = commit 1 "any todo path" "any done path" false { (effects ()) with
+        read = (fun path -> if path = "any done path" then Ok [] else Ok ["any todo"]);
+        commit = (fun msg _ -> commit_msg := msg; Ok ());
+        get_repo = (fun _ -> any_repo);
+      } in
+      expect.equal "any todo" !commit_msg
   )
 )
 
