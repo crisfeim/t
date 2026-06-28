@@ -139,7 +139,7 @@ let () = case "Remove" (fun test ->
   [ ("delivers error on read failure", Error `FileSystem, 1, Ok (), Error `FileSystem) ;
     ("delivers error on wrong line", Ok ["any todo"], 2, Ok (), Error (`WrongLine 2)) ;
     ("delivers error on write failure", Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem) ;
-    ("returns removed todo on success", Ok ["any todo"], 1, Ok (), Error `FileSystem) ;
+    ("returns removed todo on success", Ok ["any todo"], 1, Ok (), Ok "any todo") ;
   ] |> List.iter (fun (description, read, line, write, expected) ->
     test description (fun expect ->
       expect.equal expected
