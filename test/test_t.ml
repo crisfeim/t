@@ -117,7 +117,7 @@ let write_res = function `Success -> Ok ()    | `FileSystem -> Error `FileSystem
 let editor_res = function `Success s -> Ok s  | `Editor -> Error `Editor
 
 let ((*List*)) =
-  [ (`FileSystem             , `FileSystem                         )
+  [ (`FileSystem, `FileSystem)
   ; (`Success ["compra";"lavar"], `Success ["1 compra"; "2 lavar"])
   ]
   |> List.iter (fun (read_in, expected_in) ->
@@ -139,27 +139,27 @@ let ((*Add*)) =
 
 let ((*Remove*)) =
   [ (`FileSystem, 1, `Success, `FileSystem  )
-  ; (`Success   , 2, `Success, `WrongLine 2 )
-  ; (`Success   , 1, `FileSystem, `FileSystem)
-  ; (`Success   , 1, `Success, `Success     )
+  ; (`Success["any todo"]   , 2, `Success, `WrongLine 2 )
+  ; (`Success["any todo"]   , 1, `FileSystem, `FileSystem)
+  ; (`Success["any todo"]   , 1, `Success, `Success     )
   ]
   |> List.iter (fun (read_in, line, write_in, expected_in) ->
     assert (remove line "any todo path" {
       (effects ()) with
-      read  = (fun _ -> match read_in with `Success -> Ok ["any todo"] | `FileSystem -> Error `FileSystem);
+      read  = (fun _ -> read_res read_in);
       write = (fun _ _ -> write_res write_in);
     } = to_res [] expected_in))
 
 let ((*Complete*)) =
   [ (`FileSystem, 1, `Success   , `FileSystem  )
-  ; (`Success   , 2, `Success   , `WrongLine 2 )
-  ; (`Success   , 1, `FileSystem, `FileSystem  )
-  ; (`Success   , 1, `Success   , `Success     )
+  ; (`Success["any todo"]   , 2, `Success   , `WrongLine 2 )
+  ; (`Success["any todo"]   , 1, `FileSystem, `FileSystem  )
+  ; (`Success["any todo"]   , 1, `Success   , `Success     )
   ]
   |> List.iter (fun (read_in, line, write_in, expected_in) ->
     assert (complete line "any todo path" "any done path" {
       (effects ()) with
-      read  = (fun _ -> match read_in with `Success -> Ok ["any todo"] | `FileSystem -> Error `FileSystem);
+      read  = (fun _ -> read_res read_in);
       write = (fun _ _ -> write_res write_in);
     } = to_res [] expected_in))
 
@@ -178,15 +178,15 @@ let ((* Complete writes to done_path before updating todo_path *)) =
 
 let ((*Edit*)) =
   [ (`FileSystem, 1, `Success "any edition", `Success   , `FileSystem  )
-  ; (`Success   , 2, `Success "any edition", `Success   , `WrongLine 2 )
-  ; (`Success   , 1, `Editor               , `Success   , `Editor      )
-  ; (`Success   , 1, `Success "any edition", `FileSystem, `FileSystem  )
-  ; (`Success   , 1, `Success "any edition", `Success   , `Success     )
+  ; (`Success ["any todo"]  , 2, `Success "any edition", `Success   , `WrongLine 2 )
+  ; (`Success ["any todo"]  , 1, `Editor               , `Success   , `Editor      )
+  ; (`Success ["any todo"]  , 1, `Success "any edition", `FileSystem, `FileSystem  )
+  ; (`Success ["any todo"]  , 1, `Success "any edition", `Success   , `Success     )
   ]
   |> List.iter (fun (read_in, line, editor_in, write_in, expected_in) ->
     assert (edit line "any todo path" {
       (effects ()) with
-      read   = (fun _ -> match read_in with `Success -> Ok ["any todo"] | `FileSystem -> Error `FileSystem);
+      read   = (fun _ -> read_res read_in);
       write  = (fun _ _ -> write_res write_in);
       editor = (fun _ -> editor_res editor_in);
     } = to_unit expected_in))
