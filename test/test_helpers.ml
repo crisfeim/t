@@ -1,4 +1,4 @@
-open Test
+open Test_lib
 open T
 
 (* Test helpers *)

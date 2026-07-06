@@ -1,5 +1,5 @@
 open T
-open Test
+open Test_lib
 open Test_helpers
 
 let () = case "List" (fun test ->
