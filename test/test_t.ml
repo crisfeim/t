@@ -326,9 +326,9 @@ let project name effects =
 
 let () = case "Project" (fun test ->
 	[
-		(Error `FileSystem, Ok [], Error `FileSystem);
-		(Ok ["/User/any-project"], Error `FileSystem, Error `FileSystem);
-		(Ok ["/User/any-project"], Ok ["any todo"], Ok ["1 any todo"])
+	(Error `FileSystem, Ok [], Error `FileSystem);
+	(Ok ["/User/any-project"], Error `FileSystem, Error `FileSystem);
+	(Ok ["/User/any-project"], Ok ["any todo"], Ok ["1 any todo"])
 	]
 	|> List.iteri (fun i (project_r, read_r, expected) ->
 		test (string_of_int i) (fun expect ->
