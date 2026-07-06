@@ -102,7 +102,7 @@ let any_commit = (fun _ _ -> Ok ())
 let any_repo = Some { path = "any repo dir"; system = "fossil" }
 let any_projects = (fun () -> Ok ["any project path"])
 
-let effects () = {
+let mock_effects () = {
 	projects = any_projects;
 	read = any_read;
 	write = any_write;
@@ -141,7 +141,7 @@ let () = case "List" (fun test ->
   ]
   |> List.iteri (fun i (read, expected) ->
 	  test (case_id i) (fun expect ->
-			assert_list expect expected (list "any todo path" { (effects ()) with read = (fun _ -> read) })
+			assert_list expect expected (list "any todo path" { (mock_effects ()) with read = (fun _ -> read) })
 	  )
   )
 )
@@ -154,7 +154,7 @@ let () = case "Add" (fun test ->
   ]
   |> List.iteri (fun i (read, write, expected) ->
     test (case_id i) (fun expect ->
-    	assert_str expect expected (add "any todo" "any todo path" { (effects ()) with
+    	assert_str expect expected (add "any todo" "any todo path" { (mock_effects ()) with
        read = (fun _ -> read);
        write = (fun _ _ -> write) })
     ))
@@ -169,7 +169,7 @@ let () = case "Remove" (fun test ->
   ]
   |> List.iteri (fun i (read, line, write, expected) ->
     test (case_id i) (fun expect ->
-    	assert_str expect expected (remove line "any todo path" { (effects ()) with
+    	assert_str expect expected (remove line "any todo path" { (mock_effects ()) with
        read = (fun _ -> read);
        write = (fun _ _ -> write) })
     )
@@ -185,14 +185,14 @@ let () = case "Complete" (fun test ->
   ]
   |> List.iteri (fun i (read, line, write, expected) ->
     test (case_id i) (fun expect ->
-    	assert_str expect expected (complete line "any todo path" "any done path" { (effects ()) with
+    	assert_str expect expected (complete line "any todo path" "any done path" { (mock_effects ()) with
        read = (fun _ -> read);
        write = (fun _ _ -> write) })
     ));
 
   test "writes to done_path before updating todo_path" (fun expect ->
     let write_calls = ref [] in
-    let _ = complete 1 "any todo path" "any done path" { (effects ()) with
+    let _ = complete 1 "any todo path" "any done path" { (mock_effects ()) with
       read = (fun path -> if path = "any done path" then Ok [] else Ok ["tarea"]);
       write = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
       now = (fun () -> "202606252301");
@@ -215,7 +215,7 @@ let () = case "Edit" (fun test ->
   ]
   |> List.iteri (fun i (read, line, editor, write, expected) ->
     test (case_id i) (fun expect ->
-    	assert_unit expect expected (edit line "any todo path" { (effects ()) with
+    	assert_unit expect expected (edit line "any todo path" { (mock_effects ()) with
        read = (fun _ -> read);
        write = (fun _ _ -> write);
        editor = (fun _ -> editor); })
@@ -223,7 +223,7 @@ let () = case "Edit" (fun test ->
 
   test "writes edited data" (fun expect ->
     let write_calls = ref [] in
-    let _ = edit 1 "any todo path" { (effects ()) with
+    let _ = edit 1 "any todo path" { (mock_effects ()) with
       read = (fun _ -> Ok ["any todo"]);
       write = (fun todos _ -> write_calls := todos :: !write_calls; Ok ());
       editor = (fun _ -> Ok "edited");
@@ -233,7 +233,7 @@ let () = case "Edit" (fun test ->
 
   test "avoids unnecessary I/O when editor returns empty" (fun expect ->
     let did_write = ref false in
-    let _ = edit 1 "any todo path" { (effects ()) with
+    let _ = edit 1 "any todo path" { (mock_effects ()) with
       read = (fun _ -> Ok ["any todo"]);
       write = (fun _ _ -> did_write := true; Ok ());
       editor = (fun _ -> Ok "");
@@ -243,7 +243,7 @@ let () = case "Edit" (fun test ->
 
   test "avoids unnecessary I/O when editor returns unchanged" (fun expect ->
     let did_write = ref false in
-    let _ = edit 1 "any todo path" { (effects ()) with
+    let _ = edit 1 "any todo path" { (mock_effects ()) with
       read = (fun _ -> Ok ["any todo"]);
       write = (fun _ _ -> did_write := true; Ok ());
       editor = (fun _ -> Ok "any todo");
@@ -266,7 +266,7 @@ let () = case "Commit" (fun test ->
   |> List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
     test (case_id i) (fun expect ->
       assert_unit expect expected
-        (commit line "any todo path" "any done path" true { (effects ()) with
+        (commit line "any todo path" "any done path" true { (mock_effects ()) with
           read = (fun _ -> read);
           write = (fun _ _ -> write);
           editor = (fun _ -> editor);
@@ -276,7 +276,7 @@ let () = case "Commit" (fun test ->
 
   test "archives todo in correct order on success" (fun expect ->
     let write_calls = ref [] in
-    let _ = commit 1 "any todo path" "any done path" true { (effects ()) with
+    let _ = commit 1 "any todo path" "any done path" true { (mock_effects ()) with
       read = (fun path -> if path = "any done path" then Ok ["20260625 some"] else Ok ["any todo"]);
       write = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
       now = (fun () -> "20260627");
@@ -290,7 +290,7 @@ let () = case "Commit" (fun test ->
 
   test "uses editor output as commit message" (fun expect ->
     let commit_msg = ref "" in
-    let _ = commit 1 "any todo path" "any done path" true { (effects ()) with
+    let _ = commit 1 "any todo path" "any done path" true { (mock_effects ()) with
       read = (fun path -> if path = "any done path" then Ok [] else Ok ["any todo"]);
       editor = (fun _ -> Ok "edited");
       commit = (fun msg _ -> commit_msg := msg; Ok ());
@@ -301,7 +301,7 @@ let () = case "Commit" (fun test ->
 
   test "uses todo as commit message when open_editor is false" (fun expect ->
       let commit_msg = ref "" in
-      let _ = commit 1 "any todo path" "any done path" false { (effects ()) with
+      let _ = commit 1 "any todo path" "any done path" false { (mock_effects ()) with
         read = (fun path -> if path = "any done path" then Ok [] else Ok ["any todo"]);
         commit = (fun msg _ -> commit_msg := msg; Ok ());
         get_repo = (fun _ -> any_repo);
@@ -317,7 +317,7 @@ let () = case "Projects" (fun test ->
   ]
   |> List.iteri (fun i (projects_r, expected) ->
     test (case_id i) (fun expect ->
-      assert_list expect expected (projects { (effects ()) with projects = (fun () -> projects_r) }))
+      assert_list expect expected (projects { (mock_effects ()) with projects = (fun () -> projects_r) }))
   )
 )
 
@@ -354,7 +354,7 @@ let () = case "Project" (fun test ->
 	]
 	|> List.iteri (fun i (project_r, read_r, expected) ->
 		test (case_id i) (fun expect ->
-			assert_list expect expected (project "any-project" { (effects()) with
+			assert_list expect expected (project "any-project" { (mock_effects()) with
 				projects = (fun _ -> project_r);
 				read = (fun _ -> read_r)
 			 })
