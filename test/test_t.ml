@@ -115,14 +115,22 @@ let effects () = {
 (* Tests *)
 open Test
 
+let string_of_result = function
+  | Ok list -> "Ok [" ^ (String.concat "; " list) ^ "]"
+  | Error _ -> "Error `FileSystem"
+
 let () = case "List" (fun test ->
   [
   (Error `FileSystem, Error `FileSystem);
-  (Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"]);
+  (Ok ["compra"; "lavar"], Ok ["1 lavar"; "2 comprar"]);
   ]
   |> List.iteri (fun i (read, expected) ->
-    test (string_of_int i) (fun expect ->
-      expect.equal expected (list "any todo path" { (effects ()) with read = (fun _ -> read) })))
+	  test (Printf.sprintf "Caso %d" i) (fun expect ->
+	    let result = list "any todo path" { (effects ()) with read = (fun _ -> read) } in
+	    if expected <> result then
+	      expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_result expected) (string_of_result result))
+	  )
+  )
 )
 
 let () = case "Add" (fun test ->
