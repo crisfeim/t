@@ -64,9 +64,11 @@ let on_exit () =
       (0, 0)
       !cases
   in
-  let all_cases = ("All tests", total_passed, total_failed, []) :: !cases in
 
-	run_cases all_cases;
-	exit !exit_code
+  let all_case = ("All tests", total_passed, total_failed, []) in
+
+	run_cases (all_case :: !cases);
+	let exit_code = if total_failed > 0 then 1 else 0 in
+  exit exit_code
 
 let () = at_exit (on_exit)
