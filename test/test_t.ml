@@ -137,7 +137,7 @@ let assert_unit expect = assert_result_list expect (fun _ -> "()")
 let () = case "List" (fun test ->
   [
   (Error `FileSystem, Error `FileSystem);
-  (Ok ["compra"; "lavar"], Ok ["1 lavar"; "2 comprar"]);
+  (Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"]);
   ]
   |> List.iteri (fun i (read, expected) ->
 	  test (case_id i) (fun expect ->
@@ -150,7 +150,7 @@ let () = case "Add" (fun test ->
   [
   (Error `FileSystem, Ok (), Error `FileSystem);
   (Ok [], Error `FileSystem, Error `FileSystem);
-  (Ok [], Ok (), Ok "any todo @todo: erase this");
+  (Ok [], Ok (), Ok "any todo");
   ]
   |> List.iteri (fun i (read, write, expected) ->
     test (case_id i) (fun expect ->
@@ -165,7 +165,7 @@ let () = case "Remove" (fun test ->
   (Error `FileSystem, 1, Ok (), Error `FileSystem);
   (Ok ["any todo"], 2, Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem);
-  (Ok ["any todo"], 1, Ok (), Ok "any todo @todo: remove this");
+  (Ok ["any todo"], 1, Ok (), Ok "any todo");
   ]
   |> List.iteri (fun i (read, line, write, expected) ->
     test (case_id i) (fun expect ->
@@ -181,7 +181,7 @@ let () = case "Complete" (fun test ->
   (Error `FileSystem, 1, Ok (), Error `FileSystem);
   (Ok ["any todo"], 2, Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem);
-  (Ok ["any todo"], 1, Ok (), Ok "any todo @todo remove this");
+  (Ok ["any todo"], 1, Ok (), Ok "any todo");
   ]
   |> List.iteri (fun i (read, line, write, expected) ->
     test (case_id i) (fun expect ->
@@ -211,7 +211,7 @@ let () = case "Edit" (fun test ->
   (Ok ["any todo"], 2, Ok "any edition", Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `Editor, Ok (), Error `Editor);
   (Ok ["any todo"], 1, Ok "any edition", Error `FileSystem, Error `FileSystem);
-  (Ok ["any todo"], 1, Ok "any edition", Ok (), Error `FileSystem);
+  (Ok ["any todo"], 1, Ok "any edition", Ok (), Ok());
   ]
   |> List.iteri (fun i (read, line, editor, write, expected) ->
     test (case_id i) (fun expect ->
@@ -261,7 +261,7 @@ let () = case "Commit" (fun test ->
   (any_repo, Ok ["any todo"], 1, Ok "", Ok (), Ok (), Error (`CommitError "Commit aborted due to empty message"));
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Error (`CommitError "any error"), Ok (), Error (`CommitError "any error"));
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Error `FileSystem, Error `FileSystem);
-  (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Error `FileSystem);
+  (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Ok());
   ]
   |> List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
     test (case_id i) (fun expect ->
@@ -313,7 +313,7 @@ let () = case "Commit" (fun test ->
 let () = case "Projects" (fun test ->
   [
   (Error `FileSystem, Error `FileSystem);
-  (Ok ["p1"; "p2"], Ok ["p1"; "p2 @todo"]);
+  (Ok ["p1"; "p2"], Ok ["p1"; "p2"]);
   ]
   |> List.iteri (fun i (projects_r, expected) ->
     test (case_id i) (fun expect ->
