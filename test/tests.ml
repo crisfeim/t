@@ -7,11 +7,12 @@ let () = case "List" (fun test ->
   (Error `FileSystem, Error `FileSystem);
   (Ok ["compra"; "lavar"], Ok ["1 lavar"; "2 compra"]);
   ]
-  |> List.iteri (fun i (read, expected) ->
-	  test (case_id i) (fun expect ->
-			assert_list expect expected (list "any todo path" { (mock_effects ()) with read = (fun _ -> read) })
+  |>
+  List.iteri (fun i (read, expected) ->
+  	test (case_id i) (fun fn ->
+  		assert_list fn expected (list "any todo path" { (mock_effects ()) with read = (fun _ -> read) })
 	  )
-  )
+	)
 )
 
 let () = case "Add" (fun test ->
@@ -19,13 +20,14 @@ let () = case "Add" (fun test ->
   (Error `FileSystem, Ok (), Error `FileSystem);
   (Ok [], Error `FileSystem, Error `FileSystem);
   (Ok [], Ok (), Ok "any todo");
-  ]
-  |> List.iteri (fun i (read, write, expected) ->
-    test (case_id i) (fun expect ->
-    	assert_str expect expected (add "any todo" "any todo path" { (mock_effects ()) with
-       read = (fun _ -> read);
-       write = (fun _ _ -> write) })
-    ))
+  ]|>
+  List.iteri (fun i (read, write, expected) ->
+    test (case_id i) (fun fn ->
+	   	assert_str fn expected (add "any todo" "any todo path" { (mock_effects ()) with
+	       read = (fun _ -> read);
+	       write = (fun _ _ -> write) })
+    )
+ 	)
 )
 
 let () = case "Remove" (fun test ->
@@ -34,13 +36,13 @@ let () = case "Remove" (fun test ->
   (Ok ["any todo"], 2, Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem);
   (Ok ["any todo"], 1, Ok (), Ok "any todo");
-  ]
-  |> List.iteri (fun i (read, line, write, expected) ->
-    test (case_id i) (fun expect ->
-    	assert_str expect expected (remove line "any todo path" { (mock_effects ()) with
-       read = (fun _ -> read);
-       write = (fun _ _ -> write) })
-    )
+  ]|>
+  List.iteri (fun i (read, line, write, expected) ->
+		test (case_id i) (fun fn ->
+		 	assert_str fn expected (remove line "any todo path" { (mock_effects ()) with
+				read = (fun _ -> read);
+		   	write = (fun _ _ -> write) })
+		)
   )
 )
 
@@ -50,13 +52,14 @@ let () = case "Complete" (fun test ->
   (Ok ["any todo"], 2, Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem);
   (Ok ["any todo"], 1, Ok (), Ok "any todo");
-  ]
-  |> List.iteri (fun i (read, line, write, expected) ->
-    test (case_id i) (fun expect ->
-    	assert_str expect expected (complete line "any todo path" "any done path" { (mock_effects ()) with
+  ] |>
+  List.iteri (fun i (read, line, write, expected) ->
+    test (case_id i) (fun fn ->
+    	assert_str fn expected (complete line "any todo path" "any done path" { (mock_effects ()) with
        read = (fun _ -> read);
        write = (fun _ _ -> write) })
-    ));
+    )
+ 	);
 
   test "writes to done_path before updating todo_path" (fun expect ->
     let write_calls = ref [] in
@@ -80,14 +83,15 @@ let () = case "Edit" (fun test ->
   (Ok ["any todo"], 1, Error `Editor, Ok (), Error `Editor);
   (Ok ["any todo"], 1, Ok "any edition", Error `FileSystem, Error `FileSystem);
   (Ok ["any todo"], 1, Ok "any edition", Ok (), Ok());
-  ]
-  |> List.iteri (fun i (read, line, editor, write, expected) ->
+  ] |>
+  List.iteri (fun i (read, line, editor, write, expected) ->
     test (case_id i) (fun expect ->
     	assert_unit expect expected (edit line "any todo path" { (mock_effects ()) with
        read = (fun _ -> read);
        write = (fun _ _ -> write);
        editor = (fun _ -> editor); })
-    ));
+    )
+  );
 
   test "writes edited data" (fun expect ->
     let write_calls = ref [] in
@@ -130,8 +134,8 @@ let () = case "Commit" (fun test ->
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Error (`CommitError "any error"), Ok (), Error (`CommitError "any error"));
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Error `FileSystem, Error `FileSystem);
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Ok());
-  ]
-  |> List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
+  ] |>
+  List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
     test (case_id i) (fun expect ->
       assert_unit expect expected
         (commit line "any todo path" "any done path" true { (mock_effects ()) with
@@ -140,7 +144,8 @@ let () = case "Commit" (fun test ->
           editor = (fun _ -> editor);
           commit = (fun _ _ -> commit_r);
           get_repo = (fun _ -> repo); })
-    ));
+    )
+  );
 
   test "archives todo in correct order on success" (fun expect ->
     let write_calls = ref [] in
@@ -182,10 +187,11 @@ let () = case "Projects" (fun test ->
   [
   (Error `FileSystem, Error `FileSystem);
   (Ok ["p1"; "p2"], Ok ["p1"; "p2"]);
-  ]
-  |> List.iteri (fun i (projects_r, expected) ->
-    test (case_id i) (fun expect ->
-      assert_list expect expected (projects { (mock_effects ()) with projects = (fun () -> projects_r) }))
+  ] |>
+  List.iteri (fun i (projects_r, expected) ->
+    test (case_id i) (fun fn ->
+    	assert_list fn expected (projects { (mock_effects ()) with projects = (fun () -> projects_r) })
+    )
   )
 )
 
@@ -219,13 +225,12 @@ let () = case "Project" (fun test ->
 	(Error `FileSystem, Ok [], Error `FileSystem);
 	(Ok ["/User/any-project"], Error `FileSystem, Error `FileSystem);
 	(Ok ["/User/any-project"], Ok ["any todo"], Ok ["1 any todo"])
-	]
-	|> List.iteri (fun i (project_r, read_r, expected) ->
-		test (case_id i) (fun expect ->
-			assert_list expect expected (project "any-project" { (mock_effects()) with
+	] |>
+	List.iteri (fun i (project_r, read_r, expected) ->
+		test (case_id i) (fun fn ->
+			assert_list fn expected (project "any-project" { (mock_effects()) with
 				projects = (fun _ -> project_r);
-				read = (fun _ -> read_r)
-			 })
+				read = (fun _ -> read_r)})
 		)
 	);
 )
