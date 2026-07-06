@@ -301,7 +301,6 @@ let () = case "Projects" (fun test ->
 
 let sort_matches todo_files =
   List.sort (fun path1 path2 ->
-    (* 1. Contar componentes basados en la barra "/" *)
     let count1 = List.length (String.split_on_char '/' path1) in
     let count2 = List.length (String.split_on_char '/' path2) in
 
