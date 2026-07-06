@@ -356,64 +356,21 @@ let () = case "Project" (fun test ->
 			 })
 		)
 	);
+)
 
-	test "List by project's name selects less deeper matching project" (fun expect ->
-		let stubs = [
-			("/User/nested/any-project", ["any nested todo"]);
-			("/User/any-project", ["any todo"]);
-		] in
-
-		let fx = { (effects()) with
-    projects = (fun () -> Ok (List.map fst stubs));
-    read = (fun path ->
-      match List.assoc_opt path stubs with
-      | Some todos -> Ok todos
-      | None -> Ok[]
-    )
-  } in
-
-		let todos = project "any-project" fx in
-		let expected = Ok["1 any todo"] in
-		expect.equal expected todos;
+let () = case "Sort matches" (fun test ->
+	test "sort_matches: prioritizes shallowest path" (fun expect ->
+	  let input = ["/User/nested/any-project"; "/User/any-project"] in
+	  expect.equal ["/User/any-project"; "/User/nested/any-project"] (sort_matches input)
 	);
 
-	test "List by project's name selects shorter matching directory when different matches with same deepness level" (fun expect ->
-		let stubs = [
-			("/User/nested_longest/any-project", ["any nested todo"]);
-			("/User/short/any-project", ["any todo"]);
-		] in
-
-		let fx = { (effects()) with
-    projects = (fun () -> Ok (List.map fst stubs));
-    read = (fun path ->
-      match List.assoc_opt path stubs with
-      | Some todos -> Ok todos
-      | None -> Ok[]
-    )
-  } in
-
-		let todos = project "any-project" fx in
-		let expected = Ok["1 any todo"] in
-		expect.equal expected todos;
+	test "sort_matches: prioritizes shortest path on equal depth" (fun expect ->
+	  let input = ["/User/nested_longest/any-project"; "/User/short/any-project"] in
+	  expect.equal ["/User/short/any-project"; "/User/nested_longest/any-project"] (sort_matches input)
 	);
 
-	test "List by project's name selects matches alphabetically when different matches with same deepness level & length" (fun expect ->
-		let stubs = [
-			("/User/t/any-project", ["any nested todo"]);
-			("/User/a/any-project", ["any todo"]);
-		] in
-
-		let fx = { (effects()) with
-    projects = (fun () -> Ok (List.map fst stubs));
-    read = (fun path ->
-      match List.assoc_opt path stubs with
-      | Some todos -> Ok todos
-      | None -> Ok[]
-    )
-  } in
-
-		let todos = project "any-project" fx in
-		let expected = Ok["1 any todo"] in
-		expect.equal expected todos;
-	);
+	test "sort_matches: falls back to alphabetical order on equal depth and length" (fun expect ->
+	  let input = ["/User/t/any-project"; "/User/a/any-project"] in
+	  expect.equal ["/User/a/any-project"; "/User/t/any-project"] (sort_matches input)
+	)
 )
