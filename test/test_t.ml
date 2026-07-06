@@ -299,24 +299,25 @@ let () = case "Projects" (fun test ->
   )
 )
 
-(*
-t project <project>
+let project name effects =
+  let* projects = projects effects in
 
-let projets = projects effecs
-let project_path = project_path in projects_path <where path contains name>
-list project_path effects
-*)
-let project name effects = Error `FileSystem
+  match projects |> List.find_opt (fun path -> List.mem name (String.split_on_char '/' path)) with
+  | Some found_path -> list found_path effects
+  | None -> Error `FileSystem
+
+
 let () = case "Project" (fun test ->
-	(* read_all *) (* read *) (*expected result*)
 	[
 		(Error `FileSystem, Ok [], Error `FileSystem);
-		(Ok [], Error `FileSystem, Error `FileSystem)
+		(Ok ["/User/any-project"], Error `FileSystem, Error `FileSystem);
+		(Ok ["/User/any-project"], Ok ["any todo"], Ok ["1 any todo"])
 	]
 	|> List.iteri (fun i (project_r, read_r, expected) ->
 		test (string_of_int i) (fun expect ->
-			expect.equal expected (project "any-project" { (effects())
-				with projects = (fun _ -> project_r)
+			expect.equal expected (project "any-project" { (effects()) with
+				projects = (fun _ -> project_r);
+				read = (fun _ -> read_r)
 			 })
 		)
 	)
