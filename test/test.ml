@@ -25,27 +25,45 @@ let make_expect description errors_ref =
     fail = (fun message -> raise_error description message errors_ref) }
 
 let exit_code = ref 0
+let cases: (string * int * int * string list) list ref = ref []
 
-let case name fn =
-  let passed = ref 0 in
-  let failed = ref 0 in
-  let errors = ref [] in
-  fn (fun description fn ->
-    try fn (make_expect description errors); passed := !passed + 1;
-    with
-      | Test_failed -> (); failed := !failed + 1;
-      | exn ->
-        errors := format_error description ("Failed: " ^ Printexc.to_string exn) :: !errors;
-        failed := !failed + 1;
-  );
-  if !failed > 0 then exit_code := 1;
+let case_factory name fn =
+	let passed = ref 0 in
+	let failed = ref 0 in
+	let errors = ref [] in
+	fn (fun description fn ->
+	  try fn (make_expect description errors); passed := !passed + 1;
+	  with
+	    | Test_failed -> (); failed := !failed + 1;
+	    | exn ->
+	      errors := format_error description ("Failed: " ^ Printexc.to_string exn) :: !errors;
+	      failed := !failed + 1;
+	);
+	if !failed > 0 then exit_code := 1;
+	(name, !passed, !failed, !errors)
 
-  Printf.printf "\u{001B}[1m%-20s\u{001B}[0m | \u{001B}[92mPassed: %2d\u{001B}[0m | \u{001B}[91mFailed: %2d\u{001B}[0m" name !passed !failed;
-  if !errors <> [] then begin
+let case name fn = cases := (case_factory name fn) :: !cases
+
+let run_cases cases = cases |> List.iter (fun (name, passed, failed, errors) ->
+	Printf.printf "\u{001B}[1m%-20s\u{001B}[0m | \u{001B}[92mPassed: %2d\u{001B}[0m | \u{001B}[91mFailed: %2d\u{001B}[0m" name passed failed;
+  if errors <> [] then begin
     print_newline ();
-    List.iter print_endline (List.rev !errors);
+    List.iter print_endline (List.rev errors);
     print_newline ()
   end else
     print_newline ()
+)
 
-let () = at_exit (fun () -> exit !exit_code)
+let on_exit () =
+	let total_passed, total_failed =
+    List.fold_left
+      (fun (acc_p, acc_f) (_, passed, failed, _) -> (acc_p + passed, acc_f + failed))
+      (0, 0)
+      !cases
+  in
+  let all_cases = ("All tests", total_passed, total_failed, []) :: !cases in
+
+	run_cases all_cases;
+	exit !exit_code
+
+let () = at_exit (on_exit)
