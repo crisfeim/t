@@ -299,23 +299,6 @@ let () = case "Projects" (fun test ->
   )
 )
 
-let sort_matches todo_files =
-  List.sort (fun path1 path2 ->
-    let count1 = List.length (String.split_on_char '/' path1) in
-    let count2 = List.length (String.split_on_char '/' path2) in
-
-    if count1 <> count2 then
-      compare count1 count2
-    else
-      let len1 = String.length path1 in
-      let len2 = String.length path2 in
-      if len1 <> len2 then
-        compare len1 len2
-      else
-        String.compare path1 path2
-  ) todo_files
-
-
 let sort_matches projects =
 	List.sort (fun path1 path2 ->
 		let count1 = List.length (String.split_on_char '/' path1) in
