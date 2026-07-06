@@ -299,10 +299,39 @@ let () = case "Projects" (fun test ->
   )
 )
 
+let sort_matches todo_files =
+  List.sort (fun path1 path2 ->
+    (* 1. Contar componentes basados en la barra "/" *)
+    let count1 = List.length (String.split_on_char '/' path1) in
+    let count2 = List.length (String.split_on_char '/' path2) in
+
+    if count1 <> count2 then
+      compare count1 count2
+    else
+      let len1 = String.length path1 in
+      let len2 = String.length path2 in
+      if len1 <> len2 then
+        compare len1 len2
+      else
+        String.compare path1 path2
+  ) todo_files
+
+
+let sort_matches projects =
+	List.sort (fun path1 path2 ->
+		let count1 = List.length (String.split_on_char '/' path1) in
+    let count2 = List.length (String.split_on_char '/' path2) in
+
+    if count1 <> count2 then
+      compare count1 count2
+    else
+    	String.compare path1  path2
+	) projects
+
 let project name effects =
   let* projects = projects effects in
 
-  match projects |> List.find_opt (fun path -> List.mem name (String.split_on_char '/' path)) with
+  match projects |> sort_matches |> List.find_opt (fun path -> List.mem name (String.split_on_char '/' path)) with
   | Some found_path -> list found_path effects
   | None -> Error `FileSystem
 
@@ -320,5 +349,26 @@ let () = case "Project" (fun test ->
 				read = (fun _ -> read_r)
 			 })
 		)
-	)
+	);
+
+	test "Test project listing by name selects less deeper matching project" (fun expect ->
+
+		let stubs = [
+			("/User/nested/any-project", ["any nested todo"]);
+			("/User/any-project", ["any todo"]);
+		] in
+
+		let fx = { (effects()) with
+    projects = (fun () -> Ok (List.map fst stubs));
+    read = (fun path ->
+      match List.assoc_opt path stubs with
+      | Some todos -> Ok todos
+      | None -> Ok[]
+    )
+  } in
+
+		let todos = project "any-project" fx in
+		let expected = Ok["1 any todo"] in
+		expect.equal expected todos;
+	);
 )
