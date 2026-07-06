@@ -33,7 +33,7 @@ let ( let* )
 
 let list todo_path effects =
 	let* todos = effects.read todo_path in
-	let formatted = todos |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
+	let formatted = todos |> List.rev |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
 	Ok formatted
 
 let add todo todo_path effects =
@@ -137,7 +137,7 @@ let assert_unit expect = assert_result_list expect (fun _ -> "()")
 let () = case "List" (fun test ->
   [
   (Error `FileSystem, Error `FileSystem);
-  (Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"]);
+  (Ok ["compra"; "lavar"], Ok ["1 lavar"; "2 compra"]);
   ]
   |> List.iteri (fun i (read, expected) ->
 	  test (case_id i) (fun expect ->
