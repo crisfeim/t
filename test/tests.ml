@@ -85,11 +85,11 @@ let () = case "Edit" (fun test ->
   (Ok ["any todo"], 1, Ok "any edition", Ok (), Ok());
   ] |>
   List.iteri (fun i (read, line, editor, write, expected) ->
-    test (case_id i) (fun expect ->
-    	assert_unit expect expected (edit line "any todo path" { (mock_effects ()) with
-       read = (fun _ -> read);
-       write = (fun _ _ -> write);
-       editor = (fun _ -> editor); })
+    test (case_id i) (fun fn ->
+   		assert_unit fn expected (edit line "any todo path" { (mock_effects ()) with
+      	read = (fun _ -> read);
+       	write = (fun _ _ -> write);
+        editor = (fun _ -> editor); })
     )
   );
 
@@ -136,8 +136,8 @@ let () = case "Commit" (fun test ->
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Ok());
   ] |>
   List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
-    test (case_id i) (fun expect ->
-      assert_unit expect expected
+    test (case_id i) (fun fn ->
+      assert_unit fn expected
         (commit line "any todo path" "any done path" true { (mock_effects ()) with
           read = (fun _ -> read);
           write = (fun _ _ -> write);
