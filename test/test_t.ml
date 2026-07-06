@@ -83,9 +83,7 @@ let commit line todo_path done_path open_editor effects =
 	let* _ = effects.write updated todo_path in
 	Ok ()
 
-let projects effects =
-	let* paths = effects.projects () in
-	Ok paths
+let projects effects = let* paths = effects.projects () in Ok paths
 
 let edit line todo_path effects =
 	let* (todos, todo, _) = extract line todo_path effects.read in
@@ -299,4 +297,26 @@ let () = case "Projects" (fun test ->
     test (string_of_int i) (fun expect ->
       expect.equal expected (projects { (effects ()) with projects = (fun () -> projects_r) }))
   )
+)
+
+(*
+t project <project>
+
+let projets = projects effecs
+let project_path = project_path in projects_path <where path contains name>
+list project_path effects
+*)
+let project name effects = Error `FileSystem
+let () = case "Project" (fun test ->
+	(* read_all *) (* read *) (*expected result*)
+	[
+		(Error `FileSystem, Ok [], Error `FileSystem)
+	]
+	|> List.iteri (fun i (project_r, read_r, expected) ->
+		test (string_of_int i) (fun expect ->
+			expect.equal expected (project "any-project" { (effects())
+				with projects = (fun _ -> project_r)
+			 })
+		)
+	)
 )
