@@ -115,9 +115,17 @@ let effects () = {
 (* Tests *)
 open Test
 
-let string_of_result = function
-  | Ok list -> "Ok [" ^ (String.concat "; " list) ^ "]"
-  | Error _ -> "Error `FileSystem"
+let string_of_result ok_formatter = function
+  | Ok value -> "Ok (" ^ (ok_formatter value) ^ ")"
+  | Error `FileSystem -> "Error `FileSystem"
+  | Error `Editor -> "Error `Editor"
+  | Error `NoRepository -> "Error `NoRepository"
+  | Error (`CommitError msg) -> "Error `CommitError: " ^ msg
+  | Error (`WrongLine line) -> "Error `WrongLine: " ^ string_of_int line
+
+let string_of_list   = string_of_result (fun value -> String.concat "; " value)
+let string_of_string = string_of_result (fun value -> value)
+let string_of_unit   = string_of_result (fun _ -> "()" )
 
 let () = case "List" (fun test ->
   [
@@ -128,7 +136,7 @@ let () = case "List" (fun test ->
 	  test (Printf.sprintf "Caso %d" i) (fun expect ->
 	    let result = list "any todo path" { (effects ()) with read = (fun _ -> read) } in
 	    if expected <> result then
-	      expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_result expected) (string_of_result result))
+	      expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_list expected) (string_of_list result))
 	  )
   )
 )
@@ -137,13 +145,15 @@ let () = case "Add" (fun test ->
   [
   (Error `FileSystem, Ok (), Error `FileSystem);
   (Ok [], Error `FileSystem, Error `FileSystem);
-  (Ok [], Ok (), Ok "any todo");
+  (Ok [], Ok (), Ok "any todo @todo: erase this");
   ]
   |> List.iteri (fun i (read, write, expected) ->
     test (string_of_int i) (fun expect ->
-      expect.equal expected (add "any todo" "any todo path" { (effects ()) with
-        read = (fun _ -> read);
-        write = (fun _ _ -> write) })
+    	let result = (add "any todo" "any todo path" { (effects ()) with
+       read = (fun _ -> read);
+       write = (fun _ _ -> write) }) in
+      if expected <> result then
+     	expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_string expected) (string_of_string result))
     ))
 )
 
@@ -152,14 +162,18 @@ let () = case "Remove" (fun test ->
   (Error `FileSystem, 1, Ok (), Error `FileSystem);
   (Ok ["any todo"], 2, Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem);
-  (Ok ["any todo"], 1, Ok (), Ok "any todo");
+  (Ok ["any todo"], 1, Ok (), Ok "any todo @todo: remove this");
   ]
   |> List.iteri (fun i (read, line, write, expected) ->
     test (string_of_int i) (fun expect ->
-      expect.equal expected (remove line "any todo path" { (effects ()) with
-        read = (fun _ -> read);
-        write = (fun _ _ -> write) })
-    ))
+    	let result = remove line "any todo path" { (effects ()) with
+       read = (fun _ -> read);
+       write = (fun _ _ -> write) } in
+
+      if expected <> result then
+     		expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_string expected) (string_of_string result))
+    )
+  )
 )
 
 let () = case "Complete" (fun test ->
@@ -167,13 +181,15 @@ let () = case "Complete" (fun test ->
   (Error `FileSystem, 1, Ok (), Error `FileSystem);
   (Ok ["any todo"], 2, Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem);
-  (Ok ["any todo"], 1, Ok (), Ok "any todo");
+  (Ok ["any todo"], 1, Ok (), Ok "any todo @todo remove this");
   ]
   |> List.iteri (fun i (read, line, write, expected) ->
     test (string_of_int i) (fun expect ->
-      expect.equal expected (complete line "any todo path" "any done path" { (effects ()) with
-        read = (fun _ -> read);
-        write = (fun _ _ -> write) })
+    	let result = complete line "any todo path" "any done path" { (effects ()) with
+       read = (fun _ -> read);
+       write = (fun _ _ -> write) } in
+      if expected <> result then
+      	expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_string expected) (string_of_string result))
     ));
 
   test "writes to done_path before updating todo_path" (fun expect ->
@@ -197,14 +213,16 @@ let () = case "Edit" (fun test ->
   (Ok ["any todo"], 2, Ok "any edition", Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `Editor, Ok (), Error `Editor);
   (Ok ["any todo"], 1, Ok "any edition", Error `FileSystem, Error `FileSystem);
-  (Ok ["any todo"], 1, Ok "any edition", Ok (), Ok ());
+  (Ok ["any todo"], 1, Ok "any edition", Ok (), Error `FileSystem);
   ]
   |> List.iteri (fun i (read, line, editor, write, expected) ->
     test (string_of_int i) (fun expect ->
-      expect.equal expected (edit line "any todo path" { (effects ()) with
-        read = (fun _ -> read);
-        write = (fun _ _ -> write);
-        editor = (fun _ -> editor); })
+    	let result = edit line "any todo path" { (effects ()) with
+       read = (fun _ -> read);
+       write = (fun _ _ -> write);
+       editor = (fun _ -> editor); } in
+      if expected <> result then
+     		expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_unit expected) (string_of_unit result))
     ));
 
   test "writes edited data" (fun expect ->
