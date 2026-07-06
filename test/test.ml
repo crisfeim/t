@@ -2,7 +2,6 @@
 [@@@warning "-69"]
 [@@@warning "-32"]
 
-
 (* Global state *)
 let exit_code = ref 0
 let cases: (string * int * int * string list) list ref = ref []
@@ -13,11 +12,12 @@ type expect = {
   equal : 'a. 'a -> 'a -> unit;
   fail  : string -> unit;
 }
+
+exception Test_failed
+
 let format_error description message =
   if message = "" then Printf.sprintf "\u{001B}[91m􀢄\u{001B}[0m  %s" description
   else Printf.sprintf "\u{001B}[91m􀢄\u{001B}[0m  %s: %s" description message
-
-exception Test_failed
 
 let raise_error description message errors_ref =
   errors_ref := format_error description message :: !errors_ref;
@@ -25,11 +25,10 @@ let raise_error description message errors_ref =
 
 let make_expect description errors_ref =
   let is bool message = if bool then () else raise_error description message errors_ref in
-  { is;
-    equal = (fun expected actual ->
-      if expected = actual then ()
-      else raise_error description "" errors_ref);
-    fail = (fun message -> raise_error description message errors_ref) }
+  let equal expected actual = if expected = actual then () else raise_error description "" errors_ref in
+  let fail message = raise_error description message errors_ref in
+
+  { is ; equal ; fail }
 
 let case_factory name test_fn =
 	let passed = ref 0 in
