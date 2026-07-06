@@ -1,6 +1,13 @@
 (* Test utility *)
 [@@@warning "-69"]
 [@@@warning "-32"]
+
+
+(* Global state *)
+let exit_code = ref 0
+let cases: (string * int * int * string list) list ref = ref []
+
+(* Library *)
 type expect = {
   is    : bool -> string -> unit;
   equal : 'a. 'a -> 'a -> unit;
@@ -23,9 +30,6 @@ let make_expect description errors_ref =
       if expected = actual then ()
       else raise_error description "" errors_ref);
     fail = (fun message -> raise_error description message errors_ref) }
-
-let exit_code = ref 0
-let cases: (string * int * int * string list) list ref = ref []
 
 let case_factory name test_fn =
 	let passed = ref 0 in
