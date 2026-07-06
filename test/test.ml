@@ -27,12 +27,12 @@ let make_expect description errors_ref =
 let exit_code = ref 0
 let cases: (string * int * int * string list) list ref = ref []
 
-let case_factory name fn =
+let case_factory name test_fn =
 	let passed = ref 0 in
 	let failed = ref 0 in
 	let errors = ref [] in
-	fn (fun description fn ->
-	  try fn (make_expect description errors); passed := !passed + 1;
+	test_fn (fun description expect_fn ->
+	  try expect_fn (make_expect description errors); passed := !passed + 1;
 	  with
 	    | Test_failed -> (); failed := !failed + 1;
 	    | exn ->
