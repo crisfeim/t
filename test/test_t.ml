@@ -325,7 +325,13 @@ let sort_matches projects =
     if count1 <> count2 then
       compare count1 count2
     else
-    	String.compare path1  path2
+    	let len1 = String.length path1 in
+     	let len2 = String.length path2 in
+
+      if len1 <> len2 then
+     		compare len1 len2
+      else
+     		String.compare path1  path2
 	) projects
 
 let project name effects =
@@ -351,11 +357,30 @@ let () = case "Project" (fun test ->
 		)
 	);
 
-	test "Test project listing by name selects less deeper matching project" (fun expect ->
-
+	test "List by project's name selects less deeper matching project" (fun expect ->
 		let stubs = [
 			("/User/nested/any-project", ["any nested todo"]);
 			("/User/any-project", ["any todo"]);
+		] in
+
+		let fx = { (effects()) with
+    projects = (fun () -> Ok (List.map fst stubs));
+    read = (fun path ->
+      match List.assoc_opt path stubs with
+      | Some todos -> Ok todos
+      | None -> Ok[]
+    )
+  } in
+
+		let todos = project "any-project" fx in
+		let expected = Ok["1 any todo"] in
+		expect.equal expected todos;
+	);
+
+	test "List by project's name selects shorter matching directory when different matches with same deepness level" (fun expect ->
+		let stubs = [
+			("/User/nested_longest/any-project", ["any nested todo"]);
+			("/User/short/any-project", ["any todo"]);
 		] in
 
 		let fx = { (effects()) with
