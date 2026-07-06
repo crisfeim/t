@@ -123,9 +123,14 @@ let string_of_result ok_formatter = function
   | Error (`CommitError msg) -> "Error `CommitError: " ^ msg
   | Error (`WrongLine line) -> "Error `WrongLine: " ^ string_of_int line
 
-let string_of_list   = string_of_result (fun value -> String.concat "; " value)
-let string_of_string = string_of_result (fun value -> value)
-let string_of_unit   = string_of_result (fun _ -> "()" )
+let assert_result_list expect string_of_ok expected actual =
+	if expected <> actual then
+		let fmt = string_of_result string_of_ok in
+		expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (fmt expected) (fmt actual))
+
+let assert_list expect = assert_result_list expect (fun l -> "[" ^ String.concat "; " l ^ "]")
+let assert_str  expect = assert_result_list expect (fun s -> s)
+let assert_unit expect = assert_result_list expect (fun _ -> "()")
 
 let () = case "List" (fun test ->
   [
@@ -134,9 +139,7 @@ let () = case "List" (fun test ->
   ]
   |> List.iteri (fun i (read, expected) ->
 	  test (Printf.sprintf "Caso %d" i) (fun expect ->
-	    let result = list "any todo path" { (effects ()) with read = (fun _ -> read) } in
-	    if expected <> result then
-	      expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_list expected) (string_of_list result))
+			assert_list expect expected (list "any todo path" { (effects ()) with read = (fun _ -> read) })
 	  )
   )
 )
@@ -149,11 +152,9 @@ let () = case "Add" (fun test ->
   ]
   |> List.iteri (fun i (read, write, expected) ->
     test (string_of_int i) (fun expect ->
-    	let result = (add "any todo" "any todo path" { (effects ()) with
+    	assert_str expect expected (add "any todo" "any todo path" { (effects ()) with
        read = (fun _ -> read);
-       write = (fun _ _ -> write) }) in
-      if expected <> result then
-     	expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_string expected) (string_of_string result))
+       write = (fun _ _ -> write) })
     ))
 )
 
@@ -166,12 +167,9 @@ let () = case "Remove" (fun test ->
   ]
   |> List.iteri (fun i (read, line, write, expected) ->
     test (string_of_int i) (fun expect ->
-    	let result = remove line "any todo path" { (effects ()) with
+    	assert_str expect expected (remove line "any todo path" { (effects ()) with
        read = (fun _ -> read);
-       write = (fun _ _ -> write) } in
-
-      if expected <> result then
-     		expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_string expected) (string_of_string result))
+       write = (fun _ _ -> write) })
     )
   )
 )
@@ -185,11 +183,9 @@ let () = case "Complete" (fun test ->
   ]
   |> List.iteri (fun i (read, line, write, expected) ->
     test (string_of_int i) (fun expect ->
-    	let result = complete line "any todo path" "any done path" { (effects ()) with
+    	assert_str expect expected (complete line "any todo path" "any done path" { (effects ()) with
        read = (fun _ -> read);
-       write = (fun _ _ -> write) } in
-      if expected <> result then
-      	expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_string expected) (string_of_string result))
+       write = (fun _ _ -> write) })
     ));
 
   test "writes to done_path before updating todo_path" (fun expect ->
@@ -217,12 +213,10 @@ let () = case "Edit" (fun test ->
   ]
   |> List.iteri (fun i (read, line, editor, write, expected) ->
     test (string_of_int i) (fun expect ->
-    	let result = edit line "any todo path" { (effects ()) with
+    	assert_unit expect expected (edit line "any todo path" { (effects ()) with
        read = (fun _ -> read);
        write = (fun _ _ -> write);
-       editor = (fun _ -> editor); } in
-      if expected <> result then
-     		expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (string_of_unit expected) (string_of_unit result))
+       editor = (fun _ -> editor); })
     ));
 
   test "writes edited data" (fun expect ->
