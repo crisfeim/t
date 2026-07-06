@@ -396,4 +396,24 @@ let () = case "Project" (fun test ->
 		let expected = Ok["1 any todo"] in
 		expect.equal expected todos;
 	);
+
+	test "List by project's name selects matches alphabetically when different matches with same deepness level & length" (fun expect ->
+		let stubs = [
+			("/User/t/any-project", ["any nested todo"]);
+			("/User/a/any-project", ["any todo"]);
+		] in
+
+		let fx = { (effects()) with
+    projects = (fun () -> Ok (List.map fst stubs));
+    read = (fun path ->
+      match List.assoc_opt path stubs with
+      | Some todos -> Ok todos
+      | None -> Ok[]
+    )
+  } in
+
+		let todos = project "any-project" fx in
+		let expected = Ok["1 any todo"] in
+		expect.equal expected todos;
+	);
 )
