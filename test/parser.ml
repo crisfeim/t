@@ -56,67 +56,54 @@ let parser args = match args with
 
 let () = case "Parser" (fun test ->
 	test "Echo" (fun expect ->
-		let command = parser ["10"] in
-		expect.equal command (Some (Echo 10))
+		expect.equal (parser ["10"]) (Some (Echo 10))
 	);
 
 	test "List" (fun expect ->
-		let command = parser [] in
-		expect.equal command (Some List)
+		expect.equal (parser []) (Some List)
 	);
 
 	test "List doing" (fun expect ->
-		let command = parser ["@"] in
-		expect.equal command (Some ListDoing)
+		expect.equal (parser ["@"]) (Some ListDoing)
 	);
 
 	test "Add" (fun expect ->
-		let command = parser ["new";"todo"] in
-		expect.equal command (Some (Add "new todo"))
+		expect.equal (parser ["new";"todo"]) (Some (Add "new todo"))
 	);
 
 	test "Complete one" (fun expect ->
-		let command = parser ["+32"] in
-		expect.equal command (Some (Complete [32]))
+		expect.equal (parser ["+32"]) (Some (Complete [32]))
 	);
 
 	test "Complete many" (fun expect ->
-		let command = parser ["+32,24"] in
-		expect.equal command (Some (Complete [32;24]))
+		expect.equal (parser ["+32,24"]) (Some (Complete [32;24]))
 	);
 
 	test "Remove" (fun expect ->
-		let command = parser ["-32"] in
-		expect.equal command (Some (Remove [32]))
+		expect.equal (parser ["-32"]) (Some (Remove [32]))
 	);
 
 	test "Remove many" (fun expect ->
-		let command = parser ["-32,24"] in
-		expect.equal command (Some (Remove [32;24]))
+		expect.equal (parser ["-32,24"]) (Some (Remove [32;24]))
 	);
 
 	test "Edit" (fun expect ->
-		let command = parser [":32"] in
-		expect.equal command (Some (Edit 32))
+		expect.equal (parser [":32"]) (Some (Edit 32))
 	);
 
 	test "Edit .todo" (fun expect ->
-		let command = parser [":"] in
-		expect.equal command (Some (EditFile))
+		expect.equal (parser [":"]) (Some (EditFile))
 	);
 
 	test "Commit" (fun expect ->
-		let command = parser ["c32"] in
-		expect.equal command (Some (Commit (32, false)))
+		expect.equal (parser ["c32"]) (Some (Commit (32, false)))
 	);
 
 	test "Commit editing" (fun expect ->
-		let command = parser ["c:32"] in
-		expect.equal command (Some (Commit (32, true)))
+		expect.equal (parser ["c:32"]) (Some (Commit (32, true)))
 	);
 
 	test "Mark as doing" (fun expect ->
-		let command = parser ["@32"] in
-		expect.equal command (Some (Doing 32))
+		expect.equal (parser ["@32"]) (Some (Doing 32))
 	);
 )
