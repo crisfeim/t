@@ -6,20 +6,16 @@ type command =
 | Add of string
 | Complete of int
 
-let get_substring string from = String.sub string from (String.length string - from)
+let get_line string = int_of_string (String.sub string 1 (String.length string - 1))
 
-let parse_compact cmd =
-  if String.length cmd > 1 && String.get cmd 0 = '+' then
-    let num_str = get_substring cmd 1 in
-    match int_of_string_opt num_str with
-    | Some line -> Some (Complete line)
-    | None -> None
-  else
-    None
+let is_complete_cmd str =
+  String.length str > 1
+  && String.get str 0 = '+'
+  && Option.is_some (int_of_string_opt (String.sub str 1 (String.length str - 1)))
 
 let parser todo_path args = match args with
 	| [] -> Some (List todo_path)
-	| [single_arg] -> parse_compact single_arg
+	| [single] when is_complete_cmd single -> Some (Complete (get_line single))
 	| values -> Some (Add (String.concat " " values))
 
 let () = case "Parser" (fun test ->
