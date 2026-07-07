@@ -29,7 +29,7 @@ let batch_cmd operator str =
 		|> String.split_on_char ','
 		|> List.for_all is_numeric)
 
-let commit_editing str =
+let cmd_c_editing str =
 	String.length str > 2
 	&& String.get str 0 = 'c'
 	&& String.get str 1 = '~'
@@ -43,7 +43,7 @@ let parser todo_path args = match args with
 	| [single] when batch_cmd '-' single -> Some (Remove ((list_from (drop 1 single)) |> List.map int_of_string))
 	| [single] when cmd '~' single -> Some (Edit (int_of_string (drop 1 single)))
 	| [single] when cmd 'c' single -> Some (Commit (int_of_string (drop 1 single), false))
-	| [single] when commit_editing single -> Some (Commit (int_of_string (drop 2 single), true))
+	| [single] when cmd_c_editing single -> Some (Commit (int_of_string (drop 2 single), true))
 	| values -> Some (Add (String.concat " " values))
 
 let () = case "Parser" (fun test ->
