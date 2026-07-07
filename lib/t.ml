@@ -83,7 +83,7 @@ let commit line todo_path done_path open_editor effects =
 	let* _ = effects.write updated todo_path in
 	Ok ()
 
-let projects effects = let* paths = effects.projects () in Ok paths
+let projects effects = effects.projects()
 
 let edit line todo_path effects =
 	let* (todos, todo, _) = extract line todo_path effects.read in
