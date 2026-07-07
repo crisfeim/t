@@ -32,7 +32,7 @@ let batch_cmd operator str =
 let cmd_c_editing str =
 	String.length str > 2
 	&& String.get str 0 = 'c'
-	&& String.get str 1 = '~'
+	&& String.get str 1 = ':'
 	&& Option.is_some (int_of_string_opt (String.sub str 2 (String.length str - 2)))
 
 let list_from string = String.split_on_char ',' string
@@ -41,7 +41,7 @@ let parser args = match args with
 	| [] -> Some (List)
 	| [single] when batch_cmd '+' single -> Some (Complete ((list_from (drop 1 single)) |> List.map int_of_string))
 	| [single] when batch_cmd '-' single -> Some (Remove ((list_from (drop 1 single)) |> List.map int_of_string))
-	| [single] when cmd '~' single -> Some (Edit (int_of_string (drop 1 single)))
+	| [single] when cmd ':' single -> Some (Edit (int_of_string (drop 1 single)))
 	| [single] when cmd 'c' single -> Some (Commit (int_of_string (drop 1 single), false))
 	| [single] when cmd_c_editing single -> Some (Commit (int_of_string (drop 2 single), true))
 	| values -> Some (Add (String.concat " " values))
@@ -78,7 +78,7 @@ let () = case "Parser" (fun test ->
 	);
 
 	test "Edit" (fun expect ->
-		let command = parser ["~32"] in
+		let command = parser [":32"] in
 		expect.equal command (Some (Edit 32))
 	);
 
@@ -88,7 +88,7 @@ let () = case "Parser" (fun test ->
 	);
 
 	test "Commit editing" (fun expect ->
-		let command = parser ["c~32"] in
+		let command = parser ["c:32"] in
 		expect.equal command (Some (Commit (32, true)))
 	);
 )
