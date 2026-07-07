@@ -22,16 +22,9 @@ let drop n str =
 
 let is_numeric str = Option.is_some (int_of_string_opt str)
 
-let is_complete_cmd str =
+let batch_cmd operator str =
 	String.length str > 1
-  && String.get str 0 = '+'
-	&& (drop 1 str
-		|> String.split_on_char ','
-		|> List.for_all is_numeric)
-
-let is_remove_cmd str =
-	String.length str > 1
-  && String.get str 0 = '-'
+  && String.get str 0 = operator
 	&& (drop 1 str
 		|> String.split_on_char ','
 		|> List.for_all is_numeric)
@@ -46,8 +39,8 @@ let list_from string = String.split_on_char ',' string
 
 let parser todo_path args = match args with
 	| [] -> Some (List todo_path)
-	| [single] when is_complete_cmd single -> Some (Complete ((list_from (drop 1 single)) |> List.map int_of_string))
-	| [single] when is_remove_cmd single -> Some (Remove ((list_from (drop 1 single)) |> List.map int_of_string))
+	| [single] when batch_cmd '+' single -> Some (Complete ((list_from (drop 1 single)) |> List.map int_of_string))
+	| [single] when batch_cmd '-' single -> Some (Remove ((list_from (drop 1 single)) |> List.map int_of_string))
 	| [single] when cmd '~' single -> Some (Edit (int_of_string (drop 1 single)))
 	| [single] when cmd 'c' single -> Some (Commit (int_of_string (drop 1 single), false))
 	| [single] when commit_editing single -> Some (Commit (int_of_string (drop 2 single), true))
