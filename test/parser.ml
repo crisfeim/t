@@ -3,6 +3,7 @@ open T
 
 type command =
 | List
+| ListRange of int list
 | Add of string
 | Complete of int list
 | Remove of int list
@@ -41,6 +42,15 @@ let cmd_c_editing str =
 
 let list_from string = String.split_on_char ',' string
 
+let parse_range str =
+		  match String.split_on_char '.' str with
+		  | [left_str; ""; ""; right_str] ->
+		      (match int_of_string_opt left_str, int_of_string_opt right_str with
+		       | Some first, Some second when second >= first ->
+		            List.init (second - first + 1) (fun i -> first + i)
+		       | _ -> [])
+		  | _ -> []
+
 let parser args = match args with
 	| [] -> Some (List)
 	| [single] when batch_cmd '+' single -> Some (Complete ((list_from (drop 1 single)) |> List.map int_of_string))
@@ -52,6 +62,7 @@ let parser args = match args with
 	| [single] when Option.is_some (int_of_string_opt single) -> Some (Echo (int_of_string single))
 	| [single] when single = ":" -> Some (EditFile)
 	| [single] when single = "@" -> Some (ListDoing)
+	| [single] when (parse_range single <> [])  -> Some (ListRange (parse_range single))
 	| values -> Some (Add (String.concat " " values))
 
 let () = case "Parser" (fun test ->
@@ -61,6 +72,14 @@ let () = case "Parser" (fun test ->
 
 	test "List" (fun expect ->
 		expect.equal (parser []) (Some List)
+	);
+
+	test "List range" (fun expect ->
+		expect.equal (parser ["1...5"]) (Some (ListRange [1;2;3;4;5]))
+	);
+
+	test "Parse range" (fun expect ->
+		expect.equal (parse_range "1...3") [1;2;3]
 	);
 
 	test "List doing" (fun expect ->
