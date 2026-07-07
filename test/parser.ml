@@ -5,7 +5,7 @@ type command =
 | List of path
 | Add of string
 | Complete of int list
-| Remove of int
+| Remove of int list
 | Edit of int
 | Commit of int * bool
 
@@ -29,6 +29,13 @@ let is_complete_cmd str =
 		|> String.split_on_char ','
 		|> List.for_all is_numeric)
 
+let is_remove_cmd str =
+	String.length str > 1
+  && String.get str 0 = '-'
+	&& (drop 1 str
+		|> String.split_on_char ','
+		|> List.for_all is_numeric)
+
 let commit_editing str =
 	String.length str > 2
 	&& String.get str 0 = 'c'
@@ -40,7 +47,7 @@ let list_from string = String.split_on_char ',' string
 let parser todo_path args = match args with
 	| [] -> Some (List todo_path)
 	| [single] when is_complete_cmd single -> Some (Complete ((list_from (drop 1 single)) |> List.map int_of_string))
-	| [single] when cmd '-' single -> Some (Remove (int_of_string (drop 1 single)))
+	| [single] when is_remove_cmd single -> Some (Remove ((list_from (drop 1 single)) |> List.map int_of_string))
 	| [single] when cmd '~' single -> Some (Edit (int_of_string (drop 1 single)))
 	| [single] when cmd 'c' single -> Some (Commit (int_of_string (drop 1 single), false))
 	| [single] when commit_editing single -> Some (Commit (int_of_string (drop 2 single), true))
@@ -69,7 +76,12 @@ let () = case "Parser" (fun test ->
 
 	test "Remove" (fun expect ->
 		let command = parser "any path" ["-32"] in
-		expect.equal command (Some (Remove 32))
+		expect.equal command (Some (Remove [32]))
+	);
+
+	test "Remove many" (fun expect ->
+		let command = parser "any path" ["-32,24"] in
+		expect.equal command (Some (Remove [32;24]))
 	);
 
 	test "Edit" (fun expect ->
