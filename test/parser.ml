@@ -2,7 +2,7 @@ open Test_lib
 open T
 
 type command =
-| List of path
+| List
 | Add of string
 | Complete of int list
 | Remove of int list
@@ -37,8 +37,8 @@ let cmd_c_editing str =
 
 let list_from string = String.split_on_char ',' string
 
-let parser todo_path args = match args with
-	| [] -> Some (List todo_path)
+let parser args = match args with
+	| [] -> Some (List)
 	| [single] when batch_cmd '+' single -> Some (Complete ((list_from (drop 1 single)) |> List.map int_of_string))
 	| [single] when batch_cmd '-' single -> Some (Remove ((list_from (drop 1 single)) |> List.map int_of_string))
 	| [single] when cmd '~' single -> Some (Edit (int_of_string (drop 1 single)))
@@ -48,47 +48,47 @@ let parser todo_path args = match args with
 
 let () = case "Parser" (fun test ->
 	test "List" (fun expect ->
-		let command = parser  "any path" [] in
-		expect.equal command (Some (List "any path"))
+		let command = parser [] in
+		expect.equal command (Some (List))
 	);
 
 	test "Add" (fun expect ->
-		let command = parser "any path" ["new";"todo"] in
+		let command = parser ["new";"todo"] in
 		expect.equal command (Some (Add "new todo"))
 	);
 
 	test "Complete one" (fun expect ->
-		let command = parser "any path" ["+32"] in
+		let command = parser ["+32"] in
 		expect.equal command (Some (Complete [32]))
 	);
 
 	test "Complete many" (fun expect ->
-		let command = parser "any path" ["+32,24"] in
+		let command = parser ["+32,24"] in
 		expect.equal command (Some (Complete [32;24]))
 	);
 
 	test "Remove" (fun expect ->
-		let command = parser "any path" ["-32"] in
+		let command = parser ["-32"] in
 		expect.equal command (Some (Remove [32]))
 	);
 
 	test "Remove many" (fun expect ->
-		let command = parser "any path" ["-32,24"] in
+		let command = parser ["-32,24"] in
 		expect.equal command (Some (Remove [32;24]))
 	);
 
 	test "Edit" (fun expect ->
-		let command = parser "any path" ["~32"] in
+		let command = parser ["~32"] in
 		expect.equal command (Some (Edit 32))
 	);
 
 	test "Commit" (fun expect ->
-		let command = parser "any path" ["c32"] in
+		let command = parser ["c32"] in
 		expect.equal command (Some (Commit (32, false)))
 	);
 
 	test "Commit editing" (fun expect ->
-		let command = parser "any path" ["c~32"] in
+		let command = parser ["c~32"] in
 		expect.equal command (Some (Commit (32, true)))
 	);
 )
