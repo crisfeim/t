@@ -11,6 +11,7 @@ type command =
 | Echo of int
 | EditFile
 | Doing of int
+| ListDoing
 
 let get_line string from = int_of_string (String.sub string from (String.length string - from))
 
@@ -50,6 +51,7 @@ let parser args = match args with
 	| [single] when cmd_c_editing single -> Some (Commit (int_of_string (drop 2 single), true))
 	| [single] when Option.is_some (int_of_string_opt single) -> Some (Echo (int_of_string single))
 	| [single] when single = ":" -> Some (EditFile)
+	| [single] when single = "@" -> Some (ListDoing)
 	| values -> Some (Add (String.concat " " values))
 
 let () = case "Parser" (fun test ->
@@ -61,6 +63,11 @@ let () = case "Parser" (fun test ->
 	test "List" (fun expect ->
 		let command = parser [] in
 		expect.equal command (Some List)
+	);
+
+	test "List doing" (fun expect ->
+		let command = parser ["@"] in
+		expect.equal command (Some ListDoing)
 	);
 
 	test "Add" (fun expect ->
