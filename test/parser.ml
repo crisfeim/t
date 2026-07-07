@@ -8,6 +8,7 @@ type command =
 | Remove of int list
 | Edit of int
 | Commit of int * bool
+| Echo of int
 
 let get_line string from = int_of_string (String.sub string from (String.length string - from))
 
@@ -44,12 +45,18 @@ let parser args = match args with
 	| [single] when cmd ':' single -> Some (Edit (int_of_string (drop 1 single)))
 	| [single] when cmd 'c' single -> Some (Commit (int_of_string (drop 1 single), false))
 	| [single] when cmd_c_editing single -> Some (Commit (int_of_string (drop 2 single), true))
+	| [single] when Option.is_some (int_of_string_opt single) -> Some (Echo (int_of_string single))
 	| values -> Some (Add (String.concat " " values))
 
 let () = case "Parser" (fun test ->
+	test "Echo" (fun expect ->
+		let command = parser ["10"] in
+		expect.equal command (Some (Echo 10))
+	);
+
 	test "List" (fun expect ->
 		let command = parser [] in
-		expect.equal command (Some (List))
+		expect.equal command (Some List)
 	);
 
 	test "Add" (fun expect ->
