@@ -10,6 +10,7 @@ type command =
 | Commit of int * bool
 | Echo of int
 | EditFile
+| Doing of int
 
 let get_line string from = int_of_string (String.sub string from (String.length string - from))
 
@@ -45,6 +46,7 @@ let parser args = match args with
 	| [single] when batch_cmd '-' single -> Some (Remove ((list_from (drop 1 single)) |> List.map int_of_string))
 	| [single] when cmd ':' single -> Some (Edit (int_of_string (drop 1 single)))
 	| [single] when cmd 'c' single -> Some (Commit (int_of_string (drop 1 single), false))
+	| [single] when cmd '@' single -> Some (Doing (int_of_string (drop 1 single)))
 	| [single] when cmd_c_editing single -> Some (Commit (int_of_string (drop 2 single), true))
 	| [single] when Option.is_some (int_of_string_opt single) -> Some (Echo (int_of_string single))
 	| [single] when single = ":" -> Some (EditFile)
@@ -104,5 +106,10 @@ let () = case "Parser" (fun test ->
 	test "Commit editing" (fun expect ->
 		let command = parser ["c:32"] in
 		expect.equal command (Some (Commit (32, true)))
+	);
+
+	test "Mark as doing" (fun expect ->
+		let command = parser ["@32"] in
+		expect.equal command (Some (Doing 32))
 	);
 )
