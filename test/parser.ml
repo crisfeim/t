@@ -40,11 +40,10 @@ let batch_cmd operator str =
 		|> String.split_on_char ','
 		|> List.for_all is_numeric)
 
-let cmd_c_editing str =
+let is_commit_editing str =
 	String.length str > 2
 	&& String.get str 0 = 'c'
 	&& String.get str 1 = ':'
-	&& Option.is_some (int_of_string_opt (String.sub str 2 (String.length str - 2)))
 
 let list_from string = String.split_on_char ',' string
 
@@ -63,7 +62,9 @@ let parser path args= match args with
 	| [single] when cmd ':' single -> Some (Edit (path, int_of_string (drop 1 single)))
 	| [single] when cmd 'c' single -> Some (Commit (path, int_of_string (drop 1 single), false))
 	| [single] when cmd '@' single -> Some (Doing (path, int_of_string (drop 1 single)))
-	| [single] when cmd_c_editing single -> Some (Commit (path, int_of_string (drop 2 single), true))
+	| [single] when is_commit_editing single ->
+			let*? line = int_of_string_opt (drop 2 single) in
+			Some (Commit (path, line, true))
 	| [single] when Option.is_some (int_of_string_opt single) -> Some (Echo (path, int_of_string single))
 	| [single] when single = ":" -> Some (EditFile path)
 	| [single] when single = "@" -> Some (ListDoing path)
