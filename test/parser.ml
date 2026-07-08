@@ -44,9 +44,9 @@ let list_from string = String.split_on_char ',' string
 
 let parse_range str =
   match String.split_on_char '.' str with
-  | [left_str; ""; ""; right_str] ->
-      (match int_of_string_opt left_str, int_of_string_opt right_str with
-       | Some first, Some second when second >= first -> List.init (second - first + 1) (fun i -> first + i)
+  | [left; ""; ""; right] ->
+      (match int_of_string_opt left, int_of_string_opt right with
+       | Some left, Some right when right >= left -> List.init (right - left + 1) (fun i -> left + i)
        | _ -> [])
   | _ -> []
 
