@@ -179,15 +179,22 @@ let () = case "Parser" (fun test ->
 	test "Mark as doing" (fun expect ->
 		expect.equal (parser any_path ["@32"]) (Some (Doing (any_path, 32)))
 	);
+)
 
-
-	test "Project" (fun expect ->
-		let effects = { (Test_helpers.mock_effects()) with projects = (fun () -> Ok["/User/some-project/.todo"]) } in
-		expect.equal (preparser any_path [".some-project"] effects) (Some (List "/User/some-project/.todo"));
-		expect.equal (preparser any_path [".some-project"; "+1"] effects) (Some (Complete ("/User/some-project/.todo", [1])));
-		expect.equal (preparser any_path [".some-project"; "-5,2"] effects) (Some (Remove ("/User/some-project/.todo", [5; 2])));
-		expect.equal (preparser any_path [".some-project"; ":10"] effects) (Some (Edit ("/User/some-project/.todo", 10)));
-		expect.equal (preparser any_path [".some-project"; "@1"] effects) (Some (Doing ("/User/some-project/.todo", 1)));
-		expect.equal (preparser any_path [".some-project"; "c1"] effects) (Some (Commit ("/User/some-project/.todo", 1, false)))
-	);
+let () = case "Project namespacing" (fun test ->
+  let effects = { (Test_helpers.mock_effects()) with projects = (fun () -> Ok["/User/some-project/.todo"]) } in
+  let cases = [
+    ("List",     [], Some (List "/User/some-project/.todo"));
+    ("Complete", ["+1,2"], Some (Complete ("/User/some-project/.todo", [1;2])));
+    ("Remove",   ["-5,2"], Some (Remove ("/User/some-project/.todo", [5; 2])));
+    ("Edit",     [":10"], Some (Edit ("/User/some-project/.todo", 10)));
+    ("Doing",    ["@1"], Some (Doing ("/User/some-project/.todo", 1)));
+    ("Commit",   ["c1"], Some (Commit ("/User/some-project/.todo", 1, false)))
+  ] in
+  cases
+  |> List.iter (fun (desc, args, expected) ->
+    test desc (fun expect ->
+      expect.equal (preparser any_path ([".some-project"] @ args) effects) expected
+    )
+  )
 )
