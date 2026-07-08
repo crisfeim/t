@@ -13,6 +13,7 @@ type command =
 | EditFile
 | Doing of int
 | ListDoing
+| ListProjects
 
 let get_line string from = int_of_string (String.sub string from (String.length string - from))
 
@@ -62,6 +63,7 @@ let parser args = match args with
 	| [single] when Option.is_some (int_of_string_opt single) -> Some (Echo (int_of_string single))
 	| [single] when single = ":" -> Some (EditFile)
 	| [single] when single = "@" -> Some (ListDoing)
+	| [single] when single = "." -> Some (ListProjects)
 	| [single] when (parse_range single <> [])  -> Some (ListRange (parse_range single))
 	| values -> Some (Add (String.concat " " values))
 
@@ -72,6 +74,10 @@ let () = case "Parser" (fun test ->
 
 	test "List" (fun expect ->
 		expect.equal (parser []) (Some List)
+	);
+
+	test "List projects" (fun expect ->
+		expect.equal (parser ["."]) (Some ListProjects)
 	);
 
 	test "List range" (fun expect ->
