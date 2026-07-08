@@ -16,8 +16,6 @@ type command =
 | ListProjects
 | ListDoingAcrossProjects
 
-let get_line string from = int_of_string (String.sub string from (String.length string - from))
-
 let cmd operator str =
 	String.length str > 1
   && String.get str 0 = operator
@@ -108,8 +106,6 @@ let command_router todo_path args effects =
 	 | values -> parser todo_path args
 
 let any_todo_path = "any-todo-path"
-
-let (let*) = Option.bind
 
 let () = case "Parser" (fun test ->
 	test "Echo" (fun expect ->
