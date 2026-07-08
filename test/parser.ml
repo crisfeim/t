@@ -73,10 +73,8 @@ let to_option = function
   | Error _ -> None
 
 let command_router todo_path args effects =
-	let project_name from =
-		if String.length from > 1 && String.get from 0 = '.' && String.get from 1 <> '@' then
-			Some (String.sub from 1 (String.length from - 1))
-		else None
+	let is_project project =
+		String.length project > 1 && String.get project 0 = '.' && String.get project 1 <> '@'
 	in
 
 	let project_path name all_projects =
@@ -90,18 +88,16 @@ let command_router todo_path args effects =
 				| [] -> None)
 	in
 
-	 match args with
-	 | [project] when Option.is_some (project_name project) ->
+	match args with
+		| [project] when is_project project ->
 		  let*? all_projects = effects.projects() |> to_option in
-			let*? name = project_name project in
-			let*? path = project_path name all_projects in
+			let*? path = project_path (drop 1 project) all_projects in
 			Some (List path)
-		| [project; args] when Option.is_some (project_name project) ->
+		| [project; args] when is_project project ->
 			let*? all_projects = effects.projects() |> to_option in
-			let*? name = project_name project in
-			let*? path = project_path name all_projects in
+			let*? path = project_path (drop 1 project) all_projects in
 			parser path [args]
-	 | values -> parser todo_path args
+		| values -> parser todo_path args
 
 let any_todo_path = "any-todo-path"
 
