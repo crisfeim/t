@@ -66,6 +66,8 @@ let parser path args= match args with
 	| [single] when (parse_range single <> [])  -> Some (ListRange (path, parse_range single))
 	| values -> Some (Add (path, String.concat " " values))
 
+let (let*?) = Option.bind
+
 let command_router todo_path args effects =
 	let project_name from =
 		if String.length from > 1 && String.get from 0 = '.' && String.get from 1 <> '@' then
@@ -74,8 +76,6 @@ let command_router todo_path args effects =
 	in
 
 	let project_path name all_projects =
-		match name with
-		| Some name ->
 			all_projects
 			|> List.filter (fun path ->
 			     String.split_on_char '/' path |>
@@ -84,24 +84,22 @@ let command_router todo_path args effects =
 			|> (function
 				| first :: _ -> Some first
 				| [] -> None)
-		| None -> None
 	in
 
 	 match args with
 	 | [project] when Option.is_some (project_name project) ->
 			(match effects.projects() with
 			| Ok all_projects ->
-				(match (project_path (project_name project) all_projects) with
-					| Some path -> Some (List path)
-					| None -> None)
+				let*? name = project_name project in
+				let*? path = project_path name all_projects in
+				Some (List path)
 			| Error _ -> None)
 		| [project; args] when Option.is_some (project_name project) ->
 			(match effects.projects() with
 				| Ok all_projects ->
-					(match (project_path (project_name project) all_projects) with
-						| Some path -> parser path [args]
-						| None -> None
-					)
+					let*? name = project_name project in
+					let*? path = project_path name all_projects in
+					parser path [args]
 				| Error _ -> None)
 	 | values -> parser todo_path args
 
