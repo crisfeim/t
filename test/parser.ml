@@ -1,6 +1,12 @@
 open Test_lib
 open T
 
+let (let*?) = Option.bind
+
+let to_option = function
+  | Ok x -> Some x
+  | Error _ -> None
+
 type command =
 | List of path
 | ListRange of path * int list
@@ -66,11 +72,7 @@ let parser path args= match args with
 	| [single] when (parse_range single <> [])  -> Some (ListRange (path, parse_range single))
 	| values -> Some (Add (path, String.concat " " values))
 
-let (let*?) = Option.bind
 
-let to_option = function
-  | Ok x -> Some x
-  | Error _ -> None
 
 let command_router todo_path args effects =
 	let is_project project =
