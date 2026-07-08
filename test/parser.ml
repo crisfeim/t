@@ -68,6 +68,10 @@ let parser path args= match args with
 
 let (let*?) = Option.bind
 
+let to_option = function
+  | Ok x -> Some x
+  | Error _ -> None
+
 let command_router todo_path args effects =
 	let project_name from =
 		if String.length from > 1 && String.get from 0 = '.' && String.get from 1 <> '@' then
@@ -88,19 +92,15 @@ let command_router todo_path args effects =
 
 	 match args with
 	 | [project] when Option.is_some (project_name project) ->
-			(match effects.projects() with
-			| Ok all_projects ->
-				let*? name = project_name project in
-				let*? path = project_path name all_projects in
-				Some (List path)
-			| Error _ -> None)
+		  let*? all_projects = effects.projects() |> to_option in
+			let*? name = project_name project in
+			let*? path = project_path name all_projects in
+			Some (List path)
 		| [project; args] when Option.is_some (project_name project) ->
-			(match effects.projects() with
-				| Ok all_projects ->
-					let*? name = project_name project in
-					let*? path = project_path name all_projects in
-					parser path [args]
-				| Error _ -> None)
+			let*? all_projects = effects.projects() |> to_option in
+			let*? name = project_name project in
+			let*? path = project_path name all_projects in
+			parser path [args]
 	 | values -> parser todo_path args
 
 let any_todo_path = "any-todo-path"
