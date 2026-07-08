@@ -2,17 +2,17 @@ open Test_lib
 open T
 
 type command =
-| List
-| ListRange of int list
-| Add of string
-| Complete of int list
-| Remove of int list
-| Edit of int
-| Commit of int * bool
-| Echo of int
-| EditFile
-| Doing of int
-| ListDoing
+| List of path
+| ListRange of path * int list
+| Add of path * string
+| Complete of path * int list
+| Remove of path * int list
+| Edit of path * int
+| Commit of path * int * bool
+| Echo of path * int
+| EditFile of path
+| Doing of path * int
+| ListDoing of path
 | ListProjects
 | ListDoingAcrossProjects
 
@@ -48,46 +48,49 @@ let parse_range str =
   match String.split_on_char '.' str with
   | [left_str; ""; ""; right_str] ->
       (match int_of_string_opt left_str, int_of_string_opt right_str with
-       | Some first, Some second when second >= first ->
-            List.init (second - first + 1) (fun i -> first + i)
+       | Some first, Some second when second >= first -> List.init (second - first + 1) (fun i -> first + i)
        | _ -> [])
   | _ -> []
 
-let parser args = match args with
-	| [] -> Some (List)
-	| [single] when batch_cmd '+' single -> Some (Complete ((list_from (drop 1 single)) |> List.map int_of_string))
-	| [single] when batch_cmd '-' single -> Some (Remove ((list_from (drop 1 single)) |> List.map int_of_string))
-	| [single] when cmd ':' single -> Some (Edit (int_of_string (drop 1 single)))
-	| [single] when cmd 'c' single -> Some (Commit (int_of_string (drop 1 single), false))
-	| [single] when cmd '@' single -> Some (Doing (int_of_string (drop 1 single)))
-	| [single] when cmd_c_editing single -> Some (Commit (int_of_string (drop 2 single), true))
-	| [single] when Option.is_some (int_of_string_opt single) -> Some (Echo (int_of_string single))
-	| [single] when single = ":" -> Some (EditFile)
-	| [single] when single = "@" -> Some (ListDoing)
+let parser path args= match args with
+	| [] -> Some (List path)
+	| [single] when batch_cmd '+' single -> Some (Complete (path, ((list_from (drop 1 single)) |> List.map int_of_string)))
+	| [single] when batch_cmd '-' single -> Some (Remove (path, ((list_from (drop 1 single)) |> List.map int_of_string)))
+	| [single] when cmd ':' single -> Some (Edit (path, int_of_string (drop 1 single)))
+	| [single] when cmd 'c' single -> Some (Commit (path, int_of_string (drop 1 single), false))
+	| [single] when cmd '@' single -> Some (Doing (path, int_of_string (drop 1 single)))
+	| [single] when cmd_c_editing single -> Some (Commit (path, int_of_string (drop 2 single), true))
+	| [single] when Option.is_some (int_of_string_opt single) -> Some (Echo (path, int_of_string single))
+	| [single] when single = ":" -> Some (EditFile path)
+	| [single] when single = "@" -> Some (ListDoing path)
 	| [single] when single = "." -> Some (ListProjects)
 	| [single] when single = ".@" -> Some (ListDoingAcrossProjects)
-	| [single] when (parse_range single <> [])  -> Some (ListRange (parse_range single))
-	| values -> Some (Add (String.concat " " values))
+	| [single] when (parse_range single <> [])  -> Some (ListRange (path, parse_range single))
+	| values -> Some (Add (path, String.concat " " values))
+
+let any_path = "any-todo-path"
+
+let (let*) = Option.bind
 
 let () = case "Parser" (fun test ->
 	test "Echo" (fun expect ->
-		expect.equal (parser ["10"]) (Some (Echo 10))
+		expect.equal (parser any_path ["10"]) (Some (Echo (any_path, 10)))
 	);
 
 	test "List" (fun expect ->
-		expect.equal (parser []) (Some List)
+		expect.equal (parser any_path []) (Some (List any_path))
 	);
 
 	test "List projects" (fun expect ->
-		expect.equal (parser ["."]) (Some ListProjects)
+		expect.equal (parser any_path ["."]) (Some ListProjects)
 	);
 
 	test "List doing across projects" (fun expect ->
-		expect.equal (parser [".@"]) (Some ListDoingAcrossProjects)
+		expect.equal (parser any_path [".@"]) (Some ListDoingAcrossProjects)
 	);
 
 	test "List range" (fun expect ->
-		expect.equal (parser ["1...5"]) (Some (ListRange [1;2;3;4;5]))
+		expect.equal (parser any_path ["1...5"]) (Some (ListRange (any_path, [1;2;3;4;5])))
 	);
 
 	test "Parse range" (fun expect ->
@@ -95,46 +98,78 @@ let () = case "Parser" (fun test ->
 	);
 
 	test "List doing" (fun expect ->
-		expect.equal (parser ["@"]) (Some ListDoing)
+		expect.equal (parser any_path ["@"]) (Some (ListDoing any_path))
 	);
 
 	test "Add" (fun expect ->
-		expect.equal (parser ["new";"todo"]) (Some (Add "new todo"))
+		expect.equal (parser any_path ["new";"todo"]) (Some (Add (any_path, "new todo")))
 	);
 
 	test "Complete one" (fun expect ->
-		expect.equal (parser ["+32"]) (Some (Complete [32]))
+		expect.equal (parser any_path ["+32"]) (Some (Complete (any_path, [32])))
 	);
 
 	test "Complete many" (fun expect ->
-		expect.equal (parser ["+32,24"]) (Some (Complete [32;24]))
+		expect.equal (parser any_path ["+32,24"]) (Some (Complete (any_path, [32;24])))
 	);
 
 	test "Remove" (fun expect ->
-		expect.equal (parser ["-32"]) (Some (Remove [32]))
+		expect.equal (parser any_path ["-32"]) (Some (Remove (any_path, [32])))
 	);
 
 	test "Remove many" (fun expect ->
-		expect.equal (parser ["-32,24"]) (Some (Remove [32;24]))
+		expect.equal (parser any_path ["-32,24"]) (Some (Remove (any_path, [32;24])))
 	);
 
 	test "Edit" (fun expect ->
-		expect.equal (parser [":32"]) (Some (Edit 32))
+		expect.equal (parser any_path [":32"]) (Some (Edit (any_path, 32)))
 	);
 
 	test "Edit .todo" (fun expect ->
-		expect.equal (parser [":"]) (Some (EditFile))
+		expect.equal (parser any_path [":"]) (Some (EditFile any_path))
 	);
 
 	test "Commit" (fun expect ->
-		expect.equal (parser ["c32"]) (Some (Commit (32, false)))
+		expect.equal (parser  any_path ["c32"]) (Some (Commit (any_path, 32, false)))
 	);
 
 	test "Commit editing" (fun expect ->
-		expect.equal (parser ["c:32"]) (Some (Commit (32, true)))
+		expect.equal (parser any_path ["c:32"]) (Some (Commit (any_path, 32, true)))
 	);
 
 	test "Mark as doing" (fun expect ->
-		expect.equal (parser ["@32"]) (Some (Doing 32))
+		expect.equal (parser any_path ["@32"]) (Some (Doing (any_path, 32)))
+	);
+
+
+	test "Project" (fun expect ->
+		let project_name from =
+			if String.length from > 1 && String.get from 0 = '.' && String.get from 1 <> '@' then
+				Some (String.sub from 1 (String.length from - 1))
+			else None
+		in
+
+		let preparser todo_path args effects =
+			 match args with
+			 | [single] when Option.is_some (project_name single) ->
+					(match effects.projects() with
+					| Ok all_projects ->
+							(match (project_name single) with
+							| Some name ->
+									all_projects
+									|> List.filter (fun path ->
+									     String.split_on_char '/' path |>
+									     List.exists (fun part -> part = name))
+									|> T.sort_matches
+									|> (function
+										| first :: _ -> Some (List first)
+										| [] -> None)
+							| None -> None)
+					| Error _ -> None)
+			 | values -> parser todo_path args
+		in
+
+		let effects = { (Test_helpers.mock_effects()) with projects = (fun () -> Ok["/User/some-project/.todo"]) } in
+		expect.equal (preparser any_path [".some-project"] effects) (Some (List "/User/some-project/.todo"))
 	);
 )
