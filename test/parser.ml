@@ -149,27 +149,46 @@ let () = case "Parser" (fun test ->
 			else None
 		in
 
+		let project_path name all_projects =
+			match name with
+			| Some name ->
+				all_projects
+				|> List.filter (fun path ->
+				     String.split_on_char '/' path |>
+				     List.exists (fun part -> part = name))
+				|> T.sort_matches
+				|> (function
+					| first :: _ -> Some first
+					| [] -> None)
+			| None -> None
+		in
+
 		let preparser todo_path args effects =
 			 match args with
-			 | [single] when Option.is_some (project_name single) ->
+			 | [project] when Option.is_some (project_name project) ->
 					(match effects.projects() with
 					| Ok all_projects ->
-							(match (project_name single) with
-							| Some name ->
-									all_projects
-									|> List.filter (fun path ->
-									     String.split_on_char '/' path |>
-									     List.exists (fun part -> part = name))
-									|> T.sort_matches
-									|> (function
-										| first :: _ -> Some (List first)
-										| [] -> None)
+						(match (project_path (project_name project) all_projects) with
+							| Some path -> Some (List path)
 							| None -> None)
 					| Error _ -> None)
+				| [project; args] when Option.is_some (project_name project) ->
+					(match effects.projects() with
+						| Ok all_projects ->
+							(match (project_path (project_name project) all_projects) with
+								| Some path -> parser path [args]
+								| None -> None
+							)
+						| Error _ -> None)
 			 | values -> parser todo_path args
 		in
 
 		let effects = { (Test_helpers.mock_effects()) with projects = (fun () -> Ok["/User/some-project/.todo"]) } in
-		expect.equal (preparser any_path [".some-project"] effects) (Some (List "/User/some-project/.todo"))
+		expect.equal (preparser any_path [".some-project"] effects) (Some (List "/User/some-project/.todo"));
+		expect.equal (preparser any_path [".some-project"; "+1"] effects) (Some (Complete ("/User/some-project/.todo", [1])));
+		expect.equal (preparser any_path [".some-project"; "-5,2"] effects) (Some (Remove ("/User/some-project/.todo", [5; 2])));
+		expect.equal (preparser any_path [".some-project"; ":10"] effects) (Some (Edit ("/User/some-project/.todo", 10)));
+		expect.equal (preparser any_path [".some-project"; "@1"] effects) (Some (Doing ("/User/some-project/.todo", 1)));
+		expect.equal (preparser any_path [".some-project"; "c1"] effects) (Some (Commit ("/User/some-project/.todo", 1, false)))
 	);
 )
