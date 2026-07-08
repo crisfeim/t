@@ -1,7 +1,3 @@
-(* Test utility *)
-[@@@warning "-69"]
-[@@@warning "-32"]
-
 (* Global state *)
 let exit_code = ref 0
 let cases: (string * int * int * string list) list ref = ref []
