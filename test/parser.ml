@@ -45,13 +45,13 @@ let cmd_c_editing str =
 let list_from string = String.split_on_char ',' string
 
 let parse_range str =
-		  match String.split_on_char '.' str with
-		  | [left_str; ""; ""; right_str] ->
-		      (match int_of_string_opt left_str, int_of_string_opt right_str with
-		       | Some first, Some second when second >= first ->
-		            List.init (second - first + 1) (fun i -> first + i)
-		       | _ -> [])
-		  | _ -> []
+  match String.split_on_char '.' str with
+  | [left_str; ""; ""; right_str] ->
+      (match int_of_string_opt left_str, int_of_string_opt right_str with
+       | Some first, Some second when second >= first ->
+            List.init (second - first + 1) (fun i -> first + i)
+       | _ -> [])
+  | _ -> []
 
 let parser args = match args with
 	| [] -> Some (List)
