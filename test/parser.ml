@@ -68,7 +68,7 @@ let parser path args= match args with
 	| [single] when (parse_range single <> [])  -> Some (ListRange (path, parse_range single))
 	| values -> Some (Add (path, String.concat " " values))
 
-let preparser todo_path args effects =
+let command_router todo_path args effects =
 	let project_name from =
 		if String.length from > 1 && String.get from 0 = '.' && String.get from 1 <> '@' then
 			Some (String.sub from 1 (String.length from - 1))
@@ -107,29 +107,29 @@ let preparser todo_path args effects =
 				| Error _ -> None)
 	 | values -> parser todo_path args
 
-let any_path = "any-todo-path"
+let any_todo_path = "any-todo-path"
 
 let (let*) = Option.bind
 
 let () = case "Parser" (fun test ->
 	test "Echo" (fun expect ->
-		expect.equal (parser any_path ["10"]) (Some (Echo (any_path, 10)))
+		expect.equal (parser any_todo_path ["10"]) (Some (Echo (any_todo_path, 10)))
 	);
 
 	test "List" (fun expect ->
-		expect.equal (parser any_path []) (Some (List any_path))
+		expect.equal (parser any_todo_path []) (Some (List any_todo_path))
 	);
 
 	test "List projects" (fun expect ->
-		expect.equal (parser any_path ["."]) (Some ListProjects)
+		expect.equal (parser any_todo_path ["."]) (Some ListProjects)
 	);
 
 	test "List doing across projects" (fun expect ->
-		expect.equal (parser any_path [".@"]) (Some ListDoingAcrossProjects)
+		expect.equal (parser any_todo_path [".@"]) (Some ListDoingAcrossProjects)
 	);
 
 	test "List range" (fun expect ->
-		expect.equal (parser any_path ["1...5"]) (Some (ListRange (any_path, [1;2;3;4;5])))
+		expect.equal (parser any_todo_path ["1...5"]) (Some (ListRange (any_todo_path, [1;2;3;4;5])))
 	);
 
 	test "Parse range" (fun expect ->
@@ -137,47 +137,47 @@ let () = case "Parser" (fun test ->
 	);
 
 	test "List doing" (fun expect ->
-		expect.equal (parser any_path ["@"]) (Some (ListDoing any_path))
+		expect.equal (parser any_todo_path ["@"]) (Some (ListDoing any_todo_path))
 	);
 
 	test "Add" (fun expect ->
-		expect.equal (parser any_path ["new";"todo"]) (Some (Add (any_path, "new todo")))
+		expect.equal (parser any_todo_path ["new";"todo"]) (Some (Add (any_todo_path, "new todo")))
 	);
 
 	test "Complete one" (fun expect ->
-		expect.equal (parser any_path ["+32"]) (Some (Complete (any_path, [32])))
+		expect.equal (parser any_todo_path ["+32"]) (Some (Complete (any_todo_path, [32])))
 	);
 
 	test "Complete many" (fun expect ->
-		expect.equal (parser any_path ["+32,24"]) (Some (Complete (any_path, [32;24])))
+		expect.equal (parser any_todo_path ["+32,24"]) (Some (Complete (any_todo_path, [32;24])))
 	);
 
 	test "Remove" (fun expect ->
-		expect.equal (parser any_path ["-32"]) (Some (Remove (any_path, [32])))
+		expect.equal (parser any_todo_path ["-32"]) (Some (Remove (any_todo_path, [32])))
 	);
 
 	test "Remove many" (fun expect ->
-		expect.equal (parser any_path ["-32,24"]) (Some (Remove (any_path, [32;24])))
+		expect.equal (parser any_todo_path ["-32,24"]) (Some (Remove (any_todo_path, [32;24])))
 	);
 
 	test "Edit" (fun expect ->
-		expect.equal (parser any_path [":32"]) (Some (Edit (any_path, 32)))
+		expect.equal (parser any_todo_path [":32"]) (Some (Edit (any_todo_path, 32)))
 	);
 
 	test "Edit .todo" (fun expect ->
-		expect.equal (parser any_path [":"]) (Some (EditFile any_path))
+		expect.equal (parser any_todo_path [":"]) (Some (EditFile any_todo_path))
 	);
 
 	test "Commit" (fun expect ->
-		expect.equal (parser  any_path ["c32"]) (Some (Commit (any_path, 32, false)))
+		expect.equal (parser  any_todo_path ["c32"]) (Some (Commit (any_todo_path, 32, false)))
 	);
 
 	test "Commit editing" (fun expect ->
-		expect.equal (parser any_path ["c:32"]) (Some (Commit (any_path, 32, true)))
+		expect.equal (parser any_todo_path ["c:32"]) (Some (Commit (any_todo_path, 32, true)))
 	);
 
 	test "Mark as doing" (fun expect ->
-		expect.equal (parser any_path ["@32"]) (Some (Doing (any_path, 32)))
+		expect.equal (parser any_todo_path ["@32"]) (Some (Doing (any_todo_path, 32)))
 	);
 )
 
@@ -194,7 +194,7 @@ let () = case "Project namespacing" (fun test ->
   cases
   |> List.iter (fun (desc, args, expected) ->
     test desc (fun expect ->
-      expect.equal (preparser any_path ([".some-project"] @ args) effects) expected
+      expect.equal (command_router any_todo_path ([".some-project"] @ args) effects) expected
     )
   )
 )
