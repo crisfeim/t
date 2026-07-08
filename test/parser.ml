@@ -68,6 +68,45 @@ let parser path args= match args with
 	| [single] when (parse_range single <> [])  -> Some (ListRange (path, parse_range single))
 	| values -> Some (Add (path, String.concat " " values))
 
+let preparser todo_path args effects =
+	let project_name from =
+		if String.length from > 1 && String.get from 0 = '.' && String.get from 1 <> '@' then
+			Some (String.sub from 1 (String.length from - 1))
+		else None
+	in
+
+	let project_path name all_projects =
+		match name with
+		| Some name ->
+			all_projects
+			|> List.filter (fun path ->
+			     String.split_on_char '/' path |>
+			     List.exists (fun part -> part = name))
+			|> T.sort_matches
+			|> (function
+				| first :: _ -> Some first
+				| [] -> None)
+		| None -> None
+	in
+
+	 match args with
+	 | [project] when Option.is_some (project_name project) ->
+			(match effects.projects() with
+			| Ok all_projects ->
+				(match (project_path (project_name project) all_projects) with
+					| Some path -> Some (List path)
+					| None -> None)
+			| Error _ -> None)
+		| [project; args] when Option.is_some (project_name project) ->
+			(match effects.projects() with
+				| Ok all_projects ->
+					(match (project_path (project_name project) all_projects) with
+						| Some path -> parser path [args]
+						| None -> None
+					)
+				| Error _ -> None)
+	 | values -> parser todo_path args
+
 let any_path = "any-todo-path"
 
 let (let*) = Option.bind
@@ -143,46 +182,6 @@ let () = case "Parser" (fun test ->
 
 
 	test "Project" (fun expect ->
-		let project_name from =
-			if String.length from > 1 && String.get from 0 = '.' && String.get from 1 <> '@' then
-				Some (String.sub from 1 (String.length from - 1))
-			else None
-		in
-
-		let project_path name all_projects =
-			match name with
-			| Some name ->
-				all_projects
-				|> List.filter (fun path ->
-				     String.split_on_char '/' path |>
-				     List.exists (fun part -> part = name))
-				|> T.sort_matches
-				|> (function
-					| first :: _ -> Some first
-					| [] -> None)
-			| None -> None
-		in
-
-		let preparser todo_path args effects =
-			 match args with
-			 | [project] when Option.is_some (project_name project) ->
-					(match effects.projects() with
-					| Ok all_projects ->
-						(match (project_path (project_name project) all_projects) with
-							| Some path -> Some (List path)
-							| None -> None)
-					| Error _ -> None)
-				| [project; args] when Option.is_some (project_name project) ->
-					(match effects.projects() with
-						| Ok all_projects ->
-							(match (project_path (project_name project) all_projects) with
-								| Some path -> parser path [args]
-								| None -> None
-							)
-						| Error _ -> None)
-			 | values -> parser todo_path args
-		in
-
 		let effects = { (Test_helpers.mock_effects()) with projects = (fun () -> Ok["/User/some-project/.todo"]) } in
 		expect.equal (preparser any_path [".some-project"] effects) (Some (List "/User/some-project/.todo"));
 		expect.equal (preparser any_path [".some-project"; "+1"] effects) (Some (Complete ("/User/some-project/.todo", [1])));
