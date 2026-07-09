@@ -9,8 +9,8 @@ let () = case "List" (fun test ->
   ]
   |>
   List.iteri (fun i (read, expected) ->
-  	test (case_id i) (fun fn ->
-  		assert_list fn expected (list "any todo path" { (mock_effects ()) with read = (fun _ -> read) })
+  	test (case_id i) (fun expect ->
+  		expect.equal fmt_result_list expected (list "any todo path" { (mock_effects ()) with read = (fun _ -> read) })
 	  )
 	)
 )
@@ -205,12 +205,11 @@ let () = case "Projects" (fun test ->
   (Ok ["p1"; "p2"], Ok ["p1"; "p2"]);
   ] |>
   List.iteri (fun i (projects_r, expected) ->
-    test (case_id i) (fun fn ->
-    	assert_list fn expected (projects { (mock_effects ()) with projects = (fun () -> projects_r) })
+    test (case_id i) (fun expect ->
+    	expect.equal fmt_result_list expected (projects { (mock_effects ()) with projects = (fun () -> projects_r) })
     )
   )
 )
-
 
 let () = case "Project" (fun test ->
 	[
@@ -219,8 +218,8 @@ let () = case "Project" (fun test ->
 	(Ok ["/User/any-project"], Ok ["any todo"], Ok ["1 any todo"])
 	] |>
 	List.iteri (fun i (project_r, read_r, expected) ->
-		test (case_id i) (fun fn ->
-			assert_list fn expected (project "any-project" { (mock_effects()) with
+		test (case_id i) (fun expect ->
+			expect.equal fmt_result_list expected (project "any-project" { (mock_effects()) with
 				projects = (fun _ -> project_r);
 				read = (fun _ -> read_r)})
 		)
