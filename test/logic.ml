@@ -9,8 +9,8 @@ let () = case "List" (fun test ->
   ]
   |>
   List.iteri (fun i (read, expected) ->
-  	test (case_id i) (fun fn ->
-  		assert_list fn expected (list "any todo path" { (mock_effects ()) with read = (fun _ -> read) })
+  	test (case_id i) (fun expect ->
+  		expect.equal fmt_result_list expected (list "any todo path" { (mock_effects ()) with read = (fun _ -> read) })
 	  )
 	)
 )
@@ -22,8 +22,8 @@ let () = case "Add" (fun test ->
   (Ok [], Ok (), Ok "any todo");
   ]|>
   List.iteri (fun i (read, write, expected) ->
-    test (case_id i) (fun fn ->
-	   	assert_str fn expected (add "any todo" "any todo path" { (mock_effects ()) with
+    test (case_id i) (fun expect ->
+	   	expect.equal fmt_result_string expected (add "any todo" "any todo path" { (mock_effects ()) with
 	       read = (fun _ -> read);
 	       write = (fun _ _ -> write) })
     )
@@ -38,8 +38,8 @@ let () = case "Remove" (fun test ->
   (Ok ["any todo"], 1, Ok (), Ok "any todo");
   ]|>
   List.iteri (fun i (read, line, write, expected) ->
-		test (case_id i) (fun fn ->
-		 	assert_str fn expected (remove line "any todo path" { (mock_effects ()) with
+		test (case_id i) (fun expect ->
+		 	expect.equal fmt_result_string expected (remove line "any todo path" { (mock_effects ()) with
 				read = (fun _ -> read);
 		   	write = (fun _ _ -> write) })
 		)
@@ -54,8 +54,8 @@ let () = case "Complete" (fun test ->
   (Ok ["any todo"], 1, Ok (), Ok "any todo");
   ] |>
   List.iteri (fun i (read, line, write, expected) ->
-    test (case_id i) (fun fn ->
-    	assert_str fn expected (complete line "any todo path" "any done path" { (mock_effects ()) with
+    test (case_id i) (fun expect ->
+    	expect.equal fmt_result_string expected (complete line "any todo path" "any done path" { (mock_effects ()) with
        read = (fun _ -> read);
        write = (fun _ _ -> write) })
     )
@@ -69,7 +69,7 @@ let () = case "Complete" (fun test ->
       now = (fun () -> "202606252301");
     } in
 
-    expect.equal !write_calls [
+    expect.equal fmt_tuple !write_calls [
     ("any done path", ["202606252301 tarea"]);
     ("any todo path", [])
     ]
@@ -85,8 +85,8 @@ let () = case "Edit" (fun test ->
   (Ok ["any todo"], 1, Ok "any edition", Ok (), Ok());
   ] |>
   List.iteri (fun i (read, line, editor, write, expected) ->
-    test (case_id i) (fun fn ->
-   		assert_unit fn expected (edit line "any todo path" { (mock_effects ()) with
+    test (case_id i) (fun expect ->
+   		expect.equal fmt_result_unit expected (edit line "any todo path" { (mock_effects ()) with
       	read = (fun _ -> read);
        	write = (fun _ _ -> write);
         editor = (fun _ -> editor); })
@@ -100,7 +100,7 @@ let () = case "Edit" (fun test ->
       write = (fun todos _ -> write_calls := todos :: !write_calls; Ok ());
       editor = (fun _ -> Ok "edited");
     } in
-    expect.equal !write_calls [["edited"]]
+    expect.equal fmt_string_list_of_list !write_calls [["edited"]]
   );
 
   test "avoids unnecessary I/O when editor returns empty" (fun expect ->
@@ -136,8 +136,8 @@ let () = case "Commit" (fun test ->
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Ok());
   ] |>
   List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
-    test (case_id i) (fun fn ->
-      assert_unit fn expected
+    test (case_id i) (fun expect ->
+      expect.equal fmt_result_unit expected
         (commit line "any todo path" "any done path" true { (mock_effects ()) with
           read = (fun _ -> read);
           write = (fun _ _ -> write);
@@ -156,8 +156,8 @@ let () = case "Commit" (fun test ->
       editor = (fun _ -> Ok "edited");
       get_repo = (fun _ -> any_repo);
     } in
-    expect.equal
-      [("any done path", ["20260627 edited"; "20260625 some"]); ("any todo path", [])]
+    expect.equal fmt_tuple
+    	[("any done path", ["20260627 edited"; "20260625 some"]); ("any todo path", [])]
       !write_calls
   );
 
@@ -169,7 +169,7 @@ let () = case "Commit" (fun test ->
       commit = (fun msg _ -> commit_msg := msg; Ok ());
       get_repo = (fun _ -> any_repo);
     } in
-    expect.equal "edited" !commit_msg
+    expect.equal fmt_string "edited" !commit_msg
   );
 
   test "uses todo as commit message when open_editor is false" (fun expect ->
@@ -179,7 +179,7 @@ let () = case "Commit" (fun test ->
         commit = (fun msg _ -> commit_msg := msg; Ok ());
         get_repo = (fun _ -> any_repo);
       } in
-      expect.equal "any todo" !commit_msg
+      expect.equal fmt_string "any todo" !commit_msg
   )
 )
 
@@ -189,36 +189,11 @@ let () = case "Projects" (fun test ->
   (Ok ["p1"; "p2"], Ok ["p1"; "p2"]);
   ] |>
   List.iteri (fun i (projects_r, expected) ->
-    test (case_id i) (fun fn ->
-    	assert_list fn expected (projects { (mock_effects ()) with projects = (fun () -> projects_r) })
+    test (case_id i) (fun expect ->
+    	expect.equal fmt_result_list expected (projects { (mock_effects ()) with projects = (fun () -> projects_r) })
     )
   )
 )
-
-let sort_matches projects =
-	List.sort (fun path1 path2 ->
-		let count1 = List.length (String.split_on_char '/' path1) in
-    let count2 = List.length (String.split_on_char '/' path2) in
-
-    if count1 <> count2 then
-      compare count1 count2
-    else
-    	let len1 = String.length path1 in
-     	let len2 = String.length path2 in
-
-      if len1 <> len2 then
-     		compare len1 len2
-      else
-     		String.compare path1  path2
-	) projects
-
-let project name effects =
-  let* projects = projects effects in
-
-  match projects |> sort_matches |> List.find_opt (fun path -> List.mem name (String.split_on_char '/' path)) with
-  | Some found_path -> list found_path effects
-  | None -> Error `FileSystem
-
 
 let () = case "Project" (fun test ->
 	[
@@ -227,8 +202,8 @@ let () = case "Project" (fun test ->
 	(Ok ["/User/any-project"], Ok ["any todo"], Ok ["1 any todo"])
 	] |>
 	List.iteri (fun i (project_r, read_r, expected) ->
-		test (case_id i) (fun fn ->
-			assert_list fn expected (project "any-project" { (mock_effects()) with
+		test (case_id i) (fun expect ->
+			expect.equal fmt_result_list expected (project "any-project" { (mock_effects()) with
 				projects = (fun _ -> project_r);
 				read = (fun _ -> read_r)})
 		)
@@ -238,16 +213,16 @@ let () = case "Project" (fun test ->
 let () = case "Sort matches" (fun test ->
 	test "sort_matches: prioritizes shallowest path" (fun expect ->
 	  let input = ["/User/nested/any-project"; "/User/any-project"] in
-	  expect.equal ["/User/any-project"; "/User/nested/any-project"] (sort_matches input)
+	  expect.equal fmt_string_list ["/User/any-project"; "/User/nested/any-project"] (sort_matches input)
 	);
 
 	test "sort_matches: prioritizes shortest path on equal depth" (fun expect ->
 	  let input = ["/User/nested_longest/any-project"; "/User/short/any-project"] in
-	  expect.equal ["/User/short/any-project"; "/User/nested_longest/any-project"] (sort_matches input)
+	  expect.equal fmt_string_list ["/User/short/any-project"; "/User/nested_longest/any-project"] (sort_matches input)
 	);
 
 	test "sort_matches: falls back to alphabetical order on equal depth and length" (fun expect ->
 	  let input = ["/User/t/any-project"; "/User/a/any-project"] in
-	  expect.equal ["/User/a/any-project"; "/User/t/any-project"] (sort_matches input)
+	  expect.equal fmt_string_list ["/User/a/any-project"; "/User/t/any-project"] (sort_matches input)
 	)
 )

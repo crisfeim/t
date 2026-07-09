@@ -1,7 +1,3 @@
-(* Test utility *)
-[@@@warning "-69"]
-[@@@warning "-32"]
-
 (* Global state *)
 let exit_code = ref 0
 let cases: (string * int * int * string list) list ref = ref []
@@ -9,7 +5,7 @@ let cases: (string * int * int * string list) list ref = ref []
 (* Library *)
 type expect = {
   is    : bool -> string -> unit;
-  equal : 'a. 'a -> 'a -> unit;
+  equal : 'a. ('a -> string) -> 'a -> 'a -> unit;
   fail  : string -> unit;
 }
 
@@ -25,7 +21,14 @@ let raise_error description message errors_ref =
 
 let make_expect description errors_ref =
   let is bool message = if bool then () else raise_error description message errors_ref in
-  let equal expected actual = if expected = actual then () else raise_error description "" errors_ref in
+
+  let equal fmt expected actual =
+    if expected = actual then ()
+    else
+      let message = Printf.sprintf "Expected (%s) got (%s) instead" (fmt expected) (fmt actual) in
+      raise_error description message errors_ref
+  in
+
   let fail message = raise_error description message errors_ref in
 
   { is ; equal ; fail }
