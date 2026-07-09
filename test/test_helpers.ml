@@ -35,16 +35,10 @@ let fmt_result_list result    = string_of_result (fun l -> "[" ^ String.concat "
 let fmt_result_string result  = string_of_result (fun s -> "\"" ^ s ^ "\"") result
 let fmt_result_unit result    = string_of_result (fun _ -> "()") result
 
-let fmt_tuple calls =
-  let fmt_tuple (path, tasks) =
-    let tasks_str = String.concat "; " (List.map (fun t -> "\"" ^ t ^ "\"") tasks) in
-    Printf.sprintf "(\"%s\", [%s])" path tasks_str
-  in
-  "[" ^ (String.concat "; " (List.map fmt_tuple calls)) ^ "]"
-
-let fmt_string calls = calls
-
+let fmt_string str = str
 let fmt_string_list l = "[" ^ (String.concat "; " (List.map (fun s -> "\"" ^ s ^ "\"") l)) ^ "]"
+let fmt_string_list_of_list l = "[" ^ (String.concat "; " (List.map fmt_string_list l)) ^ "]"
 
-let fmt_string_list_of_list l =
-  "[" ^ (String.concat "; " (List.map fmt_string_list l)) ^ "]"
+let fmt_tuple tuple =
+  let fmt_tuple (path, tasks) = Printf.sprintf "(\"%s\", %s)" path (fmt_string_list tasks) in
+  "[" ^ (String.concat "; " (List.map fmt_tuple tuple)) ^ "]"
