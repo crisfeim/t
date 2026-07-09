@@ -38,4 +38,4 @@ let assert_result expect string_of_ok expected actual =
 		let fmt = string_of_result string_of_ok in
 		expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (fmt expected) (fmt actual))
 
-let assert_unit expect = assert_result expect (fun _ -> "()")
+let fmt_result_unit result = string_of_result (fun _ -> "()") result
