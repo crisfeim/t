@@ -100,7 +100,7 @@ let () = case "Edit" (fun test ->
       write = (fun todos _ -> write_calls := todos :: !write_calls; Ok ());
       editor = (fun _ -> Ok "edited");
     } in
-    expect.equal fmt_string_list_list !write_calls [["edited"]]
+    expect.equal fmt_string_list_of_list !write_calls [["edited"]]
   );
 
   test "avoids unnecessary I/O when editor returns empty" (fun expect ->

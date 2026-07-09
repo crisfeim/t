@@ -46,6 +46,5 @@ let fmt_string calls = calls
 
 let fmt_string_list l = "[" ^ (String.concat "; " (List.map (fun s -> "\"" ^ s ^ "\"") l)) ^ "]"
 
-let fmt_string_list_list l =
-  let fmt_inner inner = "[" ^ (String.concat "; " (List.map (fun s -> "\"" ^ s ^ "\"") inner)) ^ "]" in
-  "[" ^ (String.concat "; " (List.map fmt_inner l)) ^ "]"
+let fmt_string_list_of_list l =
+  "[" ^ (String.concat "; " (List.map fmt_string_list l)) ^ "]"
