@@ -1,3 +1,4 @@
+
 type error =
 	[
   | `FileSystem
@@ -7,6 +8,16 @@ type error =
   | `CommitError of string
 ]
 
+(* Custom bindings *)
+let ( let*?) = Option.bind
+let ( let* )
+	(x : ('a, [< error]) result)
+	(f : 'a -> ('b, [> error]) result) : ('b, error) result =
+  match x with
+  | Ok v -> f v
+  | Error e -> Error (e :> error)
+
+(* Types as documentation *)
 type todo    = string
 type path    = string
 type content = string
@@ -23,13 +34,6 @@ type effects = {
 	commit  : message -> repo -> (unit, error) result;
   get_repo: path -> repo option
 }
-
-let ( let* )
-	(x : ('a, [< error]) result)
-	(f : 'a -> ('b, [> error]) result) : ('b, error) result =
-  match x with
-  | Ok v -> f v
-  | Error e -> Error (e :> error)
 
 let list todo_path effects =
 	let* todos = effects.read todo_path in
@@ -118,8 +122,6 @@ let project name effects =
   | None -> Error `FileSystem
 
 (* Parser *)
-let (let*?) = Option.bind
-
 let to_option = function
   | Ok x -> Some x
   | Error _ -> None
