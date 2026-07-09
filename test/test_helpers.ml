@@ -42,3 +42,22 @@ let fmt_string_list_of_list l = "[" ^ (String.concat "; " (List.map fmt_string_l
 let fmt_tuple tuple =
   let fmt_tuple (path, tasks) = Printf.sprintf "(\"%s\", %s)" path (fmt_string_list tasks) in
   "[" ^ (String.concat "; " (List.map fmt_tuple tuple)) ^ "]"
+
+let fmt_option fmt = function
+  | None -> "None"
+  | Some cmd -> "Some (" ^ fmt cmd ^ ")"
+
+let fmt_command = function
+  | List p -> Printf.sprintf "List %S" p
+  | ListRange (p, l) -> Printf.sprintf "ListRange (%S, %s)" p (fmt_int_list l)
+  | Add (p, s) -> Printf.sprintf "Add (%S, %S)" p s
+  | Complete (p, l) -> Printf.sprintf "Complete (%S, %s)" p (fmt_int_list l)
+  | Remove (p, l) -> Printf.sprintf "Remove (%S, %s)" p (fmt_int_list l)
+  | Edit (p, i) -> Printf.sprintf "Edit (%S, %d)" p i
+  | Commit (p, i, b) -> Printf.sprintf "Commit (%S, %d, %b)" p i b
+  | Echo (p, i) -> Printf.sprintf "Echo (%S, %d)" p i
+  | EditFile p -> Printf.sprintf "EditFile %S" p
+  | Doing (p, i) -> Printf.sprintf "Doing (%S, %d)" p i
+  | ListDoing p -> Printf.sprintf "ListDoing %S" p
+  | ListProjects -> "ListProjects"
+  | ListDoingAcrossProjects -> "ListDoingAcrossProjects"
