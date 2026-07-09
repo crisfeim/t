@@ -5,4 +5,3 @@ let () =
   Printf.printf "\n--- Argumentos recibidos por OCaml ---\n";
   List.iteri (fun i arg -> Printf.printf "Argumento [%d]: %s\n" i arg) args;
   Printf.printf "--------------------------------------\n\n"
-;;
