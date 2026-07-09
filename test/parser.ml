@@ -5,6 +5,11 @@ open T
 let any_todo_path = "any-todo-path"
 
 let () = case "Parser" (fun test ->
+
+	test "count" (fun expect ->
+		expect.equal (fmt_option fmt_command) (Some (Count)) (parser any_todo_path ["count"])
+	);
+
 	test "Echo" (fun expect ->
 		expect.equal (fmt_option fmt_command) (parser any_todo_path ["10"]) (Some (Echo (any_todo_path, 10)))
 	);

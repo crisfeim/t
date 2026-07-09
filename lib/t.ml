@@ -127,6 +127,7 @@ let to_option = function
   | Error _ -> None
 
 type command =
+| Count
 | List of path
 | ListRange of path * int list
 | Add of path * string
@@ -189,6 +190,7 @@ let parser path args= match args with
 	| [single] when single = "@" -> Some (ListDoing path)
 	| [single] when single = "." -> Some (ListProjects)
 	| [single] when single = ".@" -> Some (ListDoingAcrossProjects)
+	| [single] when single = "count" -> Some (Count)
 	| [single] when (parse_range single <> [])  -> Some (ListRange (path, parse_range single))
 	| values -> Some (Add (path, String.concat " " values))
 

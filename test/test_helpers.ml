@@ -48,6 +48,7 @@ let fmt_option fmt = function
   | Some cmd -> "Some (" ^ fmt cmd ^ ")"
 
 let fmt_command = function
+	| Count -> "Count"
   | List p -> Printf.sprintf "List %S" p
   | ListRange (p, l) -> Printf.sprintf "ListRange (%S, %s)" p (fmt_int_list l)
   | Add (p, s) -> Printf.sprintf "Add (%S, %S)" p s
