@@ -220,7 +220,14 @@ let command_router todo_path args effects =
 			let*? all_projects = effects.projects() |> to_option in
 			let*? path = project_path (drop 1 project) all_projects in
 			parser path [args]
-		| values -> parser todo_path args
+		| values ->
+			match (values |> first) with
+				| Some first when is_project first ->
+					let*? all_projects = effects.projects() |> to_option in
+					let*? path = project_path (drop 1 first) all_projects in
+					let todo = (List.tl values) |> String.concat " " in
+					Some (Add (path, todo))
+				| _ -> parser todo_path args
 
 
 let fmt_int_list l =

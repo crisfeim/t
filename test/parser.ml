@@ -82,12 +82,13 @@ let () = case "Project namespacing" (fun test ->
     ("Remove",   ["-5,2"], Some (Remove ("/User/some-project/.todo", [5; 2])));
     ("Edit",     [":10"], Some (Edit ("/User/some-project/.todo", 10)));
     ("Doing",    ["@1"], Some (Doing ("/User/some-project/.todo", 1)));
-    ("Commit",   ["c1"], Some (Commit ("/User/some-project/.todo", 1, false)))
+    ("Commit",   ["c1"], Some (Commit ("/User/some-project/.todo", 1, false)));
+    ("Add",      ["New"; "Todo"], Some(Add ("/User/some-project/.todo", "New Todo")))
   ] in
   cases
   |> List.iter (fun (desc, args, expected) ->
     test desc (fun expect ->
-      expect.equal (fmt_option fmt_command) (command_router any_todo_path ([".some-project"] @ args) effects) expected
+      expect.equal (fmt_option fmt_command) expected (command_router any_todo_path ([".some-project"] @ args) effects)
     )
   )
 )
