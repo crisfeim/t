@@ -22,8 +22,8 @@ let () = case "Add" (fun test ->
   (Ok [], Ok (), Ok "any todo");
   ]|>
   List.iteri (fun i (read, write, expected) ->
-    test (case_id i) (fun fn ->
-	   	assert_str fn expected (add "any todo" "any todo path" { (mock_effects ()) with
+    test (case_id i) (fun expect ->
+	   	expect.equal fmt_result_string expected (add "any todo" "any todo path" { (mock_effects ()) with
 	       read = (fun _ -> read);
 	       write = (fun _ _ -> write) })
     )
@@ -38,8 +38,8 @@ let () = case "Remove" (fun test ->
   (Ok ["any todo"], 1, Ok (), Ok "any todo");
   ]|>
   List.iteri (fun i (read, line, write, expected) ->
-		test (case_id i) (fun fn ->
-		 	assert_str fn expected (remove line "any todo path" { (mock_effects ()) with
+		test (case_id i) (fun expect ->
+		 	expect.equal fmt_result_string expected (remove line "any todo path" { (mock_effects ()) with
 				read = (fun _ -> read);
 		   	write = (fun _ _ -> write) })
 		)
@@ -70,8 +70,8 @@ let () = case "Complete" (fun test ->
   (Ok ["any todo"], 1, Ok (), Ok "any todo");
   ] |>
   List.iteri (fun i (read, line, write, expected) ->
-    test (case_id i) (fun fn ->
-    	assert_str fn expected (complete line "any todo path" "any done path" { (mock_effects ()) with
+    test (case_id i) (fun expect ->
+    	expect.equal fmt_result_string expected (complete line "any todo path" "any done path" { (mock_effects ()) with
        read = (fun _ -> read);
        write = (fun _ _ -> write) })
     )

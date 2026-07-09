@@ -31,10 +31,11 @@ let string_of_result ok_formatter = function
 let case_id i = Printf.sprintf "Matrix Case %d" (i + 1)
 
 let fmt_result_list result = string_of_result (fun l -> "[" ^ String.concat "; " l ^ "]") result
+let fmt_result_string result  = string_of_result (fun s -> "\"" ^ s ^ "\"") result
 
 let assert_result expect string_of_ok expected actual =
 	if expected <> actual then
 		let fmt = string_of_result string_of_ok in
 		expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (fmt expected) (fmt actual))
-let assert_str expect  = assert_result expect (fun s -> "\"" ^ s ^ "\"")
+
 let assert_unit expect = assert_result expect (fun _ -> "()")
