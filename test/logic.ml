@@ -46,22 +46,6 @@ let () = case "Remove" (fun test ->
   )
 )
 
-let fmt_tuple calls =
-  let fmt_tuple (path, tasks) =
-    let tasks_str = String.concat "; " (List.map (fun t -> "\"" ^ t ^ "\"") tasks) in
-    Printf.sprintf "(\"%s\", [%s])" path tasks_str
-  in
-  "[" ^ (String.concat "; " (List.map fmt_tuple calls)) ^ "]"
-
-let fmt_string calls = calls
-
-let fmt_string_list_list l =
-  let fmt_inner inner = "[" ^ (String.concat "; " (List.map (fun s -> "\"" ^ s ^ "\"") inner)) ^ "]" in
-  "[" ^ (String.concat "; " (List.map fmt_inner l)) ^ "]"
-
-let fmt_string_list l =
-  "[" ^ (String.concat "; " (List.map (fun s -> "\"" ^ s ^ "\"") l)) ^ "]"
-
 let () = case "Complete" (fun test ->
   [
   (Error `FileSystem, 1, Ok (), Error `FileSystem);

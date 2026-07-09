@@ -30,12 +30,22 @@ let string_of_result ok_formatter = function
 
 let case_id i = Printf.sprintf "Matrix Case %d" (i + 1)
 
-let fmt_result_list result = string_of_result (fun l -> "[" ^ String.concat "; " l ^ "]") result
+(* Formatters *)
+let fmt_result_list result    = string_of_result (fun l -> "[" ^ String.concat "; " l ^ "]") result
 let fmt_result_string result  = string_of_result (fun s -> "\"" ^ s ^ "\"") result
+let fmt_result_unit result    = string_of_result (fun _ -> "()") result
 
-let assert_result expect string_of_ok expected actual =
-	if expected <> actual then
-		let fmt = string_of_result string_of_ok in
-		expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (fmt expected) (fmt actual))
+let fmt_tuple calls =
+  let fmt_tuple (path, tasks) =
+    let tasks_str = String.concat "; " (List.map (fun t -> "\"" ^ t ^ "\"") tasks) in
+    Printf.sprintf "(\"%s\", [%s])" path tasks_str
+  in
+  "[" ^ (String.concat "; " (List.map fmt_tuple calls)) ^ "]"
 
-let fmt_result_unit result = string_of_result (fun _ -> "()") result
+let fmt_string calls = calls
+
+let fmt_string_list l = "[" ^ (String.concat "; " (List.map (fun s -> "\"" ^ s ^ "\"") l)) ^ "]"
+
+let fmt_string_list_list l =
+  let fmt_inner inner = "[" ^ (String.concat "; " (List.map (fun s -> "\"" ^ s ^ "\"") inner)) ^ "]" in
+  "[" ^ (String.concat "; " (List.map fmt_inner l)) ^ "]"
