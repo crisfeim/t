@@ -22,6 +22,29 @@ type command =
 | ListProjects
 | ListDoingAcrossProjects
 
+let fmt_int_list l =
+  "[" ^ (String.concat "; " (List.map string_of_int l)) ^ "]"
+
+let fmt_command = function
+  | List p -> Printf.sprintf "List %S" p
+  | ListRange (p, l) -> Printf.sprintf "ListRange (%S, %s)" p (fmt_int_list l)
+  | Add (p, s) -> Printf.sprintf "Add (%S, %S)" p s
+  | Complete (p, l) -> Printf.sprintf "Complete (%S, %s)" p (fmt_int_list l)
+  | Remove (p, l) -> Printf.sprintf "Remove (%S, %s)" p (fmt_int_list l)
+  | Edit (p, i) -> Printf.sprintf "Edit (%S, %d)" p i
+  | Commit (p, i, b) -> Printf.sprintf "Commit (%S, %d, %b)" p i b
+  | Echo (p, i) -> Printf.sprintf "Echo (%S, %d)" p i
+  | EditFile p -> Printf.sprintf "EditFile %S" p
+  | Doing (p, i) -> Printf.sprintf "Doing (%S, %d)" p i
+  | ListDoing p -> Printf.sprintf "ListDoing %S" p
+  | ListProjects -> "ListProjects"
+  | ListDoingAcrossProjects -> "ListDoingAcrossProjects"
+
+let fmt_option fmt = function
+  | None -> "None"
+  | Some cmd -> "Some (" ^ fmt cmd ^ ")"
+
+
 let cmd operator str =
 	String.length str > 1
   && String.get str 0 = operator
@@ -74,6 +97,9 @@ let parser path args= match args with
 	| values -> Some (Add (path, String.concat " " values))
 
 
+let first = function
+	| first :: _ -> Some first
+	| [] -> None
 
 let command_router todo_path args effects =
 	let is_project project =
@@ -81,14 +107,12 @@ let command_router todo_path args effects =
 	in
 
 	let project_path name all_projects =
-			all_projects
+		all_projects
 			|> List.filter (fun path ->
 			     String.split_on_char '/' path |>
 			     List.exists (fun part -> part = name))
 			|> T.sort_matches
-			|> (function
-				| first :: _ -> Some first
-				| [] -> None)
+			|> first
 	in
 
 	match args with
@@ -106,71 +130,71 @@ let any_todo_path = "any-todo-path"
 
 let () = case "Parser" (fun test ->
 	test "Echo" (fun expect ->
-		expect.equal (parser any_todo_path ["10"]) (Some (Echo (any_todo_path, 10)))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path ["10"]) (Some (Echo (any_todo_path, 10)))
 	);
 
 	test "List" (fun expect ->
-		expect.equal (parser any_todo_path []) (Some (List any_todo_path))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path []) (Some (List any_todo_path))
 	);
 
 	test "List projects" (fun expect ->
-		expect.equal (parser any_todo_path ["."]) (Some ListProjects)
+		expect.equal (fmt_option fmt_command) (parser any_todo_path ["."]) (Some ListProjects)
 	);
 
 	test "List doing across projects" (fun expect ->
-		expect.equal (parser any_todo_path [".@"]) (Some ListDoingAcrossProjects)
+		expect.equal (fmt_option fmt_command) (parser any_todo_path [".@"]) (Some ListDoingAcrossProjects)
 	);
 
 	test "List range" (fun expect ->
-		expect.equal (parser any_todo_path ["1...5"]) (Some (ListRange (any_todo_path, [1;2;3;4;5])))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path ["1...5"]) (Some (ListRange (any_todo_path, [1;2;3;4;5])))
 	);
 
 	test "Parse range" (fun expect ->
-		expect.equal (parse_range "1...3") [1;2;3]
+		expect.equal fmt_int_list (parse_range "1...3") [1;2;3]
 	);
 
 	test "List doing" (fun expect ->
-		expect.equal (parser any_todo_path ["@"]) (Some (ListDoing any_todo_path))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path ["@"]) (Some (ListDoing any_todo_path))
 	);
 
 	test "Add" (fun expect ->
-		expect.equal (parser any_todo_path ["new";"todo"]) (Some (Add (any_todo_path, "new todo")))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path ["new";"todo"]) (Some (Add (any_todo_path, "new todo")))
 	);
 
 	test "Complete one" (fun expect ->
-		expect.equal (parser any_todo_path ["+32"]) (Some (Complete (any_todo_path, [32])))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path ["+32"]) (Some (Complete (any_todo_path, [32])))
 	);
 
 	test "Complete many" (fun expect ->
-		expect.equal (parser any_todo_path ["+32,24"]) (Some (Complete (any_todo_path, [32;24])))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path ["+32,24"]) (Some (Complete (any_todo_path, [32;24])))
 	);
 
 	test "Remove" (fun expect ->
-		expect.equal (parser any_todo_path ["-32"]) (Some (Remove (any_todo_path, [32])))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path ["-32"]) (Some (Remove (any_todo_path, [32])))
 	);
 
 	test "Remove many" (fun expect ->
-		expect.equal (parser any_todo_path ["-32,24"]) (Some (Remove (any_todo_path, [32;24])))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path ["-32,24"]) (Some (Remove (any_todo_path, [32;24])))
 	);
 
 	test "Edit" (fun expect ->
-		expect.equal (parser any_todo_path [":32"]) (Some (Edit (any_todo_path, 32)))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path [":32"]) (Some (Edit (any_todo_path, 32)))
 	);
 
 	test "Edit .todo" (fun expect ->
-		expect.equal (parser any_todo_path [":"]) (Some (EditFile any_todo_path))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path [":"]) (Some (EditFile any_todo_path))
 	);
 
 	test "Commit" (fun expect ->
-		expect.equal (parser  any_todo_path ["c32"]) (Some (Commit (any_todo_path, 32, false)))
+		expect.equal (fmt_option fmt_command) (parser  any_todo_path ["c32"]) (Some (Commit (any_todo_path, 32, false)))
 	);
 
 	test "Commit editing" (fun expect ->
-		expect.equal (parser any_todo_path ["c:32"]) (Some (Commit (any_todo_path, 32, true)))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path ["c:32"]) (Some (Commit (any_todo_path, 32, true)))
 	);
 
 	test "Mark as doing" (fun expect ->
-		expect.equal (parser any_todo_path ["@32"]) (Some (Doing (any_todo_path, 32)))
+		expect.equal (fmt_option fmt_command) (parser any_todo_path ["@32"]) (Some (Doing (any_todo_path, 32)))
 	);
 )
 
@@ -187,7 +211,7 @@ let () = case "Project namespacing" (fun test ->
   cases
   |> List.iter (fun (desc, args, expected) ->
     test desc (fun expect ->
-      expect.equal (command_router any_todo_path ([".some-project"] @ args) effects) expected
+      expect.equal (fmt_option fmt_command) (command_router any_todo_path ([".some-project"] @ args) effects) expected
     )
   )
 )

@@ -1,6 +1,6 @@
 type expect = {
   is    : bool -> string -> unit;
-  equal : 'a. 'a -> 'a -> unit;
+  equal : 'a. ('a -> string) -> 'a -> 'a -> unit;
   fail  : string -> unit;
 }
 

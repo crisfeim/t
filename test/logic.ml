@@ -46,6 +46,22 @@ let () = case "Remove" (fun test ->
   )
 )
 
+let fmt_tuple calls =
+  let fmt_tuple (path, tasks) =
+    let tasks_str = String.concat "; " (List.map (fun t -> "\"" ^ t ^ "\"") tasks) in
+    Printf.sprintf "(\"%s\", [%s])" path tasks_str
+  in
+  "[" ^ (String.concat "; " (List.map fmt_tuple calls)) ^ "]"
+
+let fmt_string calls = calls
+
+let fmt_string_list_list l =
+  let fmt_inner inner = "[" ^ (String.concat "; " (List.map (fun s -> "\"" ^ s ^ "\"") inner)) ^ "]" in
+  "[" ^ (String.concat "; " (List.map fmt_inner l)) ^ "]"
+
+let fmt_string_list l =
+  "[" ^ (String.concat "; " (List.map (fun s -> "\"" ^ s ^ "\"") l)) ^ "]"
+
 let () = case "Complete" (fun test ->
   [
   (Error `FileSystem, 1, Ok (), Error `FileSystem);
@@ -69,7 +85,7 @@ let () = case "Complete" (fun test ->
       now = (fun () -> "202606252301");
     } in
 
-    expect.equal !write_calls [
+    expect.equal fmt_tuple !write_calls [
     ("any done path", ["202606252301 tarea"]);
     ("any todo path", [])
     ]
@@ -100,7 +116,7 @@ let () = case "Edit" (fun test ->
       write = (fun todos _ -> write_calls := todos :: !write_calls; Ok ());
       editor = (fun _ -> Ok "edited");
     } in
-    expect.equal !write_calls [["edited"]]
+    expect.equal fmt_string_list_list !write_calls [["edited"]]
   );
 
   test "avoids unnecessary I/O when editor returns empty" (fun expect ->
@@ -156,8 +172,8 @@ let () = case "Commit" (fun test ->
       editor = (fun _ -> Ok "edited");
       get_repo = (fun _ -> any_repo);
     } in
-    expect.equal
-      [("any done path", ["20260627 edited"; "20260625 some"]); ("any todo path", [])]
+    expect.equal fmt_tuple
+    	[("any done path", ["20260627 edited"; "20260625 some"]); ("any todo path", [])]
       !write_calls
   );
 
@@ -169,7 +185,7 @@ let () = case "Commit" (fun test ->
       commit = (fun msg _ -> commit_msg := msg; Ok ());
       get_repo = (fun _ -> any_repo);
     } in
-    expect.equal "edited" !commit_msg
+    expect.equal fmt_string "edited" !commit_msg
   );
 
   test "uses todo as commit message when open_editor is false" (fun expect ->
@@ -179,7 +195,7 @@ let () = case "Commit" (fun test ->
         commit = (fun msg _ -> commit_msg := msg; Ok ());
         get_repo = (fun _ -> any_repo);
       } in
-      expect.equal "any todo" !commit_msg
+      expect.equal fmt_string "any todo" !commit_msg
   )
 )
 
@@ -214,16 +230,16 @@ let () = case "Project" (fun test ->
 let () = case "Sort matches" (fun test ->
 	test "sort_matches: prioritizes shallowest path" (fun expect ->
 	  let input = ["/User/nested/any-project"; "/User/any-project"] in
-	  expect.equal ["/User/any-project"; "/User/nested/any-project"] (sort_matches input)
+	  expect.equal fmt_string_list ["/User/any-project"; "/User/nested/any-project"] (sort_matches input)
 	);
 
 	test "sort_matches: prioritizes shortest path on equal depth" (fun expect ->
 	  let input = ["/User/nested_longest/any-project"; "/User/short/any-project"] in
-	  expect.equal ["/User/short/any-project"; "/User/nested_longest/any-project"] (sort_matches input)
+	  expect.equal fmt_string_list ["/User/short/any-project"; "/User/nested_longest/any-project"] (sort_matches input)
 	);
 
 	test "sort_matches: falls back to alphabetical order on equal depth and length" (fun expect ->
 	  let input = ["/User/t/any-project"; "/User/a/any-project"] in
-	  expect.equal ["/User/a/any-project"; "/User/t/any-project"] (sort_matches input)
+	  expect.equal fmt_string_list ["/User/a/any-project"; "/User/t/any-project"] (sort_matches input)
 	)
 )
