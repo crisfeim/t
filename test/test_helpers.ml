@@ -20,7 +20,6 @@ let mock_effects () = {
 	get_repo = (fun _ -> any_repo);
 }
 
-
 let string_of_result ok_formatter = function
   | Ok value -> "Ok " ^ (ok_formatter value)
   | Error `FileSystem -> "Error `FileSystem"
@@ -31,11 +30,15 @@ let string_of_result ok_formatter = function
 
 let case_id i = Printf.sprintf "Matrix Case %d" (i + 1)
 
-let assert_result expect string_of_ok expected actual =
-	if expected <> actual then
-		let fmt = string_of_result string_of_ok in
-		expect.fail (Printf.sprintf "Expected (%s) got (%s) instead" (fmt expected) (fmt actual))
+(* Formatters *)
+let fmt_result_list result    = string_of_result (fun l -> "[" ^ String.concat "; " l ^ "]") result
+let fmt_result_string result  = string_of_result (fun s -> "\"" ^ s ^ "\"") result
+let fmt_result_unit result    = string_of_result (fun _ -> "()") result
 
-let assert_list expect = assert_result expect (fun l -> "[" ^ String.concat "; " l ^ "]")
-let assert_str expect  = assert_result expect (fun s -> "\"" ^ s ^ "\"")
-let assert_unit expect = assert_result expect (fun _ -> "()")
+let fmt_string str = str
+let fmt_string_list l = "[" ^ (String.concat "; " (List.map (fun s -> "\"" ^ s ^ "\"") l)) ^ "]"
+let fmt_string_list_of_list l = "[" ^ (String.concat "; " (List.map fmt_string_list l)) ^ "]"
+
+let fmt_tuple tuple =
+  let fmt_tuple (path, tasks) = Printf.sprintf "(\"%s\", %s)" path (fmt_string_list tasks) in
+  "[" ^ (String.concat "; " (List.map fmt_tuple tuple)) ^ "]"
