@@ -204,10 +204,10 @@ test edit_todo {Edits a todo via $EDITOR} -setup {
     set test_dir [exec mktemp -d]
     set todo_file [file join $test_dir ".todo"]
     set fh [open $todo_file w]
-    puts $fh "Sacar al perro a pasear"
+    puts $fh "A"
     close $fh
 
-    set editor_override [make_fake_editor $test_dir "Pasear al perro por el parque"]
+    set editor_override [make_fake_editor $test_dir "B"]
 } -body {
     global env
     set env(EDITOR) $editor_override
@@ -217,7 +217,7 @@ test edit_todo {Edits a todo via $EDITOR} -setup {
 } -cleanup {
     unset -nocomplain env(EDITOR)
     file delete -force $test_dir
-} -result [list "Pasear al perro por el parque\n" "Pasear al perro por el parque"]
+} -result [list "B\n" "B"]
 
 
 test edit_file {Edits the whole .todo file via $EDITOR} -setup {
@@ -245,7 +245,7 @@ test edit_cancels_on_empty_edit {Edits a todo via $EDITOR} -setup {
     set test_dir [exec mktemp -d]
     set todo_file [file join $test_dir ".todo"]
     set fh [open $todo_file w]
-    puts $fh "Sacar al perro a pasear"
+    puts $fh "A"
     close $fh
 
     set editor_override [make_fake_editor $test_dir ""]
@@ -258,17 +258,17 @@ test edit_cancels_on_empty_edit {Edits a todo via $EDITOR} -setup {
 } -cleanup {
     unset -nocomplain env(EDITOR)
     file delete -force $test_dir
-} -result [list "Cancel editing\n" "Sacar al perro a pasear"]
+} -result [list "Cancel editing\n" "A"]
 
 
 test edit_cancels_on_unchanged_edit {Edits a todo via $EDITOR} -setup {
     set test_dir [exec mktemp -d]
     set todo_file [file join $test_dir ".todo"]
     set fh [open $todo_file w]
-    puts $fh "Sacar al perro a pasear"
+    puts $fh "A"
     close $fh
 
-    set editor_override [make_fake_editor $test_dir "Sacar al perro a pasear"]
+    set editor_override [make_fake_editor $test_dir "A"]
 } -body {
     global env
     set env(EDITOR) $editor_override
@@ -278,7 +278,7 @@ test edit_cancels_on_unchanged_edit {Edits a todo via $EDITOR} -setup {
 } -cleanup {
     unset -nocomplain env(EDITOR)
     file delete -force $test_dir
-} -result [list "Cancel editing\n" "Sacar al perro a pasear"]
+} -result [list "Cancel editing\n" "A"]
 
 
 proc setup_fossil_repo {repo_file test_dir} {
