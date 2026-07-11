@@ -116,6 +116,7 @@ let remove line todo_path effects =
 let complete line todo_path done_path effects =
 	let* (_, todo, updated) = extract line todo_path effects.read in
 	let* done_todos = effects.read done_path in
+	let todo = replace_word ~target:"@doing" ~replacement: "" todo in
 	let done_formated = effects.now () ^ " " ^ todo in
 	let* _ = effects.write (done_formated :: done_todos) done_path in
 	let* _ = effects.write updated todo_path in
@@ -132,7 +133,7 @@ let commit line todo_path done_path open_editor effects =
 	let* msg = if open_editor then
 		let* edited = effects.editor todo in
 		if edited = "" then Error (`CommitError "Commit aborted due to empty message") else Ok edited
-		else Ok todo
+		else Ok (replace_word ~target: "@doing" ~replacement: "" todo)
 	in
 
 	let* _ = effects.commit msg repo in

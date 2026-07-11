@@ -90,6 +90,7 @@ let () = case "Complete" (fun test ->
   (Ok ["any todo"], 2, Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem);
   (Ok ["any todo"], 1, Ok (), Ok "any todo");
+  (Ok ["any todo @doing"], 1, Ok (), Ok "any todo");
   ] |>
   List.iteri (fun i (read, line, write, expected) ->
     test (case_id i) (fun expect ->
@@ -163,6 +164,41 @@ let () = case "Edit" (fun test ->
 )
 
 let () = case "Commit" (fun test ->
+ [
+  (None    , Ok ["any todo"]  , 1,  Ok (), Ok (), Error `NoRepository);
+  (any_repo, Error `FileSystem, 1,  Ok (), Ok (), Error `FileSystem);
+  (any_repo, Ok ["any todo"], 2,  Ok (), Ok (), Error (`WrongLine 2));
+  (any_repo, Ok ["any todo"], 1,  Error (`CommitError "any error"), Ok (), Error (`CommitError "any error"));
+  (any_repo, Ok ["any todo"], 1,  Ok (), Error `FileSystem, Error `FileSystem);
+  (any_repo, Ok ["any todo @doing"], 1,  Ok (), Ok (), Ok "any todo");
+  ] |>
+  List.iteri (fun i (repo, read, line, commit_r, write, expected) ->
+    test (case_id i) (fun expect ->
+      expect.equal fmt_result_string expected
+        (commit line "any todo path" "any done path" false { (mock_effects ()) with
+          read = (fun _ -> read);
+          write = (fun _ _ -> write);
+          commit = (fun _ _ -> commit_r);
+          get_repo = (fun _ -> repo); })
+    )
+  );
+
+ test "archives todo in correct order on success" (fun expect ->
+    let write_calls = ref [] in
+    let _ = commit 1 "any todo path" "any done path" true { (mock_effects ()) with
+      read = (fun path -> if path = "any done path" then Ok ["20260625 some"] else Ok ["any todo"]);
+      write = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
+      now = (fun () -> "20260627");
+      editor = (fun _ -> Ok "edited");
+      get_repo = (fun _ -> any_repo);
+    } in
+    expect.equal fmt_tuple
+    	[("any done path", ["20260627 edited"; "20260625 some"]); ("any todo path", [])]
+      !write_calls
+  );
+)
+
+let () = case "Commit editing" (fun test ->
   [
   (None    , Ok ["any todo"]  , 1, Ok "any edition", Ok (), Ok (), Error `NoRepository);
   (any_repo, Error `FileSystem, 1, Ok "any edition", Ok (), Ok (), Error `FileSystem);
@@ -183,20 +219,6 @@ let () = case "Commit" (fun test ->
           commit = (fun _ _ -> commit_r);
           get_repo = (fun _ -> repo); })
     )
-  );
-
-  test "archives todo in correct order on success" (fun expect ->
-    let write_calls = ref [] in
-    let _ = commit 1 "any todo path" "any done path" true { (mock_effects ()) with
-      read = (fun path -> if path = "any done path" then Ok ["20260625 some"] else Ok ["any todo"]);
-      write = (fun data path -> write_calls := !write_calls @ [(path, data)]; Ok ());
-      now = (fun () -> "20260627");
-      editor = (fun _ -> Ok "edited");
-      get_repo = (fun _ -> any_repo);
-    } in
-    expect.equal fmt_tuple
-    	[("any done path", ["20260627 edited"; "20260625 some"]); ("any todo path", [])]
-      !write_calls
   );
 
   test "uses editor output as commit message" (fun expect ->
