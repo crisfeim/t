@@ -27,6 +27,32 @@ let () = case "List doing" (fun test ->
 	  )
 	)
 )
+let () = case "List doing across projects" (fun test ->
+   [
+    (Error `FileSystem, (fun _ -> Error `FileSystem), Error `FileSystem);
+    (Ok [], (fun _ -> Ok []), Ok []);
+    (Ok ["proj1"; "proj2"; "proj3"],
+     (fun path -> match path with
+       | "proj1" -> Ok ["compra @doing"; "lavar"]
+       | "proj2" -> Ok ["nada aqui"]
+       | "proj3" -> Ok ["otra @doing"; "mas @doing"]
+       | _ -> Ok []),
+     Ok [
+       ("proj1", ["1 compra @doing"]);
+       ("proj3", ["1 otra @doing"; "2 mas @doing"]);
+     ]);
+  ]
+  |>
+  List.iteri (fun i (projects_result, read_fn, expected) ->
+  	test "fail" (fun expect ->
+ 		expect.equal fmt_result_projects_doing expected (list_doing_across_projects
+                 { (mock_effects ()) with
+                   projects = (fun _ -> projects_result);
+                   read = read_fn });
+   )
+  )
+)
+
 
 let () = case "Add" (fun test ->
   [

@@ -58,6 +58,18 @@ let list_doing todo_path effects =
     |> List.map (fun (i, todo) -> Printf.sprintf "%d %s" i todo) in
 	Ok formatted
 
+let list_doing_across_projects effects =
+  let* all_projects = effects.projects () in
+  let results =
+    List.filter_map (fun path ->
+      match list_doing path effects with
+      | Ok doings when doings <> [] -> Some (path, doings)
+      | _ -> None
+    ) all_projects
+  in
+  let sorted = List.sort (fun (a, _) (b, _) -> compare a b) results in
+  Ok sorted
+
 let add todo todo_path effects =
 	let* todos = effects.read todo_path in
 	let updated = todos @ [todo] in

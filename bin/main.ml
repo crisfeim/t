@@ -218,7 +218,13 @@ let dispatch cmd todo_path done_path effects = match cmd with
   	let* projects = T.projects effects in
    	List.iter (fun path -> print_endline path) projects;
   	Ok()
-  | ListDoingAcrossProjects -> print_endline "@todo: list doing across projects" ; Ok()
+  | ListDoingAcrossProjects ->
+  	let* doing = list_doing_across_projects effects in
+  	List.iter (fun (path, doings) ->
+      print_endline (path ^ ":");
+      List.iter (fun d -> print_endline (" " ^ d)) doings
+    ) doing;
+   	Ok()
 
 
 let () =

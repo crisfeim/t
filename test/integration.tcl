@@ -41,7 +41,7 @@ test list_todos {List local todos when empty args} -setup {
 } -result "1 A\n2 B\n"
 
 
-test list_ongoing_todos {List ongoing todos} -setup {
+test list_@doing_todos {List @doing todos} -setup {
     set test_dir [exec mktemp -d]
 
     set todo_file [file join $test_dir ".todo"]
@@ -55,6 +55,39 @@ test list_ongoing_todos {List ongoing todos} -setup {
 } -cleanup {
     if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result "1 A @doing\n3 C @doing\n"
+
+
+test list_doing_across_projects {Lists @doing todos across all projects} -setup {
+    set fake_home [exec mktemp -d]
+
+    file mkdir [file join $fake_home "code" "proj1"]
+    set fh [open [file join $fake_home "code" "proj1" ".todo"] w]
+    puts $fh "A @doing"
+    puts $fh "B"
+    close $fh
+
+    file mkdir [file join $fake_home "code" "proj2"]
+    set fh [open [file join $fake_home "code" "proj2" ".todo"] w]
+    puts $fh "C"
+    close $fh
+
+    file mkdir [file join $fake_home "code" "proj3"]
+    set fh [open [file join $fake_home "code" "proj3" ".todo"] w]
+    puts $fh "D @doing"
+    close $fh
+} -body {
+    global env
+    set env(HOME) $fake_home
+    set output [exec -keepnewline sh -c "cd '$fake_home' && '[bin_path]' .@"]
+    set expected [subst {[file join $fake_home code proj1 .todo]:
+ 1 A @doing
+[file join $fake_home code proj3 .todo]:
+ 1 D @doing
+}]
+    expr {$output eq $expected}
+} -cleanup {
+    file delete -force $fake_home
+} -result 1
 
 test get_count {Delivers local todos total count} -setup {
     set test_dir [exec mktemp -d]
