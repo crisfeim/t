@@ -33,6 +33,7 @@ t +1 # Completes todo in line 1 & archives it in .done
 t -1 # Removes todo in line 1
 t c1 # If repository (fossil/git), stages all changes and commits using line 1's content as the commit message
 t c:1 # Opens editor before committing contents of line 1
+t @1 # Toggles @doing tag in todo 1
 t @ # Shows all todos tagged as @doing in local .todo
 t . # Shows all folders holding a .todo file within user's folder
 t .@ # Shows all todos tagged as @doing across every project folder
