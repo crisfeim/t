@@ -15,6 +15,19 @@ let () = case "List" (fun test ->
 	)
 )
 
+let () = case "List doing" (fun test ->
+  [
+  (Error `FileSystem, Error `FileSystem);
+  (Ok ["compra @doing"; "lavar"; "another @doing"], Ok ["1 compra @doing"; "3 another @doing"]);
+  ]
+  |>
+  List.iteri (fun i (read, expected) ->
+  	test (case_id i) (fun expect ->
+  		expect.equal fmt_result_list expected (list_doing "any todo path" { (mock_effects ()) with read = (fun _ -> read) })
+	  )
+	)
+)
+
 let () = case "Add" (fun test ->
   [
   (Error `FileSystem, Ok (), Error `FileSystem);
@@ -27,7 +40,7 @@ let () = case "Add" (fun test ->
 	       read = (fun _ -> read);
 	       write = (fun _ _ -> write) })
     )
- 	)
+ 	);
 )
 
 let () = case "Remove" (fun test ->

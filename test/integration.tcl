@@ -40,6 +40,22 @@ test list_todos {List local todos when empty args} -setup {
     if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result "1 A\n2 B\n"
 
+
+test list_ongoing_todos {List ongoing todos} -setup {
+    set test_dir [exec mktemp -d]
+
+    set todo_file [file join $test_dir ".todo"]
+    set fh [open $todo_file w]
+    puts $fh "A @doing"
+    puts $fh "B"
+    puts $fh "C @doing"
+    close $fh
+} -body {
+	t $test_dir @
+} -cleanup {
+    if {[file exists $todo_file]} { file delete -force $todo_file }
+} -result "1 A @doing\n3 C @doing\n"
+
 test get_count {Delivers local todos total count} -setup {
     set test_dir [exec mktemp -d]
 

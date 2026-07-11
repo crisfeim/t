@@ -210,7 +210,10 @@ let dispatch cmd todo_path done_path effects = match cmd with
     end
   | EditFile path -> print_endline "@todo: edit file"  ; Ok()
   | Doing (path, line) -> print_endline "@todo: doing"  ; Ok()
-  | ListDoing path -> print_endline "@todo: list doing"  ; Ok()
+  | ListDoing path ->
+  	let* todos = list_doing path effects in
+   	List.iter (fun doing -> print_endline doing) todos;
+  	Ok()
   | ListProjects ->
   	let* projects = T.projects effects in
    	List.iter (fun path -> print_endline path) projects;

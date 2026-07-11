@@ -40,6 +40,24 @@ let list todo_path effects =
 	let formatted = todos |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
 	Ok formatted
 
+let string_contains ~needle haystack =
+  let nlen = String.length needle in
+  let hlen = String.length haystack in
+  let rec loop i =
+    if i + nlen > hlen then false
+    else if String.sub haystack i nlen = needle then true
+    else loop (i + 1)
+  in
+  if nlen = 0 then true else loop 0
+
+let list_doing todo_path effects =
+	let* todos = effects.read todo_path in
+	let formatted = todos
+		|> List.mapi (fun i todo -> (i + 1, todo))
+    |> List.filter (fun (_, todo) -> string_contains ~needle:"@doing" todo)
+    |> List.map (fun (i, todo) -> Printf.sprintf "%d %s" i todo) in
+	Ok formatted
+
 let add todo todo_path effects =
 	let* todos = effects.read todo_path in
 	let updated = todos @ [todo] in
