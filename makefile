@@ -1,5 +1,6 @@
 build:
 	dune build
+	cp _build/default/bin/main.exe ~/.local/bin/t
 
 .PHONY: test
 test: build
