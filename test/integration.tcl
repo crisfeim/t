@@ -73,6 +73,24 @@ test add_todo {Adds todo to local .todo file} -setup {
     if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result [list "New todo\n" "New todo"]
 
+test remove_todo {Removos todo from local .todo file} -setup {
+    set test_dir [exec mktemp -d]
+    set todo_file [file join $test_dir ".todo"]
+    set fh [open $todo_file w]
+    puts $fh "A"
+    close $fh
+} -body {
+    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' -1"]
+
+    set fh [open $todo_file r]
+    set file_content [read -nonewline $fh]
+    close $fh
+
+    list $output $file_content
+} -cleanup {
+    if {[file exists $todo_file]} { file delete -force $todo_file }
+} -result [list "A\n" ""]
+
 test complete_todo {Completes a todo from local todos} -setup {
 	set test_dir [exec mktemp -d]
   set todo_file [file join $test_dir ".todo"]

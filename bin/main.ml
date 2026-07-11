@@ -76,7 +76,10 @@ let () =
       	| Ok todo -> print_endline todo
        	| Error _ -> print_endline "Error"
        end
-      | Remove (path, line) -> print_endline "@todo: remove"
+      | Remove (path, lines) -> begin match (remove (List.hd lines) path effects) with
+      	| Ok todo -> print_endline todo
+        | Error _ -> print_endline "Error"
+        end
       | Edit (path, line) -> print_endline "@todo: edit"
       | Commit (path, line, msg) -> print_endline "@todo: commit"
       | Echo (path, line) -> print_endline "@todo: echo"
