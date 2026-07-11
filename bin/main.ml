@@ -49,7 +49,11 @@ let () =
       	| Ok todos -> List.iter (fun todo -> print_endline todo) todos
       	| Error _ -> print_endline "Error"
        	end
-      | ListRange (path, line) -> print_endline "@todo: list range"
+      | ListRange (path, range) -> begin match (list path effects) with
+      	|	Ok todos -> todos |> List.filteri (fun i _ -> List.mem (i + 1) range)
+       		|> List.iter (fun todo -> print_endline todo)
+       	| Error _ -> print_endline "Error"
+      	end
       | Add (path, todo) -> print_endline "@todo: add"
       | Complete (path, line) -> print_endline "@todo: complete"
       | Remove (path, line) -> print_endline "@todo: remove"

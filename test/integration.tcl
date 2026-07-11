@@ -43,5 +43,19 @@ test get_count {Delivers local todos total count} -setup {
     if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result "2\n"
 
+test list_range {Lists a range from local todos} -setup {
+	set test_dir [exec mktemp -d]
+  set todo_file [file join $test_dir ".todo"]
+  set fh [open $todo_file w]
+  puts $fh "A"
+  puts $fh "B"
+  puts $fh "C"
+  close $fh
+} -body {
+	 set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' 1...2"]
+} -cleanup {
+	if {[file exists $todo_file]} { file delete -force $todo_file }
+} -result "1 C\n2 B\n"
+
 exit_1_on_test_failure
 cleanupTests
