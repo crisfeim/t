@@ -1,4 +1,3 @@
-#!/opt/homebrew/bin/tclsh
 package require tcltest
 namespace import tcltest::*
 
