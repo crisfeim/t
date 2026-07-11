@@ -1,1 +1,1 @@
-val fx : unit -> T.effects
+val fx : unit -> T.Logic.effects

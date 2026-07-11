@@ -1,6 +1,6 @@
 open Test_lib
 open Test_helpers
-open T
+open T.Parser
 
 let any_todo_path = "any-todo-path"
 

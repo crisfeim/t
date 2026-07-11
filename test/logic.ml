@@ -1,4 +1,4 @@
-open T
+open T.Logic
 open Test_lib
 open Test_helpers
 

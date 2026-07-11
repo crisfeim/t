@@ -1,4 +1,5 @@
-open T
+open T.Parser
+open T.Logic
 open Effects
 
 let get_todo_path () =
@@ -34,7 +35,7 @@ let dispatch cmd todo_path done_path effects : (string, _) result = match cmd wi
 		let* edited = edit line path effects in
 		Ok edited
 	| Commit (path, line, editing) ->
-		let* msg = T.commit line path done_path editing effects in
+		let* msg = T.Logic.commit line path done_path editing effects in
 		Ok msg
 	| Echo (path, line) ->
 		let* todos = list path effects in
@@ -50,7 +51,7 @@ let dispatch cmd todo_path done_path effects : (string, _) result = match cmd wi
 		let* todos = list_doing path effects in
 		Ok (String.concat "\n" todos)
 	| ListProjects ->
-		let* projects = T.projects effects in
+		let* projects = T.Logic.projects effects in
 		Ok (String.concat "\n" projects)
 	| ListDoingAcrossProjects ->
 		let* doing = list_doing_across_projects effects in

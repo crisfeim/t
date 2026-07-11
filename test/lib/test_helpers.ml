@@ -1,5 +1,6 @@
 open Test_lib
-open T
+open T.Logic
+open T.Parser
 
 (* Test helpers *)
 let any_read = (fun _ -> Ok [])

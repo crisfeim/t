@@ -1,4 +1,4 @@
-open T
+open T.Logic
 
 let read_lines file_path =
   try
