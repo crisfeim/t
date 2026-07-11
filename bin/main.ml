@@ -1,3 +1,5 @@
+open T
+
 let () =
   (* Sys.argv es un array con los argumentos recibidos.
      El índice 0 es el nombre del ejecutable; el resto son tus argumentos. *)

@@ -6,7 +6,7 @@ type error =
   | `Editor
   | `NoRepository
   | `CommitError of string
-]
+  ]
 
 (* Custom bindings *)
 let ( let*?) = Option.bind
@@ -153,7 +153,7 @@ let drop n str =
 
 let is_numeric str = Option.is_some (int_of_string_opt str)
 
-let batch_cmd operator str =
+let is_batch_cmd operator str =
 	String.length str > 1
   && String.get str 0 = operator
 	&& (drop 1 str
@@ -177,8 +177,8 @@ let parse_range str =
 
 let parser path args= match args with
 	| [] -> Some (List path)
-	| [single] when batch_cmd '+' single -> Some (Complete (path, ((list_from (drop 1 single)) |> List.map int_of_string)))
-	| [single] when batch_cmd '-' single -> Some (Remove (path, ((list_from (drop 1 single)) |> List.map int_of_string)))
+	| [single] when is_batch_cmd '+' single -> Some (Complete (path, ((list_from (drop 1 single)) |> List.map int_of_string)))
+	| [single] when is_batch_cmd '-' single -> Some (Remove (path, ((list_from (drop 1 single)) |> List.map int_of_string)))
 	| [single] when cmd ':' single -> Some (Edit (path, int_of_string (drop 1 single)))
 	| [single] when cmd 'c' single -> Some (Commit (path, int_of_string (drop 1 single), false))
 	| [single] when cmd '@' single -> Some (Doing (path, int_of_string (drop 1 single)))
