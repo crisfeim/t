@@ -200,6 +200,23 @@ proc make_fake_editor {test_dir content} {
     return $editor_script
 }
 
+test update_todo {Edits a todo via $EDITOR} -setup {
+    set test_dir [exec mktemp -d]
+    set todo_file [file join $test_dir ".todo"]
+    set fh [open $todo_file w]
+    puts $fh "A"
+    close $fh
+} -body {
+    set output [t $test_dir :1 'New value']
+    set todo_file_content [read_file $todo_file]
+    list $output $todo_file_content
+} -cleanup {
+    unset -nocomplain env(EDITOR)
+    file delete -force $test_dir
+} -result [list "New value\n" "New value"]
+
+
+
 test edit_todo {Edits a todo via $EDITOR} -setup {
     set test_dir [exec mktemp -d]
     set todo_file [file join $test_dir ".todo"]

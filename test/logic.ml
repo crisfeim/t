@@ -115,6 +115,24 @@ let () = case "Complete" (fun test ->
   )
 )
 
+let () = case "Update" (fun test ->
+	[
+	Error `FileSystem, 1, Error `FileSystem, "any update", Error `FileSystem ;
+	Ok["any todo"], 1, Error `FileSystem, "any update", Error `FileSystem;
+	Ok["any todo"], 2, Ok(), "any update", Error (`WrongLine 2);
+	Ok["any todo"], 1, Ok(), "any update", Ok "any update"
+	]
+	|>
+	List.iteri (fun i (read, line, write, new_content, expected) ->
+		test (case_id i) (fun expect ->
+			expect.equal fmt_result_string expected (update "any-path" line new_content { (mock_effects()) with
+				read = (fun _ -> read);
+				write = (fun _ _ -> write)
+			})
+		)
+	)
+)
+
 let () = case "Edit" (fun test ->
   [
   (Error `FileSystem, 1, Ok "any edition", Ok (), Error `FileSystem);

@@ -92,6 +92,12 @@ let extract line todo_path read =
 	Ok (todos, extracted, updated)
 
 
+let update todo_path line new_content effects =
+	let* (todos, _, _) = extract line todo_path effects.read in
+  let updated = todos |> List.mapi (fun idx content -> if idx = line - 1 then new_content else content) in
+  let* _ = effects.write updated todo_path in
+	Ok new_content
+
 
 let toggle_doing line todo_path effects =
 

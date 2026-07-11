@@ -34,7 +34,9 @@ let dispatch cmd todo_path done_path effects : (string, _) result = match cmd wi
 	| Edit (path, line) ->
 		let* edited = edit line path effects in
 		Ok edited
-	| Update (path ,line, value) -> Ok ("@todo")
+	| Update (path ,line, value) ->
+		let* updated = update path line value effects in
+		Ok updated
 	| Commit (path, line, editing) ->
 		let* msg = T.Logic.commit line path done_path editing effects in
 		Ok msg
