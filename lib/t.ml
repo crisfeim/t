@@ -40,6 +40,14 @@ let list todo_path effects =
 	let formatted = todos |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
 	Ok formatted
 
+
+let replace_word ~target ~replacement str =
+  str
+  |> String.split_on_char ' '
+  |> List.map (fun word -> if word = target then replacement else word)
+  |> List.filter (fun word -> word <> "")
+  |> String.concat " "
+
 let string_contains ~needle haystack =
   let nlen = String.length needle in
   let hlen = String.length haystack in
@@ -82,6 +90,23 @@ let extract line todo_path read =
 	let updated = todos |> List.filteri (fun idx _ -> idx <> line - 1) in
 	let extracted = List.nth todos (line - 1) in
 	Ok (todos, extracted, updated)
+
+
+
+let toggle_doing line todo_path effects =
+
+	let toggle_tag str =
+		if string_contains ~needle:"@doing" str then
+			replace_word ~target:"@doing" ~replacement:"" str
+		else
+		str ^ " @doing"
+	in
+	let* (todos, todo, _) = extract line todo_path effects.read in
+	let updated = todos |> List.mapi (fun idx content ->
+	 if idx = line - 1 then toggle_tag content else content
+	) in
+	let* _ = effects.write updated todo_path in
+	Ok (toggle_tag todo)
 
 let remove line todo_path effects =
 	let* (_, removed, updated) = extract line todo_path effects.read in

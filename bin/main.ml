@@ -210,7 +210,9 @@ let dispatch cmd todo_path done_path effects : (string, _) result = match cmd wi
 		| None -> Error (`WrongLine line)
 		end
 	| EditFile path -> Ok "@todo: edit file"
-	| Doing (path, line) -> Ok "@todo: doing"
+	| Doing (path, line) ->
+		let* todo = toggle_doing line path effects in
+		Ok todo
 	| ListDoing path ->
 		let* todos = list_doing path effects in
 		Ok (String.concat "\n" todos)

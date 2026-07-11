@@ -142,7 +142,7 @@ test add_todo {Adds todo to local .todo file} -setup {
     if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result [list "New todo\n" "New todo"]
 
-test remove_todo {Removos todo from local .todo file} -setup {
+test remove_todo {Removes todo from local .todo file} -setup {
     set test_dir [exec mktemp -d]
     set todo_file [file join $test_dir ".todo"]
     set fh [open $todo_file w]
@@ -155,6 +155,20 @@ test remove_todo {Removos todo from local .todo file} -setup {
 } -cleanup {
     if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result [list "A\n" ""]
+
+test mark_todo_as_doing {Set todo as @doing in local .todo file} -setup {
+    set test_dir [exec mktemp -d]
+    set todo_file [file join $test_dir ".todo"]
+    set fh [open $todo_file w]
+    puts $fh "A"
+    close $fh
+} -body {
+    set output [t $test_dir @1]
+    set file_content [read_file $todo_file]
+    list $output $file_content
+} -cleanup {
+    if {[file exists $todo_file]} { file delete -force $todo_file }
+} -result [list "A @doing\n" "A @doing"]
 
 test complete_todo {Completes a todo from local todos} -setup {
 	set test_dir [exec mktemp -d]
