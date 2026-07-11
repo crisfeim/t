@@ -230,8 +230,7 @@ let dispatch cmd todo_path done_path effects : (string, _) result = match cmd wi
 
 
 let () =
-  let args = Array.to_list Sys.argv in
-  let cli_args = match args with [] -> [] | _::tl -> tl in
+  let cli_args = match (Array.to_list Sys.argv) with [] -> [] | _::tl -> tl in
   let effects = (fx()) in
   let todo_path = get_todo_path() in
   let done_path = get_done_path() in
