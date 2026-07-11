@@ -238,6 +238,37 @@ test commit_todo {Commits a todo to fossil, archives it, empties .todo} -setup {
     file delete -force $test_dir
 } -result [list "" 1 2 1]
 
+test list_projects {Finds .todo files across home dir} -setup {
+    set fake_home [exec mktemp -d]
+
+    # free .todo at root "home"
+    close [open [file join $fake_home ".todo"] w]
+
+    # real nested project with own .todo
+    file mkdir [file join $fake_home "code" "myproject"]
+    close [open [file join $fake_home "code" "myproject" ".todo"] w]
+
+    # must be EXCLUDED
+    file mkdir [file join $fake_home "Library" "SomeApp"]
+    close [open [file join $fake_home "Library" "SomeApp" ".todo"] w]
+
+    # must be EXCLUDED
+    file mkdir [file join $fake_home ".config" "tool"]
+    close [open [file join $fake_home ".config" "tool" ".todo"] w]
+} -body {
+    global env
+    set env(HOME) $fake_home
+    set output [t $fake_home .]
+    set lines [lsort [split [string trim $output] "\n"]]
+    set expected [lsort [list \
+      [file join $fake_home ".todo"] \
+      [file join $fake_home "code" "myproject" ".todo"] \
+    ]]
+    expr {$lines eq $expected}
+} -cleanup {
+    unset -nocomplain env(HOME)
+    file delete -force $fake_home
+} -result 1
 
 exit_1_on_test_failure
 cleanupTests

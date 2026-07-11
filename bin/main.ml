@@ -116,8 +116,41 @@ let commit message repo =
     (try Sys.remove err_file with _ -> ());
     result
 
+
+let find_todos root =
+  let exclude_dirs = ["Library"; "Music"; "Pictures"; "Movies"; "Documents"] in
+  let exclude_clause =
+    List.concat_map (fun d -> ["-path"; Filename.concat root d; "-o"]) exclude_dirs
+  in
+  let exclude_clause = match List.rev exclude_clause with
+    | "-o" :: rest -> List.rev rest
+    | _ -> exclude_clause
+  in
+  let argv = Array.of_list (
+    ["find"; root;
+     "-type"; "d"; "-path"; "*/.*"; "-prune"; "-o";
+     "-type"; "d"; "("] @ exclude_clause @ [")"; "-prune"; "-o";
+     "-type"; "f"; "-name"; ".todo*"; "-print"]
+  ) in
+  try
+    let ic = Unix.open_process_args_in "/usr/bin/find" argv in
+    let rec loop acc =
+      match input_line ic with
+      | line -> loop (line :: acc)
+      | exception End_of_file -> List.rev acc
+    in
+    let lines = loop [] in
+    ignore (Unix.close_process_in ic);
+    lines
+  with _ -> []
+
+let projects () =
+  match Sys.getenv_opt "HOME" with
+  | None -> Ok []
+  | Some home -> Ok (find_todos home)
+
 let fx () = {
-  projects = (fun _ -> Ok []);
+  projects = projects;
   read = read_lines;
   write = write_lines;
   now = (fun _ -> "@todo:formatted date");
@@ -178,7 +211,10 @@ let dispatch cmd todo_path done_path effects = match cmd with
   | EditFile path -> print_endline "@todo: edit file"  ; Ok()
   | Doing (path, line) -> print_endline "@todo: doing"  ; Ok()
   | ListDoing path -> print_endline "@todo: list doing"  ; Ok()
-  | ListProjects -> print_endline "@todo: list projects"  ; Ok()
+  | ListProjects ->
+  	let* projects = T.projects effects in
+   	List.iter (fun path -> print_endline path) projects;
+  	Ok()
   | ListDoingAcrossProjects -> print_endline "@todo: list doing across projects" ; Ok()
 
 
