@@ -2,5 +2,5 @@
 (include_subdirs unqualified)
 
 (test
- (name tests)
+ (name entrypoint)
  (libraries t))
