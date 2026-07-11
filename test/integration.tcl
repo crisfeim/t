@@ -78,7 +78,7 @@ test list_doing_across_projects {Lists @doing todos across all projects} -setup 
 } -body {
     global env
     set env(HOME) $fake_home
-    set output [exec -keepnewline sh -c "cd '$fake_home' && '[bin_path]' .@"]
+    set output [t $fake_home .@]
     set expected [subst {[file join $fake_home code proj1 .todo]:
  1 A @doing
 [file join $fake_home code proj3 .todo]:
@@ -336,7 +336,7 @@ test scoped_list_project {Lists todos scoped to a project by name} -setup {
 } -body {
     global env
     set env(HOME) $fake_home
-    exec -keepnewline sh -c "cd '$fake_home' && '[bin_path]' .myproject"
+    t $fake_home .myproject
 } -cleanup {
     unset -nocomplain env(HOME)
     file delete -force $fake_home
@@ -350,7 +350,7 @@ test scoped_complete {Completes a todo scoped to a project by name} -setup {
 } -body {
     global env
     set env(HOME) $fake_home
-    set output [exec -keepnewline sh -c "cd '$fake_home' && '[bin_path]' .myproject +1"]
+    set output [t $fake_home .myproject +1]
     set remaining [read_file $todo_file]
     list $output $remaining
 } -cleanup {
