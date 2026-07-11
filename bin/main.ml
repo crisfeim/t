@@ -1,8 +1,6 @@
 open T
 
 (* Effects *)
-
-
 let read_lines file_path =
   try
     let ch = open_in file_path in
@@ -57,14 +55,75 @@ let editor todo =
     end
   with _ -> Error `Editor
 
+
+let get_repo todo_path =
+  let start = Filename.dirname todo_path in
+  let rec find current fossil git =
+    let fossil =
+      if fossil = None && Sys.file_exists (Filename.concat current ".fslckout")
+      then Some current else fossil
+    in
+    let git =
+      if git = None && Sys.file_exists (Filename.concat current ".git")
+      then Some current else git
+    in
+    let parent = Filename.dirname current in
+    if parent = current then (fossil, git) else find parent fossil git
+  in
+  match find start None None with
+  | Some f, Some g ->
+      if String.length f >= String.length g
+      then Some { path = f; system = "fossil" }
+      else Some { path = g; system = "git" }
+  | Some f, None -> Some { path = f; system = "fossil" }
+  | None, Some g -> Some { path = g; system = "git" }
+  | None, None -> None
+
+let commit message repo =
+  let commands = match repo.system with
+    | "git" -> [ ["git"; "add"; "-A"]; ["git"; "commit"; "-m"; message] ]
+    | "fossil" -> [ ["fossil"; "addremove"]; ["fossil"; "commit"; "-m"; message] ]
+    | _ -> []
+  in
+  match commands with
+  | [] -> Error (`CommitError "unhandled vcs")
+  | cmds ->
+    let err_file = Filename.temp_file "todo_commit_err" ".txt" in
+    let result =
+      List.fold_left (fun acc args ->
+        match acc with
+        | Error _ -> acc
+        | Ok () ->
+          let quoted = List.map Filename.quote args in
+          let full_cmd =
+            Printf.sprintf "cd %s && %s >/dev/null 2>%s"
+              (Filename.quote repo.path)
+              (String.concat " " quoted)
+              (Filename.quote err_file)
+          in
+          if Sys.command full_cmd = 0 then Ok ()
+          else
+            let msg =
+              try
+                let ch = open_in err_file in
+                let content = really_input_string ch (in_channel_length ch) in
+                close_in ch; content
+              with _ -> "unknown commit error"
+            in
+            Error (`CommitError msg)
+      ) (Ok ()) cmds
+    in
+    (try Sys.remove err_file with _ -> ());
+    result
+
 let fx () = {
   projects = (fun _ -> Ok []);
   read = read_lines;
   write = write_lines;
   now = (fun _ -> "@todo:formatted date");
   editor = editor;
-  commit = (fun _ _ -> Ok ());
-  get_repo = (fun _ -> None);
+  commit = commit;
+  get_repo = get_repo;
 }
 
 let get_todo_path () =
@@ -107,7 +166,9 @@ let dispatch cmd todo_path done_path effects = match cmd with
 		let* edited = edit line path effects in
 		print_endline edited;
 		Ok()
-  | Commit (path, line, msg) -> print_endline "@todo: commit" ; Ok()
+  | Commit (path, line, editing) ->
+  	let* _ = T.commit line path done_path editing effects in
+  	Ok()
   | Echo (path, line) ->
   	let* todos = list path effects in
    	begin match List.nth_opt todos (line - 1) with
@@ -131,6 +192,10 @@ let () =
   | Some cmd ->
   		begin match (dispatch cmd todo_path done_path effects) with
     	| Ok () -> ()
-     	| Error _ -> print_endline "error"
+    	| Error (`NoRepository) -> print_endline "No repository found";
+      | Error (`CommitError msg) -> print_endline ("Commit failed: " ^ msg);
+      | Error (`FileSystem) -> print_endline "Filesystem error";
+      | Error (`Editor) -> print_endline "Editor error";
+      | Error (`WrongLine n) -> print_endline (Printf.sprintf "No todo at line %d" n);
       end
   | None -> print_endline "@todo: none"

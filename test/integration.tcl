@@ -192,5 +192,47 @@ test edit_cancels_on_unchanged_edit {Edits a todo via $EDITOR} -setup {
     file delete -force $test_dir
 } -result [list "Cancel editing\n" "Sacar al perro a pasear"]
 
+
+proc setup_fossil_repo {repo_file test_dir} {
+    exec fossil init $repo_file
+    exec sh -c "cd '$test_dir' && fossil open '$repo_file'"
+}
+
+test commit_todo {Commits a todo to fossil, archives it, empties .todo} -setup {
+    set repo_dir [exec mktemp -d]
+    set test_dir [exec mktemp -d]
+    set repo_file [file join $repo_dir "repo.fossil"]
+    setup_fossil_repo $repo_file $test_dir
+
+    set todo_file [file join $test_dir ".todo"]
+    set done_file [file join $test_dir ".done"]
+    set fh [open $todo_file w]
+    puts $fh "dummy todo content"
+    close $fh
+
+    #  Add fake work so we avoid 'nothing has changed' errors
+    set work_file [file join $test_dir "work.txt"]
+    set fh [open $work_file w]
+    puts $fh "some project change"
+    close $fh
+} -body {
+    exec sh -c "cd '$test_dir' && '[bin_path]' c1" 2>@1
+
+    set todo_file_content [read_file $todo_file]
+    set done_file_content [read_file $done_file]
+    set has_todo_in_done [regexp {dummy todo content} $done_file_content]
+
+    set commit_count [exec sh -c "cd '$test_dir' && fossil sql \"SELECT count(*) FROM event WHERE type='ci';\" 2>/dev/null"]
+    set commit_msg [exec sh -c "cd '$test_dir' && fossil sql \"SELECT comment FROM event WHERE type='ci';\" 2>/dev/null"]
+    set has_correct_commit_msg [regexp {dummy todo content} $commit_msg]
+
+    list $todo_file_content $has_todo_in_done $commit_count $has_correct_commit_msg
+
+} -cleanup {
+    file delete -force $repo_dir
+    file delete -force $test_dir
+} -result [list "" 1 2 1]
+
+
 exit_1_on_test_failure
 cleanupTests
