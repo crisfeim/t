@@ -18,7 +18,7 @@ let read_lines file_path =
   with _ ->
     Ok []
 
-let write todos file_path =
+let write_lines todos file_path =
   try
     (* Open_trunc empties file so we can override it *)
     let ch = open_out_gen [Open_wronly; Open_creat; Open_trunc; Open_text] 0o666 file_path in
@@ -31,7 +31,7 @@ let write todos file_path =
 let fx () = {
   projects = (fun _ -> Ok []);
   read = read_lines;
-  write = (fun _ _ -> Ok ());
+  write = write_lines;
   now = (fun _ -> "@todo:formatted date");
   editor = (fun _ -> Ok "");
   commit = (fun _ _ -> Ok ());

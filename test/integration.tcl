@@ -58,18 +58,26 @@ test list_range {Lists a range from local todos} -setup {
 } -result "1 C\n2 B\n"
 
 test add_todo {Adds todo to local .todo file} -setup {
-	set test_dir [exec mktemp -d]
-  set todo_file [file join $test_dir ".todo"]
-  close [open $todo_file w]
+    set test_dir [exec mktemp -d]
+    set todo_file [file join $test_dir ".todo"]
+    close [open $todo_file w]
 } -body {
-	 set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' New todo"]
+    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' 'New todo'"]
+
+    set fh [open $todo_file r]
+    set file_content [read -nonewline $fh]
+    close $fh
+
+    list $output $file_content
 } -cleanup {
-	if {[file exists $todo_file]} { file delete -force $todo_file }
-} -result "New todo\n"
+    if {[file exists $todo_file]} { file delete -force $todo_file }
+} -result [list "New todo\n" "New todo"]
 
 test complete_todo {Completes a todo from local todos} -setup {
 	set test_dir [exec mktemp -d]
   set todo_file [file join $test_dir ".todo"]
+  set done_file [file join $test_dir ".done"]
+  close [open $done_file w]
   set fh [open $todo_file w]
   puts $fh "A"
   close $fh
