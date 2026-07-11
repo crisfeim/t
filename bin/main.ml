@@ -42,12 +42,16 @@ let get_todo_path () =
   let current_dir = Sys.getcwd () in
   Filename.concat current_dir ".todo"
 
+let get_done_path () =
+  let current_dir = Sys.getcwd () in
+  Filename.concat current_dir ".done"
 
 let () =
   let args = Array.to_list Sys.argv in
   let cli_args = match args with [] -> [] | _::tl -> tl in
   let effects = (fx()) in
   let todo_path = get_todo_path() in
+  let done_path = get_done_path() in
   match command_router todo_path cli_args effects with
   | Some cmd ->
       begin match cmd with
@@ -68,7 +72,10 @@ let () =
       	| Ok todo -> print_endline todo
         | Error _ -> print_endline "Error"
       	end
-      | Complete (path, line) -> print_endline "@todo: complete"
+      | Complete (path, lines) -> begin match (complete (List.hd lines) path done_path effects) with
+      	| Ok todo -> print_endline todo
+       	| Error _ -> print_endline "Error"
+       end
       | Remove (path, line) -> print_endline "@todo: remove"
       | Edit (path, line) -> print_endline "@todo: edit"
       | Commit (path, line, msg) -> print_endline "@todo: commit"
