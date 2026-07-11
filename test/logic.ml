@@ -45,10 +45,9 @@ let () = case "List doing across projects" (fun test ->
   |>
   List.iteri (fun i (projects_result, read_fn, expected) ->
   	test "fail" (fun expect ->
- 		expect.equal fmt_result_projects_doing expected (list_doing_across_projects
-                 { (mock_effects ()) with
-                   projects = (fun _ -> projects_result);
-                   read = read_fn });
+ 		expect.equal fmt_result_projects_doing expected (list_doing_across_projects  { (mock_effects ()) with
+      projects = (fun _ -> projects_result);
+      read = read_fn });
    )
   )
 )
