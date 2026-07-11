@@ -149,11 +149,20 @@ let projects () =
   | None -> Ok []
   | Some home -> Ok (find_todos home)
 
+let now () =
+  let tm = Unix.localtime (Unix.gettimeofday ()) in
+  Printf.sprintf "%04d%02d%02d%02d%02d"
+    (tm.Unix.tm_year + 1900)
+    (tm.Unix.tm_mon + 1)
+    tm.Unix.tm_mday
+    tm.Unix.tm_hour
+    tm.Unix.tm_min
+
 let fx () = {
   projects = projects;
   read = read_lines;
   write = write_lines;
-  now = (fun _ -> "@todo:formatted date");
+  now = now;
   editor = editor;
   commit = commit;
   get_repo = get_repo;
