@@ -31,22 +31,22 @@ test list_todos {List local todos when empty args} -setup {
 
     set todo_file [file join $test_dir ".todo"]
     set fh [open $todo_file w]
-    puts $fh "lavar la ropa"
-    puts $fh "comprar leche"
+    puts $fh "A"
+    puts $fh "B"
     close $fh
 } -body {
 	t $test_dir
 } -cleanup {
     if {[file exists $todo_file]} { file delete -force $todo_file }
-} -result "1 comprar leche\n2 lavar la ropa\n"
+} -result "1 A\n2 B\n"
 
 test get_count {Delivers local todos total count} -setup {
     set test_dir [exec mktemp -d]
 
     set todo_file [file join $test_dir ".todo"]
     set fh [open $todo_file w]
-    puts $fh "lavar la ropa"
-    puts $fh "comprar leche"
+    puts $fh "A"
+    puts $fh "B"
     close $fh
 } -body {
   t $test_dir count
@@ -66,7 +66,7 @@ test list_range {Lists a range from local todos} -setup {
 	t $test_dir 1...2
 } -cleanup {
 	if {[file exists $todo_file]} { file delete -force $todo_file }
-} -result "1 C\n2 B\n"
+} -result "1 A\n2 B\n"
 
 test echo {Echoes line from local .todo} -setup {
 	set test_dir [exec mktemp -d]
@@ -283,7 +283,7 @@ proc setup_fake_project {fake_home project_name relative_dir todo_lines} {
 test scoped_list_project {Lists todos scoped to a project by name} -setup {
     set fake_home [exec mktemp -d]
     set todo_file [setup_fake_project $fake_home "myproject" "code/myproject" \
-        [list "lavar la ropa" "comprar leche"]]
+        [list "A" "B"]]
 } -body {
     global env
     set env(HOME) $fake_home
@@ -291,7 +291,7 @@ test scoped_list_project {Lists todos scoped to a project by name} -setup {
 } -cleanup {
     unset -nocomplain env(HOME)
     file delete -force $fake_home
-} -result "1 comprar leche\n2 lavar la ropa\n"
+} -result "1 A\n2 B\n"
 
 test scoped_complete {Completes a todo scoped to a project by name} -setup {
     set fake_home [exec mktemp -d]

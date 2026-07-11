@@ -5,7 +5,7 @@ open Test_helpers
 let () = case "List" (fun test ->
   [
   (Error `FileSystem, Error `FileSystem);
-  (Ok ["compra"; "lavar"], Ok ["1 lavar"; "2 compra"]);
+  (Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"]);
   ]
   |>
   List.iteri (fun i (read, expected) ->

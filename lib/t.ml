@@ -37,7 +37,7 @@ type effects = {
 
 let list todo_path effects =
 	let* todos = effects.read todo_path in
-	let formatted = todos |> List.rev |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
+	let formatted = todos |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
 	Ok formatted
 
 let add todo todo_path effects =
