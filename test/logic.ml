@@ -4,7 +4,7 @@ open Test_helpers
 
 let () = case "List" (fun test ->
   [
-  Error `FileSystem, Error `FileSystem;
+  Error `FileSystem     , Error `FileSystem;
   Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"];
   ]
   |>
@@ -17,7 +17,7 @@ let () = case "List" (fun test ->
 
 let () = case "List doing" (fun test ->
   [
-  Error `FileSystem, Error `FileSystem;
+  Error `FileSystem                              , Error `FileSystem;
   Ok ["compra @doing"; "lavar"; "another @doing"], Ok ["1 compra @doing"; "3 another @doing"];
   ]
   |>
@@ -29,8 +29,8 @@ let () = case "List doing" (fun test ->
 )
 let () = case "List doing across projects" (fun test ->
    [
-    Error `FileSystem, (fun _ -> Error `FileSystem), Error `FileSystem;
-    Ok [], (fun _ -> Ok []), Ok [];
+    Error `FileSystem       , (fun _ -> Error `FileSystem), Error `FileSystem;
+    Ok []                   , (fun _ -> Ok []), Ok [];
     Ok ["proj1"; "proj2"; "proj3"],
      (fun path -> match path with
        | "proj1" -> Ok ["compra @doing"; "lavar"]
@@ -55,9 +55,9 @@ let () = case "List doing across projects" (fun test ->
 
 let () = case "Add" (fun test ->
   [
-  Error `FileSystem, Ok (), Error `FileSystem;
-  Ok [], Error `FileSystem, Error `FileSystem;
-  Ok [], Ok (), Ok "any todo";
+  Error `FileSystem, Ok ()            , Error `FileSystem;
+  Ok []            , Error `FileSystem, Error `FileSystem;
+  Ok []            , Ok ()            , Ok "any todo";
   ]|>
   List.iteri (fun i (read, write, expected) ->
     test (case_id i) (fun expect ->
@@ -70,10 +70,10 @@ let () = case "Add" (fun test ->
 
 let () = case "Remove" (fun test ->
   [
-  Error `FileSystem, 1, Ok (), Error `FileSystem;
-  Ok ["any todo"], 2, Ok (), Error (`WrongLine 2);
-  Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem;
-  Ok ["any todo"], 1, Ok (), Ok "any todo";
+  Error `FileSystem, 1, Ok ()            , Error `FileSystem;
+  Ok ["any todo"]  , 2, Ok ()            , Error (`WrongLine 2);
+  Ok ["any todo"]  , 1, Error `FileSystem, Error `FileSystem;
+  Ok ["any todo"]  , 1, Ok ()            , Ok "any todo";
   ]|>
   List.iteri (fun i (read, line, write, expected) ->
 		test (case_id i) (fun expect ->
@@ -86,11 +86,11 @@ let () = case "Remove" (fun test ->
 
 let () = case "Complete" (fun test ->
   [
-  Error `FileSystem, 1, Ok (), Error `FileSystem;
-  Ok ["any todo"], 2, Ok (), Error (`WrongLine 2);
-  Ok ["any todo"], 1, Error `FileSystem, Error `FileSystem;
-  Ok ["any todo"], 1, Ok (), Ok "any todo";
-  Ok ["any todo @doing"], 1, Ok (), Ok "any todo";
+  Error `FileSystem     , 1, Ok ()            , Error `FileSystem;
+  Ok ["any todo"]       , 2, Ok ()            , Error (`WrongLine 2);
+  Ok ["any todo"]       , 1, Error `FileSystem, Error `FileSystem;
+  Ok ["any todo"]       , 1, Ok ()            , Ok "any todo";
+  Ok ["any todo @doing"], 1, Ok ()            , Ok "any todo";
   ] |>
   List.iteri (fun i (read, line, write, expected) ->
     test (case_id i) (fun expect ->
@@ -117,10 +117,10 @@ let () = case "Complete" (fun test ->
 
 let () = case "Update" (fun test ->
 	[
-	Error `FileSystem, 1, Error `FileSystem, "any update", Error `FileSystem ;
-	Ok["any todo"], 1, Error `FileSystem, "any update", Error `FileSystem;
-	Ok["any todo"], 2, Ok(), "any update", Error (`WrongLine 2);
-	Ok["any todo"], 1, Ok(), "any update", Ok "any update"
+	Error `FileSystem, 1, Error `FileSystem, "any update", Error `FileSystem;
+	Ok["any todo"]   , 1, Error `FileSystem, "any update", Error `FileSystem;
+	Ok["any todo"]   , 2, Ok()             , "any update", Error (`WrongLine 2);
+	Ok["any todo"]   , 1, Ok()             , "any update", Ok "any update"
 	]
 	|>
 	List.iteri (fun i (read, line, write, new_content, expected) ->
@@ -135,11 +135,11 @@ let () = case "Update" (fun test ->
 
 let () = case "Edit" (fun test ->
   [
-  Error `FileSystem, 1, Ok "any edition", Ok (), Error `FileSystem;
-  Ok ["any todo"], 2, Ok "any edition", Ok (), Error (`WrongLine 2);
-  Ok ["any todo"], 1, Error `Editor, Ok (), Error `Editor;
-  Ok ["any todo"], 1, Ok "any edition", Error `FileSystem, Error `FileSystem;
-  Ok ["any todo"], 1, Ok "some edition", Ok (), Ok "some edition";
+  Error `FileSystem, 1, Ok "any edition" , Ok ()            , Error `FileSystem;
+  Ok ["any todo"]  , 2, Ok "any edition" , Ok ()            , Error (`WrongLine 2);
+  Ok ["any todo"]  , 1, Error `Editor    , Ok ()            , Error `Editor;
+  Ok ["any todo"]  , 1, Ok "any edition" , Error `FileSystem, Error `FileSystem;
+  Ok ["any todo"]  , 1, Ok "some edition", Ok ()            , Ok "some edition";
   ] |>
   List.iteri (fun i (read, line, editor, write, expected) ->
     test (case_id i) (fun expect ->
@@ -183,10 +183,10 @@ let () = case "Edit" (fun test ->
 
 let () = case "EditFile" (fun test ->
   [
-  Error `FileSystem, Ok "any edition", Ok (), Error `FileSystem;
-  Ok ["A"; "B"], Error `Editor, Ok (), Error `Editor;
-  Ok ["A"; "B"], Ok "A\nB\nC", Error `FileSystem, Error `FileSystem;
-  Ok ["A"; "B"], Ok "A\nB\nC", Ok (), Ok "A\nB\nC";
+  Error `FileSystem, Ok "any edition", Ok ()            , Error `FileSystem;
+  Ok ["A"; "B"]    , Error `Editor   , Ok ()            , Error `Editor;
+  Ok ["A"; "B"]    , Ok "A\nB\nC"    , Error `FileSystem, Error `FileSystem;
+  Ok ["A"; "B"]    , Ok "A\nB\nC"    , Ok ()            , Ok "A\nB\nC";
   ] |>
   List.iteri (fun i (read, editor, write, expected) ->
     test (case_id i) (fun expect ->
@@ -222,12 +222,12 @@ let () = case "EditFile" (fun test ->
 
 let () = case "Commit" (fun test ->
  [
-  None    , Ok ["any todo"]  , 1,  Ok (), Ok (), Error `NoRepository;
-  any_repo, Error `FileSystem, 1,  Ok (), Ok (), Error `FileSystem;
-  any_repo, Ok ["any todo"], 2,  Ok (), Ok (), Error (`WrongLine 2);
-  any_repo, Ok ["any todo"], 1,  Error (`CommitError "any error"), Ok (), Error (`CommitError "any error");
-  any_repo, Ok ["any todo"], 1,  Ok (), Error `FileSystem, Error `FileSystem;
-  any_repo, Ok ["any todo @doing"], 1,  Ok (), Ok (), Ok "any todo";
+  None    , Ok ["any todo"]       , 1, Ok ()                           , Ok ()            , Error `NoRepository;
+  any_repo, Error `FileSystem     , 1, Ok ()                           , Ok ()            , Error `FileSystem;
+  any_repo, Ok ["any todo"]       , 2, Ok ()                           , Ok ()            , Error (`WrongLine 2);
+  any_repo, Ok ["any todo"]       , 1, Error (`CommitError "any error"), Ok ()            , Error (`CommitError "any error");
+  any_repo, Ok ["any todo"]       , 1, Ok ()                           , Error `FileSystem, Error `FileSystem;
+  any_repo, Ok ["any todo @doing"], 1, Ok ()                           , Ok ()            , Ok "any todo";
   ] |>
   List.iteri (fun i (repo, read, line, commit_r, write, expected) ->
     test (case_id i) (fun expect ->
@@ -257,14 +257,14 @@ let () = case "Commit" (fun test ->
 
 let () = case "Commit editing" (fun test ->
   [
-  None    , Ok ["any todo"]  , 1, Ok "any edition", Ok (), Ok (), Error `NoRepository;
-  any_repo, Error `FileSystem, 1, Ok "any edition", Ok (), Ok (), Error `FileSystem;
-  any_repo, Ok ["any todo"], 2, Ok "any edition", Ok (), Ok (), Error (`WrongLine 2);
-  any_repo, Ok ["any todo"], 1, Error `Editor, Ok (), Ok (), Error `Editor;
-  any_repo, Ok ["any todo"], 1, Ok "", Ok (), Ok (), Error (`CommitError "Commit aborted due to empty message");
-  any_repo, Ok ["any todo"], 1, Ok "any edition", Error (`CommitError "any error"), Ok (), Error (`CommitError "any error");
-  any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Error `FileSystem, Error `FileSystem;
-  any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Ok "any edition";
+  None    , Ok ["any todo"]  , 1, Ok "any edition", Ok ()                           , Ok ()            , Error `NoRepository;
+  any_repo, Error `FileSystem, 1, Ok "any edition", Ok ()                           , Ok ()            , Error `FileSystem;
+  any_repo, Ok ["any todo"]  , 2, Ok "any edition", Ok ()                           , Ok ()            , Error (`WrongLine 2);
+  any_repo, Ok ["any todo"]  , 1, Error `Editor   , Ok ()                           , Ok ()            , Error `Editor;
+  any_repo, Ok ["any todo"]  , 1, Ok ""           , Ok ()                           , Ok ()            , Error (`CommitError "Commit aborted due to empty message");
+  any_repo, Ok ["any todo"]  , 1, Ok "any edition", Error (`CommitError "any error"), Ok ()            , Error (`CommitError "any error");
+  any_repo, Ok ["any todo"]  , 1, Ok "any edition", Ok ()                           , Error `FileSystem, Error `FileSystem;
+  any_repo, Ok ["any todo"]  , 1, Ok "any edition", Ok ()                           , Ok ()            , Ok "any edition";
   ] |>
   List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
     test (case_id i) (fun expect ->
@@ -303,7 +303,7 @@ let () = case "Commit editing" (fun test ->
 let () = case "Projects" (fun test ->
   [
   Error `FileSystem, Error `FileSystem;
-  Ok ["p1"; "p2"], Ok ["p1"; "p2"];
+  Ok ["p1"; "p2"]  , Ok ["p1"; "p2"];
   ] |>
   List.iteri (fun i (projects_r, expected) ->
     test (case_id i) (fun expect ->
@@ -314,11 +314,11 @@ let () = case "Projects" (fun test ->
 
 let () = case "Set doing" (fun test ->
   [
-  Error `FileSystem, 1, Ok(), Error `FileSystem;
-  Ok["any todo"], 1, Error `FileSystem, Error `FileSystem;
-  Ok["any todo"], 2, Ok(), Error (`WrongLine 2);
-  Ok["some todo"], 1, Ok(), Ok "some todo @doing";
-  Ok["some todo @doing"], 1, Ok(), Ok "some todo";
+  Error `FileSystem     , 1, Ok()             , Error `FileSystem;
+  Ok["any todo"]        , 1, Error `FileSystem, Error `FileSystem;
+  Ok["any todo"]        , 2, Ok()             , Error (`WrongLine 2);
+  Ok["some todo"]       , 1, Ok()             , Ok "some todo @doing";
+  Ok["some todo @doing"], 1, Ok()             , Ok "some todo";
   ] |>
   List.iteri (fun i (read, line, write, expected) ->
     test (case_id i) (fun expect ->
@@ -331,9 +331,9 @@ let () = case "Set doing" (fun test ->
 
 let () = case "Project" (fun test ->
 	[
-	Error `FileSystem, Ok [], Error `FileSystem;
+	Error `FileSystem       , Ok []            , Error `FileSystem;
 	Ok ["/User/any-project"], Error `FileSystem, Error `FileSystem;
-	Ok ["/User/any-project"], Ok ["any todo"], Ok ["1 any todo"]
+	Ok ["/User/any-project"], Ok ["any todo"]  , Ok ["1 any todo"]
 	] |>
 	List.iteri (fun i (project_r, read_r, expected) ->
 		test (case_id i) (fun expect ->
