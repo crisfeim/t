@@ -192,7 +192,7 @@ let dispatch cmd todo_path done_path effects = match cmd with
 			print_endline completed;
 			Ok()
 	| Remove (path, lines) ->
-		let* removed = remove (List.hd lines) todo_path effects in
+		let* removed = remove (List.hd lines) path effects in
 		print_endline removed;
 		Ok()
 	| Edit (path, line) ->
