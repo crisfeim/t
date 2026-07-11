@@ -201,8 +201,8 @@ let dispatch cmd todo_path done_path effects : (string, _) result = match cmd wi
 		let* edited = edit line path effects in
 		Ok edited
 	| Commit (path, line, editing) ->
-		let* _ = T.commit line path done_path editing effects in
-		Ok ""
+		let* msg = T.commit line path done_path editing effects in
+		Ok msg
 	| Echo (path, line) ->
 		let* todos = list path effects in
 		begin match List.nth_opt todos (line - 1) with
@@ -238,7 +238,6 @@ let () =
   match command_router todo_path cli_args effects with
   | Some cmd ->
   		begin match (dispatch cmd todo_path done_path effects) with
-    	| Ok "" -> ()
     	| Ok msg -> print_endline msg
       | Error (`NoRepository) -> print_endline "No repository found";
       | Error (`CommitError msg) -> print_endline ("Commit failed: " ^ msg);

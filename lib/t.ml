@@ -140,7 +140,7 @@ let commit line todo_path done_path open_editor effects =
 	let done_formatted = effects.now () ^ " " ^ msg in
 	let* _ = effects.write (done_formatted :: done_todos) done_path in
 	let* _ = effects.write updated todo_path in
-	Ok ()
+	Ok msg
 
 let projects effects = effects.projects()
 

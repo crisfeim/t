@@ -171,11 +171,11 @@ let () = case "Commit" (fun test ->
   (any_repo, Ok ["any todo"], 1, Ok "", Ok (), Ok (), Error (`CommitError "Commit aborted due to empty message"));
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Error (`CommitError "any error"), Ok (), Error (`CommitError "any error"));
   (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Error `FileSystem, Error `FileSystem);
-  (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Ok());
+  (any_repo, Ok ["any todo"], 1, Ok "any edition", Ok (), Ok (), Ok "any edition");
   ] |>
   List.iteri (fun i (repo, read, line, editor, commit_r, write, expected) ->
     test (case_id i) (fun expect ->
-      expect.equal fmt_result_unit expected
+      expect.equal fmt_result_string expected
         (commit line "any todo path" "any done path" true { (mock_effects ()) with
           read = (fun _ -> read);
           write = (fun _ _ -> write);
