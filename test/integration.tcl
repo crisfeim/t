@@ -82,10 +82,21 @@ test complete_todo {Completes a todo from local todos} -setup {
   puts $fh "A"
   close $fh
 } -body {
-	 set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' +1"]
+	set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' +1"]
+	set todo_fh [open $todo_file r]
+	set todo_file_content [read -nonewline $todo_fh]
+	close $todo_fh
+
+	set done_fh [open $done_file r]
+	set done_file_content [read -nonewline $done_fh]
+	close $done_fh
+
+	set has_todo_in_done [regexp {A} $done_file_content]
+
+  list $output $todo_file_content $has_todo_in_done
 } -cleanup {
 	if {[file exists $todo_file]} { file delete -force $todo_file }
-} -result "A\n"
+} -result [list "A\n" "" 1]
 
 exit_1_on_test_failure
 cleanupTests
