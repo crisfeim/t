@@ -37,8 +37,38 @@ type effects = {
 
 let list todo_path effects =
 	let* todos = effects.read todo_path in
-	let formatted = todos |> List.rev |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
+	let formatted = todos |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
 	Ok formatted
+
+let string_contains ~needle haystack =
+  let nlen = String.length needle in
+  let hlen = String.length haystack in
+  let rec loop i =
+    if i + nlen > hlen then false
+    else if String.sub haystack i nlen = needle then true
+    else loop (i + 1)
+  in
+  if nlen = 0 then true else loop 0
+
+let list_doing todo_path effects =
+	let* todos = effects.read todo_path in
+	let formatted = todos
+		|> List.mapi (fun i todo -> (i + 1, todo))
+    |> List.filter (fun (_, todo) -> string_contains ~needle:"@doing" todo)
+    |> List.map (fun (i, todo) -> Printf.sprintf "%d %s" i todo) in
+	Ok formatted
+
+let list_doing_across_projects effects =
+  let* all_projects = effects.projects () in
+  let results =
+    List.filter_map (fun path ->
+      match list_doing path effects with
+      | Ok doings when doings <> [] -> Some (path, doings)
+      | _ -> None
+    ) all_projects
+  in
+  let sorted = List.sort (fun (a, _) (b, _) -> compare a b) results in
+  Ok sorted
 
 let add todo todo_path effects =
 	let* todos = effects.read todo_path in
@@ -92,10 +122,10 @@ let projects effects = effects.projects()
 let edit line todo_path effects =
 	let* (todos, todo, _) = extract line todo_path effects.read in
 	let* edited = effects.editor todo in
-	if edited = "" || edited = todo then Ok () else
+	if edited = "" || edited = todo then Ok "Cancel editing" else
 	let updated = todos |> List.mapi (fun idx content -> if idx = line - 1 then edited else content) in
 	let* _ = effects.write updated todo_path in
-	Ok ()
+	Ok edited
 
 let sort_matches projects =
 	List.sort (fun path1 path2 ->

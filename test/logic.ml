@@ -5,7 +5,7 @@ open Test_helpers
 let () = case "List" (fun test ->
   [
   (Error `FileSystem, Error `FileSystem);
-  (Ok ["compra"; "lavar"], Ok ["1 lavar"; "2 compra"]);
+  (Ok ["compra"; "lavar"], Ok ["1 compra"; "2 lavar"]);
   ]
   |>
   List.iteri (fun i (read, expected) ->
@@ -14,6 +14,44 @@ let () = case "List" (fun test ->
 	  )
 	)
 )
+
+let () = case "List doing" (fun test ->
+  [
+  (Error `FileSystem, Error `FileSystem);
+  (Ok ["compra @doing"; "lavar"; "another @doing"], Ok ["1 compra @doing"; "3 another @doing"]);
+  ]
+  |>
+  List.iteri (fun i (read, expected) ->
+  	test (case_id i) (fun expect ->
+  		expect.equal fmt_result_list expected (list_doing "any todo path" { (mock_effects ()) with read = (fun _ -> read) })
+	  )
+	)
+)
+let () = case "List doing across projects" (fun test ->
+   [
+    (Error `FileSystem, (fun _ -> Error `FileSystem), Error `FileSystem);
+    (Ok [], (fun _ -> Ok []), Ok []);
+    (Ok ["proj1"; "proj2"; "proj3"],
+     (fun path -> match path with
+       | "proj1" -> Ok ["compra @doing"; "lavar"]
+       | "proj2" -> Ok ["nada aqui"]
+       | "proj3" -> Ok ["otra @doing"; "mas @doing"]
+       | _ -> Ok []),
+     Ok [
+       ("proj1", ["1 compra @doing"]);
+       ("proj3", ["1 otra @doing"; "2 mas @doing"]);
+     ]);
+  ]
+  |>
+  List.iteri (fun i (projects_result, read_fn, expected) ->
+  	test "fail" (fun expect ->
+ 		expect.equal fmt_result_projects_doing expected (list_doing_across_projects  { (mock_effects ()) with
+      projects = (fun _ -> projects_result);
+      read = read_fn });
+   )
+  )
+)
+
 
 let () = case "Add" (fun test ->
   [
@@ -27,7 +65,7 @@ let () = case "Add" (fun test ->
 	       read = (fun _ -> read);
 	       write = (fun _ _ -> write) })
     )
- 	)
+ 	);
 )
 
 let () = case "Remove" (fun test ->
@@ -82,7 +120,7 @@ let () = case "Edit" (fun test ->
   (Ok ["any todo"], 2, Ok "any edition", Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `Editor, Ok (), Error `Editor);
   (Ok ["any todo"], 1, Ok "any edition", Error `FileSystem, Error `FileSystem);
-  (Ok ["any todo"], 1, Ok "any edition", Ok (), Ok());
+  (Ok ["any todo"], 1, Ok "some edition", Ok (), Ok "some edition");
   ] |>
   List.iteri (fun i (read, line, editor, write, expected) ->
     test (case_id i) (fun expect ->

@@ -65,3 +65,17 @@ let fmt_command = function
   | ListDoing p -> Printf.sprintf "ListDoing %S" p
   | ListProjects -> "ListProjects"
   | ListDoingAcrossProjects -> "ListDoingAcrossProjects"
+
+let fmt_result_projects_doing result =
+  match result with
+  | Error `FileSystem -> "Error FileSystem"
+  | Error `Editor -> "Error Editor"
+  | Error `NoRepository -> "Error NoRepository"
+  | Error (`CommitError msg) -> "Error CommitError: " ^ msg
+  | Error (`WrongLine n) -> Printf.sprintf "Error WrongLine %d" n
+  | Ok projects ->
+    projects
+    |> List.map (fun (path, doings) ->
+         Printf.sprintf "%s:\n%s" path
+           (doings |> List.map (fun d -> "  " ^ d) |> String.concat "\n"))
+    |> String.concat "\n"
