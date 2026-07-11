@@ -270,5 +270,44 @@ test list_projects {Finds .todo files across home dir} -setup {
     file delete -force $fake_home
 } -result 1
 
+proc setup_fake_project {fake_home project_name relative_dir todo_lines} {
+    set project_dir [file join $fake_home $relative_dir]
+    file mkdir $project_dir
+    set todo_file [file join $project_dir ".todo"]
+    set fh [open $todo_file w]
+    foreach line $todo_lines { puts $fh $line }
+    close $fh
+    return $todo_file
+}
+
+test scoped_list_project {Lists todos scoped to a project by name} -setup {
+    set fake_home [exec mktemp -d]
+    set todo_file [setup_fake_project $fake_home "myproject" "code/myproject" \
+        [list "lavar la ropa" "comprar leche"]]
+} -body {
+    global env
+    set env(HOME) $fake_home
+    exec -keepnewline sh -c "cd '$fake_home' && '[bin_path]' .myproject"
+} -cleanup {
+    unset -nocomplain env(HOME)
+    file delete -force $fake_home
+} -result "1 comprar leche\n2 lavar la ropa\n"
+
+test scoped_complete {Completes a todo scoped to a project by name} -setup {
+    set fake_home [exec mktemp -d]
+    set todo_file [setup_fake_project $fake_home "myproject" "code/myproject" \
+        [list "A"]]
+    close [open [file join $fake_home "code" "myproject" ".done"] w]
+} -body {
+    global env
+    set env(HOME) $fake_home
+    set output [exec -keepnewline sh -c "cd '$fake_home' && '[bin_path]' .myproject +1"]
+    set remaining [read_file $todo_file]
+    list $output $remaining
+} -cleanup {
+    unset -nocomplain env(HOME)
+    file delete -force $fake_home
+} -result [list "A\n" ""]
+
 exit_1_on_test_failure
 cleanupTests
