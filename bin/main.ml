@@ -177,63 +177,56 @@ let get_done_path () =
   Filename.concat current_dir ".done"
 
 (* dispatch cmd -> result *)
-let dispatch cmd todo_path done_path effects = match cmd with
+let dispatch cmd todo_path done_path effects : (string, _) result = match cmd with
 	| Count ->
 		let* todos = list todo_path effects in
-		print_endline (string_of_int (List.length todos));
-		Ok()
+		Ok (string_of_int (List.length todos))
 	| List path ->
 		let* todos = list path effects in
-		List.iter (fun todo -> print_endline todo) todos;
-		Ok()
+		Ok (String.concat "\n" todos)
 	| ListRange (path, range) ->
 		let* todos = list path effects in
-		todos
-			|> List.filteri (fun i _ -> List.mem (i + 1) range)
-			|> List.iter (fun todo -> print_endline todo);
-		Ok()
+		let filtered =
+			todos |> List.filteri (fun i _ -> List.mem (i + 1) range)
+		in
+		Ok (String.concat "\n" filtered)
 	| Add (path, todo) ->
 		let* added = add todo path effects in
-		print_endline added;
-		Ok()
+		Ok added
 	| Complete (path, lines) ->
-			let* completed = complete (List.hd lines) path done_path effects in
-			print_endline completed;
-			Ok()
+		let* completed = complete (List.hd lines) path done_path effects in
+		Ok completed
 	| Remove (path, lines) ->
 		let* removed = remove (List.hd lines) path effects in
-		print_endline removed;
-		Ok()
+		Ok removed
 	| Edit (path, line) ->
 		let* edited = edit line path effects in
-		print_endline edited;
-		Ok()
-  | Commit (path, line, editing) ->
-  	let* _ = T.commit line path done_path editing effects in
-  	Ok()
-  | Echo (path, line) ->
-  	let* todos = list path effects in
-   	begin match List.nth_opt todos (line - 1) with
-    | Some todo -> print_endline todo; Ok()
-    | None -> Error (`WrongLine line)
-    end
-  | EditFile path -> print_endline "@todo: edit file"  ; Ok()
-  | Doing (path, line) -> print_endline "@todo: doing"  ; Ok()
-  | ListDoing path ->
-  	let* todos = list_doing path effects in
-   	List.iter (fun doing -> print_endline doing) todos;
-  	Ok()
-  | ListProjects ->
-  	let* projects = T.projects effects in
-   	List.iter (fun path -> print_endline path) projects;
-  	Ok()
-  | ListDoingAcrossProjects ->
-  	let* doing = list_doing_across_projects effects in
-  	List.iter (fun (path, doings) ->
-      print_endline (path ^ ":");
-      List.iter (fun d -> print_endline (" " ^ d)) doings
-    ) doing;
-   	Ok()
+		Ok edited
+	| Commit (path, line, editing) ->
+		let* _ = T.commit line path done_path editing effects in
+		Ok ""
+	| Echo (path, line) ->
+		let* todos = list path effects in
+		begin match List.nth_opt todos (line - 1) with
+		| Some todo -> Ok todo
+		| None -> Error (`WrongLine line)
+		end
+	| EditFile path -> Ok "@todo: edit file"
+	| Doing (path, line) -> Ok "@todo: doing"
+	| ListDoing path ->
+		let* todos = list_doing path effects in
+		Ok (String.concat "\n" todos)
+	| ListProjects ->
+		let* projects = T.projects effects in
+		Ok (String.concat "\n" projects)
+	| ListDoingAcrossProjects ->
+		let* doing = list_doing_across_projects effects in
+		let lines =
+			List.concat_map (fun (path, doings) ->
+				(path ^ ":") :: List.map (fun d -> " " ^ d) doings
+			) doing
+		in
+		Ok (String.concat "\n" lines)
 
 
 let () =
@@ -245,8 +238,9 @@ let () =
   match command_router todo_path cli_args effects with
   | Some cmd ->
   		begin match (dispatch cmd todo_path done_path effects) with
-    	| Ok () -> ()
-    	| Error (`NoRepository) -> print_endline "No repository found";
+    	| Ok "" -> ()
+    	| Ok msg -> print_endline msg
+      | Error (`NoRepository) -> print_endline "No repository found";
       | Error (`CommitError msg) -> print_endline ("Commit failed: " ^ msg);
       | Error (`FileSystem) -> print_endline "Filesystem error";
       | Error (`Editor) -> print_endline "Editor error";

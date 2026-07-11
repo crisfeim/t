@@ -27,6 +27,7 @@ By default, data persists locally in `.todo` and `.done` files relative to the c
 t # List todos in local .todo
 t "New" # Adds a todo with "New" contents in last line of local .todo
 t 1  # Echoes todo in line 1
+t 1...5 # Echoes todos from 1 to 5
 t :1 # Opens $EDITOR for editing todo in line 1
 t +1 # Completes todo in line 1 & archives it in .done
 t -1 # Removes todo in line 1
