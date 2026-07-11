@@ -82,7 +82,7 @@ let () = case "Edit" (fun test ->
   (Ok ["any todo"], 2, Ok "any edition", Ok (), Error (`WrongLine 2));
   (Ok ["any todo"], 1, Error `Editor, Ok (), Error `Editor);
   (Ok ["any todo"], 1, Ok "any edition", Error `FileSystem, Error `FileSystem);
-  (Ok ["any todo"], 1, Ok "any edition", Ok (), Ok());
+  (Ok ["any todo"], 1, Ok "some edition", Ok (), Ok "some edition");
   ] |>
   List.iteri (fun i (read, line, editor, write, expected) ->
     test (case_id i) (fun expect ->

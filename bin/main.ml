@@ -28,12 +28,41 @@ let write_lines todos file_path =
   with _ ->
     Error `FileSystem
 
+let editor todo =
+  try
+    let temp_file = Filename.temp_file "todo_edit" ".txt" in
+    let ch = open_out temp_file in
+    output_string ch todo;
+    close_out ch;
+    let editor_cmd =
+      try Sys.getenv "EDITOR" with Not_found -> "vi"
+    in
+    let cmd = Printf.sprintf "%s %s" editor_cmd (Filename.quote temp_file) in
+    let exit_code = Sys.command cmd in
+    if exit_code <> 0 then begin
+      (try Sys.remove temp_file with _ -> ());
+      Error `Editor
+    end else begin
+      let ch = open_in temp_file in
+      let rec loop acc =
+        try
+          let line = input_line ch in
+          loop (if acc = "" then line else acc ^ "\n" ^ line)
+        with End_of_file -> acc
+      in
+      let content = loop "" in
+      close_in ch;
+      (try Sys.remove temp_file with _ -> ());
+      Ok content
+    end
+  with _ -> Error `Editor
+
 let fx () = {
   projects = (fun _ -> Ok []);
   read = read_lines;
   write = write_lines;
   now = (fun _ -> "@todo:formatted date");
-  editor = (fun _ -> Ok "");
+  editor = editor;
   commit = (fun _ _ -> Ok ());
   get_repo = (fun _ -> None);
 }
@@ -74,7 +103,10 @@ let dispatch cmd todo_path done_path effects = match cmd with
 		let* removed = remove (List.hd lines) todo_path effects in
 		print_endline removed;
 		Ok()
-	| Edit (path, line) -> print_endline "@todo: edit" ; Ok()
+	| Edit (path, line) ->
+		let* edited = edit line path effects in
+		print_endline edited;
+		Ok()
   | Commit (path, line, msg) -> print_endline "@todo: commit" ; Ok()
   | Echo (path, line) ->
   	let* todos = list path effects in

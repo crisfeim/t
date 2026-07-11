@@ -15,6 +15,13 @@ proc exit_1_on_test_failure {} {
 	}
 }
 
+proc read_file {file} {
+	set file_handle [open $file r]
+	set file_content [read -nonewline $file_handle]
+	close $file_handle
+	return $file_content
+}
+
 test list_todos {List local todos when empty args} -setup {
     set test_dir [exec mktemp -d]
 
@@ -75,10 +82,7 @@ test add_todo {Adds todo to local .todo file} -setup {
     close [open $todo_file w]
 } -body {
     set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' 'New todo'"]
-
-    set fh [open $todo_file r]
-    set file_content [read -nonewline $fh]
-    close $fh
+    set file_content [read_file $todo_file]
 
     list $output $file_content
 } -cleanup {
@@ -93,15 +97,13 @@ test remove_todo {Removos todo from local .todo file} -setup {
     close $fh
 } -body {
     set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' -1"]
-
-    set fh [open $todo_file r]
-    set file_content [read -nonewline $fh]
-    close $fh
-
+    set file_content [read_file $todo_file]
     list $output $file_content
 } -cleanup {
     if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result [list "A\n" ""]
+
+
 
 test complete_todo {Completes a todo from local todos} -setup {
 	set test_dir [exec mktemp -d]
@@ -113,20 +115,44 @@ test complete_todo {Completes a todo from local todos} -setup {
   close $fh
 } -body {
 	set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' +1"]
-	set todo_fh [open $todo_file r]
-	set todo_file_content [read -nonewline $todo_fh]
-	close $todo_fh
-
-	set done_fh [open $done_file r]
-	set done_file_content [read -nonewline $done_fh]
-	close $done_fh
-
+	set todo_file_content [read_file $todo_file]
+	set done_file_content [read_file $done_file]
 	set has_todo_in_done [regexp {A} $done_file_content]
 
   list $output $todo_file_content $has_todo_in_done
 } -cleanup {
 	if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result [list "A\n" "" 1]
+
+
+proc make_fake_editor {test_dir content} {
+    set editor_script [file join $test_dir "fake_editor.sh"]
+    set fh [open $editor_script w]
+    puts $fh {#!/bin/sh}
+    puts $fh "echo \"$content\" > \"\$1\""
+    close $fh
+    file attributes $editor_script -permissions 0755
+    return $editor_script
+}
+
+test edit_todo {Edits a todo via $EDITOR} -setup {
+    set test_dir [exec mktemp -d]
+    set todo_file [file join $test_dir ".todo"]
+    set fh [open $todo_file w]
+    puts $fh "Sacar al perro a pasear"
+    close $fh
+
+    set editor_override [make_fake_editor $test_dir "Pasear al perro por el parque"]
+} -body {
+    global env
+    set env(EDITOR) $editor_override
+    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' :1"]
+    set todo_file_content [read_file $todo_file]
+    list $output $todo_file_content
+} -cleanup {
+    unset -nocomplain env(EDITOR)
+    file delete -force $test_dir
+} -result [list "Pasear al perro por el parque\n" "Pasear al perro por el parque"]
 
 exit_1_on_test_failure
 cleanupTests

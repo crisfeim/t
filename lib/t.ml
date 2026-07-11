@@ -92,10 +92,10 @@ let projects effects = effects.projects()
 let edit line todo_path effects =
 	let* (todos, todo, _) = extract line todo_path effects.read in
 	let* edited = effects.editor todo in
-	if edited = "" || edited = todo then Ok () else
+	if edited = "" || edited = todo then Ok "Cancel editing" else
 	let updated = todos |> List.mapi (fun idx content -> if idx = line - 1 then edited else content) in
 	let* _ = effects.write updated todo_path in
-	Ok ()
+	Ok edited
 
 let sort_matches projects =
 	List.sort (fun path1 path2 ->
