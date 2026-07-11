@@ -18,6 +18,16 @@ let read_lines file_path =
   with _ ->
     Ok []
 
+let write todos file_path =
+  try
+    (* Open_trunc empties file so we can override it *)
+    let ch = open_out_gen [Open_wronly; Open_creat; Open_trunc; Open_text] 0o666 file_path in
+    List.iter (fun todo -> output_string ch (todo ^ "\n")) todos;
+    close_out ch;
+    Ok ()
+  with _ ->
+    Error `FileSystem
+
 let fx () = {
   projects = (fun _ -> Ok []);
   read = read_lines;
@@ -54,7 +64,10 @@ let () =
        		|> List.iter (fun todo -> print_endline todo)
        	| Error _ -> print_endline "Error"
       	end
-      | Add (path, todo) -> print_endline "@todo: add"
+      | Add (path, todo) -> begin match (add todo path effects) with
+      	| Ok todo -> print_endline todo
+        | Error _ -> print_endline "Error"
+      	end
       | Complete (path, line) -> print_endline "@todo: complete"
       | Remove (path, line) -> print_endline "@todo: remove"
       | Edit (path, line) -> print_endline "@todo: edit"
