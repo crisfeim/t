@@ -37,14 +37,18 @@ let () =
   let args = Array.to_list Sys.argv in
   let cli_args = match args with [] -> [] | _::tl -> tl in
   let effects = (fx()) in
-  match command_router (get_todo_path()) cli_args effects with
+  let todo_path = get_todo_path() in
+  match command_router todo_path cli_args effects with
   | Some cmd ->
       begin match cmd with
-      | Count -> print_endline "@todo: count"
+      | Count -> begin match (list todo_path effects) with
+      	| Ok todos -> print_endline (string_of_int (List.length todos))
+        | Error _ -> print_endline "Error"
+        end
       | List path -> begin match (list path effects) with
       	| Ok todos -> List.iter (fun todo -> print_endline todo) todos
       	| Error _ -> print_endline "Error"
-       end
+       	end
       | ListRange (path, line) -> print_endline "@todo: list range"
       | Add (path, todo) -> print_endline "@todo: add"
       | Complete (path, line) -> print_endline "@todo: complete"
