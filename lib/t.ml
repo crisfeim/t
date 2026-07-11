@@ -142,7 +142,7 @@ type command =
 | ListProjects
 | ListDoingAcrossProjects
 
-let cmd operator str =
+let is_cmd operator str =
 	String.length str > 1
   && String.get str 0 = operator
   && Option.is_some (int_of_string_opt (String.sub str 1 (String.length str - 1)))
@@ -179,9 +179,9 @@ let parser path args= match args with
 	| [] -> Some (List path)
 	| [arg] when is_batch_cmd '+' arg -> Some (Complete (path, ((list_from (drop 1 arg)) |> List.map int_of_string)))
 	| [arg] when is_batch_cmd '-' arg -> Some (Remove (path, ((list_from (drop 1 arg)) |> List.map int_of_string)))
-	| [arg] when cmd ':' arg -> Some (Edit (path, int_of_string (drop 1 arg)))
-	| [arg] when cmd 'c' arg -> Some (Commit (path, int_of_string (drop 1 arg), false))
-	| [arg] when cmd '@' arg -> Some (Doing (path, int_of_string (drop 1 arg)))
+	| [arg] when is_cmd ':' arg -> Some (Edit (path, int_of_string (drop 1 arg)))
+	| [arg] when is_cmd 'c' arg -> Some (Commit (path, int_of_string (drop 1 arg), false))
+	| [arg] when is_cmd '@' arg -> Some (Doing (path, int_of_string (drop 1 arg)))
 	| [arg] when is_commit_editing arg ->
 			let*? line = int_of_string_opt (drop 2 arg) in
 			Some (Commit (path, line, true))
