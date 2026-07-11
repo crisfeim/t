@@ -233,6 +233,21 @@ let () = case "Projects" (fun test ->
   )
 )
 
+let set_doing line todo_path effects = Error `FileSystem
+
+let () = case "Set doing" (fun test ->
+  [
+  (Error `FileSystem, 1, Ok(), Error `FileSystem);
+  ] |>
+  List.iteri (fun i (read, line, write, expected) ->
+    test (case_id i) (fun expect ->
+    	expect.equal fmt_result_list expected (set_doing line "any-path" { (mock_effects ()) with
+     read = (fun _ -> read);
+     write = (fun _ _ -> write )})
+    )
+  )
+)
+
 let () = case "Project" (fun test ->
 	[
 	(Error `FileSystem, Ok [], Error `FileSystem);
