@@ -103,8 +103,6 @@ test remove_todo {Removos todo from local .todo file} -setup {
     if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result [list "A\n" ""]
 
-
-
 test complete_todo {Completes a todo from local todos} -setup {
 	set test_dir [exec mktemp -d]
   set todo_file [file join $test_dir ".todo"]
@@ -153,6 +151,46 @@ test edit_todo {Edits a todo via $EDITOR} -setup {
     unset -nocomplain env(EDITOR)
     file delete -force $test_dir
 } -result [list "Pasear al perro por el parque\n" "Pasear al perro por el parque"]
+
+
+test edit_cancels_on_empty_edit {Edits a todo via $EDITOR} -setup {
+    set test_dir [exec mktemp -d]
+    set todo_file [file join $test_dir ".todo"]
+    set fh [open $todo_file w]
+    puts $fh "Sacar al perro a pasear"
+    close $fh
+
+    set editor_override [make_fake_editor $test_dir ""]
+} -body {
+    global env
+    set env(EDITOR) $editor_override
+    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' :1"]
+    set todo_file_content [read_file $todo_file]
+    list $output $todo_file_content
+} -cleanup {
+    unset -nocomplain env(EDITOR)
+    file delete -force $test_dir
+} -result [list "Cancel editing\n" "Sacar al perro a pasear"]
+
+
+test edit_cancels_on_unchanged_edit {Edits a todo via $EDITOR} -setup {
+    set test_dir [exec mktemp -d]
+    set todo_file [file join $test_dir ".todo"]
+    set fh [open $todo_file w]
+    puts $fh "Sacar al perro a pasear"
+    close $fh
+
+    set editor_override [make_fake_editor $test_dir "Sacar al perro a pasear"]
+} -body {
+    global env
+    set env(EDITOR) $editor_override
+    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' :1"]
+    set todo_file_content [read_file $todo_file]
+    list $output $todo_file_content
+} -cleanup {
+    unset -nocomplain env(EDITOR)
+    file delete -force $test_dir
+} -result [list "Cancel editing\n" "Sacar al perro a pasear"]
 
 exit_1_on_test_failure
 cleanupTests
