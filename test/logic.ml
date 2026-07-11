@@ -235,17 +235,20 @@ let () = case "Projects" (fun test ->
 
 let set_doing line todo_path effects =
 	let* (todos, todo, _) = extract line todo_path effects.read in
-	Error `FileSystem
+	let updated = todos |> List.mapi (fun idx content -> if idx = line - 1 then content ^ " @doing" else content) in
+	let* _ = effects.write updated todo_path in
+	Ok (todo ^ " @doing")
 
 let () = case "Set doing" (fun test ->
   [
   (Error `FileSystem, 1, Ok(), Error `FileSystem);
   (Ok["any todo"], 1, Error `FileSystem, Error `FileSystem);
-  (Ok["any todo"], 2, Ok(), Error (`WrongLine 2))
+  (Ok["any todo"], 2, Ok(), Error (`WrongLine 2));
+  (Ok["some todo"], 1, Ok(), Ok "some todo @doing");
   ] |>
   List.iteri (fun i (read, line, write, expected) ->
     test (case_id i) (fun expect ->
-    	expect.equal fmt_result_list expected (set_doing line "any-path" { (mock_effects ()) with
+    	expect.equal fmt_result_string expected (set_doing line "any-path" { (mock_effects ()) with
      read = (fun _ -> read);
      write = (fun _ _ -> write )})
     )
