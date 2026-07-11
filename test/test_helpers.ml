@@ -47,6 +47,9 @@ let fmt_option fmt = function
   | None -> "None"
   | Some cmd -> "Some (" ^ fmt cmd ^ ")"
 
+
+let fmt_int_list l = "[" ^ (String.concat "; " (List.map string_of_int l)) ^ "]"
+
 let fmt_command = function
 	| Count -> "Count"
   | List p -> Printf.sprintf "List %S" p

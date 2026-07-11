@@ -230,7 +230,3 @@ let command_router todo_path args effects =
 					let todo = (List.tl values) |> String.concat " " in
 					Some (Add (path, todo))
 				| _ -> parser todo_path args
-
-
-let fmt_int_list l =
-  "[" ^ (String.concat "; " (List.map string_of_int l)) ^ "]"
