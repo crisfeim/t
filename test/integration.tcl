@@ -1,21 +1,23 @@
 package require tcltest
 namespace import tcltest::*
 
-set SCRIPT_DIR [file dirname [file normalize [info script]]]
-set BIN_PATH [file normalize [file join $SCRIPT_DIR ".." "_build" "default" "bin" "main"]]
-if {![file exists $BIN_PATH]} {
-    set BIN_PATH "${BIN_PATH}.exe"
+proc bin_path {} {
+	set TEST_DIR [file dirname [file normalize [info script]]]
+	set BIN_PATH [file normalize [file join $TEST_DIR ".." _build default bin main]]
+  set BIN_PATH "${BIN_PATH}.exe"
+  return $BIN_PATH
 }
 
-test echo-arguments {Cli should echo argumens at this point} -body {
-    set output [exec $BIN_PATH hello world from ocaml]
-
-    set output
-} -result {hello world from ocaml}
-
-if {$::tcltest::numTests(Failed) > 0} {
+proc exit_1_on_test_failure {} {
+	if {$::tcltest::numTests(Failed) > 0} {
     cleanupTests
     exit 1
+	}
 }
 
+test echo_arguments {Cli should echo argumens} -body {
+    set output [exec [bin_path] hello world from ocaml]
+} -result {hello world from ocaml}
+
+exit_1_on_test_failure
 cleanupTests
