@@ -3,24 +3,23 @@ on:
   push:
     branches: [main, master]
   pull_request:
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   test:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up OCaml
-        uses: ocaml/setup-ocaml@v3
+      - name: Cache Homebrew downloads
+        uses: actions/cache@v4
         with:
-          ocaml-compiler: "5"
+          path: ~/Library/Caches/Homebrew
+          key: brew-downloads-${{ runner.os }}-ocaml-dune-fossil-v1
 
-      - name: Install fossil
-        run: brew install fossil
+      - name: Install OCaml toolchain and fossil
+        run: brew install ocaml dune fossil
 
       - name: Run Tests
-        run: opam exec -- make test
+        run: make test
