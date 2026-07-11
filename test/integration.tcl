@@ -57,6 +57,18 @@ test list_range {Lists a range from local todos} -setup {
 	if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result "1 C\n2 B\n"
 
+test echo {Echoes line from local .todo} -setup {
+	set test_dir [exec mktemp -d]
+  set todo_file [file join $test_dir ".todo"]
+  set fh [open $todo_file w]
+  puts $fh "A"
+  close $fh
+} -body {
+	 set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' 1"]
+} -cleanup {
+	if {[file exists $todo_file]} { file delete -force $todo_file }
+} -result "1 A\n"
+
 test add_todo {Adds todo to local .todo file} -setup {
     set test_dir [exec mktemp -d]
     set todo_file [file join $test_dir ".todo"]

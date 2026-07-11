@@ -76,7 +76,12 @@ let dispatch cmd todo_path done_path effects = match cmd with
 		Ok()
 	| Edit (path, line) -> print_endline "@todo: edit" ; Ok()
   | Commit (path, line, msg) -> print_endline "@todo: commit" ; Ok()
-  | Echo (path, line) -> print_endline "@todo: echo"  ; Ok()
+  | Echo (path, line) ->
+  	let* todos = list path effects in
+   	begin match List.nth_opt todos (line - 1) with
+    | Some todo -> print_endline todo; Ok()
+    | None -> Error (`WrongLine line)
+    end
   | EditFile path -> print_endline "@todo: edit file"  ; Ok()
   | Doing (path, line) -> print_endline "@todo: doing"  ; Ok()
   | ListDoing path -> print_endline "@todo: list doing"  ; Ok()
