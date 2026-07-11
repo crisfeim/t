@@ -12,6 +12,7 @@ type command =
 | Complete of path * int list
 | Remove of path * int list
 | Edit of path * int
+| Update of path * int * string
 | Commit of path * int * bool
 | Echo of path * int
 | EditFile of path
@@ -70,6 +71,7 @@ let parser path args= match args with
 	| [arg] when arg = ".@" -> Some (ListDoingAcrossProjects)
 	| [arg] when arg = "count" -> Some (Count)
 	| [arg] when (parse_range arg <> [])  -> Some (ListRange (path, parse_range arg))
+	| [arg1; arg2] when is_cmd ':' arg1 -> Some (Update (path, int_of_string (drop 1 arg1), arg2))
 	| args -> Some (Add (path, String.concat " " args))
 
 

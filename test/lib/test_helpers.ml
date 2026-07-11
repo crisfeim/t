@@ -59,6 +59,7 @@ let fmt_command = function
   | Complete (p, l) -> Printf.sprintf "Complete (%S, %s)" p (fmt_int_list l)
   | Remove (p, l) -> Printf.sprintf "Remove (%S, %s)" p (fmt_int_list l)
   | Edit (p, i) -> Printf.sprintf "Edit (%S, %d)" p i
+  | Update (p, i, v) -> Printf.sprintf "Update (%S, %d, %S)" p i v
   | Commit (p, i, b) -> Printf.sprintf "Commit (%S, %d, %b)" p i b
   | Echo (p, i) -> Printf.sprintf "Echo (%S, %d)" p i
   | EditFile p -> Printf.sprintf "EditFile %S" p

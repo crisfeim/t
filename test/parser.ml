@@ -62,6 +62,10 @@ let () = case "Parser" (fun test ->
 		expect.equal (fmt_option fmt_command) (parser any_todo_path [":32"]) (Some (Edit (any_todo_path, 32)))
 	);
 
+	test "Update" (fun expect ->
+		expect.equal (fmt_option fmt_command) (parser any_todo_path [":32"; "value"]) (Some (Update (any_todo_path, 32, "value")))
+	);
+
 	test "Edit .todo" (fun expect ->
 		expect.equal (fmt_option fmt_command) (parser any_todo_path [":"]) (Some (EditFile any_todo_path))
 	);
