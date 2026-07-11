@@ -22,6 +22,10 @@ proc read_file {file} {
 	return $file_content
 }
 
+proc t {test_dir args} {
+	exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' $args"
+}
+
 test list_todos {List local todos when empty args} -setup {
     set test_dir [exec mktemp -d]
 
@@ -31,7 +35,7 @@ test list_todos {List local todos when empty args} -setup {
     puts $fh "comprar leche"
     close $fh
 } -body {
-    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]'"]
+	t $test_dir
 } -cleanup {
     if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result "1 comprar leche\n2 lavar la ropa\n"
@@ -45,7 +49,7 @@ test get_count {Delivers local todos total count} -setup {
     puts $fh "comprar leche"
     close $fh
 } -body {
-    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' count"]
+  t $test_dir count
 } -cleanup {
     if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result "2\n"
@@ -59,7 +63,7 @@ test list_range {Lists a range from local todos} -setup {
   puts $fh "C"
   close $fh
 } -body {
-	 set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' 1...2"]
+	t $test_dir 1...2
 } -cleanup {
 	if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result "1 C\n2 B\n"
@@ -71,7 +75,7 @@ test echo {Echoes line from local .todo} -setup {
   puts $fh "A"
   close $fh
 } -body {
-	 set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' 1"]
+	 t $test_dir 1
 } -cleanup {
 	if {[file exists $todo_file]} { file delete -force $todo_file }
 } -result "1 A\n"
@@ -81,7 +85,7 @@ test add_todo {Adds todo to local .todo file} -setup {
     set todo_file [file join $test_dir ".todo"]
     close [open $todo_file w]
 } -body {
-    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' 'New todo'"]
+    set output [t $test_dir New todo]
     set file_content [read_file $todo_file]
 
     list $output $file_content
@@ -96,7 +100,7 @@ test remove_todo {Removos todo from local .todo file} -setup {
     puts $fh "A"
     close $fh
 } -body {
-    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' -1"]
+    set output [t $test_dir -1]
     set file_content [read_file $todo_file]
     list $output $file_content
 } -cleanup {
@@ -112,7 +116,7 @@ test complete_todo {Completes a todo from local todos} -setup {
   puts $fh "A"
   close $fh
 } -body {
-	set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' +1"]
+	set output [t $test_dir +1]
 	set todo_file_content [read_file $todo_file]
 	set done_file_content [read_file $done_file]
 	set has_todo_in_done [regexp {A} $done_file_content]
@@ -144,7 +148,7 @@ test edit_todo {Edits a todo via $EDITOR} -setup {
 } -body {
     global env
     set env(EDITOR) $editor_override
-    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' :1"]
+    set output [t $test_dir :1]
     set todo_file_content [read_file $todo_file]
     list $output $todo_file_content
 } -cleanup {
@@ -164,7 +168,7 @@ test edit_cancels_on_empty_edit {Edits a todo via $EDITOR} -setup {
 } -body {
     global env
     set env(EDITOR) $editor_override
-    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' :1"]
+    set output [t $test_dir :1]
     set todo_file_content [read_file $todo_file]
     list $output $todo_file_content
 } -cleanup {
@@ -184,7 +188,7 @@ test edit_cancels_on_unchanged_edit {Edits a todo via $EDITOR} -setup {
 } -body {
     global env
     set env(EDITOR) $editor_override
-    set output [exec -keepnewline sh -c "cd '$test_dir' && '[bin_path]' :1"]
+    set output [t $test_dir :1]
     set todo_file_content [read_file $todo_file]
     list $output $todo_file_content
 } -cleanup {
@@ -216,7 +220,8 @@ test commit_todo {Commits a todo to fossil, archives it, empties .todo} -setup {
     puts $fh "some project change"
     close $fh
 } -body {
-    exec sh -c "cd '$test_dir' && '[bin_path]' c1" 2>@1
+
+    t $test_dir c1 2>@1
 
     set todo_file_content [read_file $todo_file]
     set done_file_content [read_file $done_file]
