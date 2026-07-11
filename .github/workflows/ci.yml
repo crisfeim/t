@@ -1,8 +1,7 @@
 name: CI
-
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
 
 concurrency:
@@ -11,8 +10,17 @@ concurrency:
 
 jobs:
   test:
-    runs-on: macos-26 
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5"
+
+      - name: Install fossil
+        run: brew install fossil
+
       - name: Run Tests
-        run: make test
+        run: opam exec -- make test
