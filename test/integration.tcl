@@ -220,6 +220,27 @@ test edit_todo {Edits a todo via $EDITOR} -setup {
 } -result [list "Pasear al perro por el parque\n" "Pasear al perro por el parque"]
 
 
+test edit_file {Edits the whole .todo file via $EDITOR} -setup {
+    set test_dir [exec mktemp -d]
+    set todo_file [file join $test_dir ".todo"]
+    set fh [open $todo_file w]
+    puts $fh "A"
+    puts $fh "B"
+    close $fh
+
+    set editor_override [make_fake_editor $test_dir "A\nB\nC"]
+} -body {
+    global env
+    set env(EDITOR) $editor_override
+    set output [t $test_dir :]
+    set todo_file_content [read_file $todo_file]
+    list $output $todo_file_content
+} -cleanup {
+    unset -nocomplain env(EDITOR)
+    file delete -force $test_dir
+} -result [list "A\nB\nC\n" "A\nB\nC"]
+
+
 test edit_cancels_on_empty_edit {Edits a todo via $EDITOR} -setup {
     set test_dir [exec mktemp -d]
     set todo_file [file join $test_dir ".todo"]

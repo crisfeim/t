@@ -153,6 +153,15 @@ let edit line todo_path effects =
 	let* _ = effects.write updated todo_path in
 	Ok edited
 
+let edit_file path effects =
+	let* todos = effects.read path in
+	let content = String.concat "\n" todos in
+	let* edited = effects.editor content in
+	if edited = "" || edited = content then Ok "Cancel editing" else
+	let updated = String.split_on_char '\n' edited in
+	let* _ = effects.write updated path in
+	Ok edited
+
 let sort_matches projects =
 	List.sort (fun path1 path2 ->
 		let count1 = List.length (String.split_on_char '/' path1) in

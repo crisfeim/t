@@ -43,7 +43,9 @@ let dispatch cmd todo_path done_path effects : (string, _) result = match cmd wi
 		| Some todo -> Ok todo
 		| None -> Error (`WrongLine line)
 		end
-	| EditFile path -> Ok "@todo: edit file"
+	| EditFile path ->
+			let* edited = edit_file path effects in
+			Ok edited
 	| Doing (path, line) ->
 		let* todo = toggle_doing line path effects in
 		Ok todo

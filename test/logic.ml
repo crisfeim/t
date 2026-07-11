@@ -163,6 +163,45 @@ let () = case "Edit" (fun test ->
   )
 )
 
+let () = case "EditFile" (fun test ->
+  [
+  (Error `FileSystem, Ok "any edition", Ok (), Error `FileSystem);
+  (Ok ["A"; "B"], Error `Editor, Ok (), Error `Editor);
+  (Ok ["A"; "B"], Ok "A\nB\nC", Error `FileSystem, Error `FileSystem);
+  (Ok ["A"; "B"], Ok "A\nB\nC", Ok (), Ok "A\nB\nC");
+  ] |>
+  List.iteri (fun i (read, editor, write, expected) ->
+    test (case_id i) (fun expect ->
+    	expect.equal fmt_result_unit expected (edit_file "any todo path" { (mock_effects ()) with
+      	read = (fun _ -> read);
+       	write = (fun _ _ -> write);
+        editor = (fun _ -> editor); })
+    )
+  );
+
+  test "writes each edited line split by newline" (fun expect ->
+    let write_calls = ref [] in
+    let _ = edit_file "any todo path" { (mock_effects ()) with
+      read = (fun _ -> Ok ["A"; "B"]);
+      write = (fun todos _ -> write_calls := todos :: !write_calls; Ok ());
+      editor = (fun _ -> Ok "A\nB\nC");
+    } in
+    expect.equal fmt_string_list_of_list !write_calls [["A"; "B"; "C"]]
+  );
+
+
+  test "avoids write when editor returns unchanged" (fun expect ->
+    let did_write = ref false in
+    let _ = edit_file "any todo path" { (mock_effects ()) with
+      read = (fun _ -> Ok ["A"; "B"]);
+      write = (fun _ _ -> did_write := true; Ok ());
+      editor = (fun _ -> Ok "A\nB");
+    } in
+    expect.is (not !did_write) "expected no write"
+  )
+)
+
+
 let () = case "Commit" (fun test ->
  [
   (None    , Ok ["any todo"]  , 1,  Ok (), Ok (), Error `NoRepository);
