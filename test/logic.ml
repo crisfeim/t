@@ -238,6 +238,7 @@ let set_doing line todo_path effects = Error `FileSystem
 let () = case "Set doing" (fun test ->
   [
   (Error `FileSystem, 1, Ok(), Error `FileSystem);
+  (Ok["any todo"], 1, Error `FileSystem, Error `FileSystem)
   ] |>
   List.iteri (fun i (read, line, write, expected) ->
     test (case_id i) (fun expect ->
