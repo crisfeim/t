@@ -186,9 +186,7 @@ let dispatch cmd todo_path done_path effects : (string, _) result = match cmd wi
 		Ok (String.concat "\n" todos)
 	| ListRange (path, range) ->
 		let* todos = list path effects in
-		let filtered =
-			todos |> List.filteri (fun i _ -> List.mem (i + 1) range)
-		in
+		let filtered = todos |> List.filteri (fun i _ -> List.mem (i + 1) range) in
 		Ok (String.concat "\n" filtered)
 	| Add (path, todo) ->
 		let* added = add todo path effects in

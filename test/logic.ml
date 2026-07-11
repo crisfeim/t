@@ -233,12 +233,15 @@ let () = case "Projects" (fun test ->
   )
 )
 
-let set_doing line todo_path effects = Error `FileSystem
+let set_doing line todo_path effects =
+	let* (todos, todo, _) = extract line todo_path effects.read in
+	Error `FileSystem
 
 let () = case "Set doing" (fun test ->
   [
   (Error `FileSystem, 1, Ok(), Error `FileSystem);
-  (Ok["any todo"], 1, Error `FileSystem, Error `FileSystem)
+  (Ok["any todo"], 1, Error `FileSystem, Error `FileSystem);
+  (Ok["any todo"], 2, Ok(), Error (`WrongLine 2))
   ] |>
   List.iteri (fun i (read, line, write, expected) ->
     test (case_id i) (fun expect ->
