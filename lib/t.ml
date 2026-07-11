@@ -177,22 +177,22 @@ let parse_range str =
 
 let parser path args= match args with
 	| [] -> Some (List path)
-	| [single] when is_batch_cmd '+' single -> Some (Complete (path, ((list_from (drop 1 single)) |> List.map int_of_string)))
-	| [single] when is_batch_cmd '-' single -> Some (Remove (path, ((list_from (drop 1 single)) |> List.map int_of_string)))
-	| [single] when cmd ':' single -> Some (Edit (path, int_of_string (drop 1 single)))
-	| [single] when cmd 'c' single -> Some (Commit (path, int_of_string (drop 1 single), false))
-	| [single] when cmd '@' single -> Some (Doing (path, int_of_string (drop 1 single)))
-	| [single] when is_commit_editing single ->
-			let*? line = int_of_string_opt (drop 2 single) in
+	| [arg] when is_batch_cmd '+' arg -> Some (Complete (path, ((list_from (drop 1 arg)) |> List.map int_of_string)))
+	| [arg] when is_batch_cmd '-' arg -> Some (Remove (path, ((list_from (drop 1 arg)) |> List.map int_of_string)))
+	| [arg] when cmd ':' arg -> Some (Edit (path, int_of_string (drop 1 arg)))
+	| [arg] when cmd 'c' arg -> Some (Commit (path, int_of_string (drop 1 arg), false))
+	| [arg] when cmd '@' arg -> Some (Doing (path, int_of_string (drop 1 arg)))
+	| [arg] when is_commit_editing arg ->
+			let*? line = int_of_string_opt (drop 2 arg) in
 			Some (Commit (path, line, true))
-	| [single] when Option.is_some (int_of_string_opt single) -> Some (Echo (path, int_of_string single))
-	| [single] when single = ":" -> Some (EditFile path)
-	| [single] when single = "@" -> Some (ListDoing path)
-	| [single] when single = "." -> Some (ListProjects)
-	| [single] when single = ".@" -> Some (ListDoingAcrossProjects)
-	| [single] when single = "count" -> Some (Count)
-	| [single] when (parse_range single <> [])  -> Some (ListRange (path, parse_range single))
-	| values -> Some (Add (path, String.concat " " values))
+	| [arg] when Option.is_some (int_of_string_opt arg) -> Some (Echo (path, int_of_string arg))
+	| [arg] when arg = ":" -> Some (EditFile path)
+	| [arg] when arg = "@" -> Some (ListDoing path)
+	| [arg] when arg = "." -> Some (ListProjects)
+	| [arg] when arg = ".@" -> Some (ListDoingAcrossProjects)
+	| [arg] when arg = "count" -> Some (Count)
+	| [arg] when (parse_range arg <> [])  -> Some (ListRange (path, parse_range arg))
+	| args -> Some (Add (path, String.concat " " args))
 
 
 let first = function
@@ -222,11 +222,11 @@ let command_router todo_path args effects =
 			let*? all_projects = effects.projects() |> to_option in
 			let*? path = project_path (drop 1 project) all_projects in
 			parser path [args]
-		| values ->
-			match (values |> first) with
+		| args ->
+			match (args |> first) with
 				| Some first when is_project first ->
 					let*? all_projects = effects.projects() |> to_option in
 					let*? path = project_path (drop 1 first) all_projects in
-					let todo = (List.tl values) |> String.concat " " in
+					let todo = (List.tl args) |> String.concat " " in
 					Some (Add (path, todo))
 				| _ -> parser todo_path args
