@@ -1,4 +1,6 @@
+; test/dune
+(include_subdirs unqualified)
+
 (test
  (name tests)
- (libraries t)
- (modules tests parser logic test_lib test_helpers))
+ (libraries t))
