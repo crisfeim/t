@@ -3,7 +3,7 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/crisfeim/t)
 [![CI](https://github.com/crisfeim/t/actions/workflows/ci.yml/badge.svg)](https://github.com/crisfeim/t/actions/workflows/ci.yml)
 
-A minimalist CLI todo manager written in Ocaml, inspired by [Steve Losh's `t`](https://github.com/sjl/t), but built with explicit support for direct Version Control System (Git/Fossil) commits, global project multi-scoping, and sequential line-based IDs.
+A minimalist CLI todo manager written in Ocaml, inspired by [Steve Losh's `t`](https://github.com/sjl/t), but built with explicit support for Git & Fossil commits, global project management, and sequential line-based IDs.
 
 > ! This is a mirror of a fossil repo. Original code lives in https://chiselapp.com/user/crisfeim/repository/t/timeline
 
@@ -18,10 +18,6 @@ A minimalist CLI todo manager written in Ocaml, inspired by [Steve Losh's `t`](h
 Use make to compile & move to `~/.local/bin`.
 
 ## Usage
-
-By default, data persists locally in `.todo` and `.done` files relative to the current working directory. Targeting specific external projects from any location is possible using the `project` modifier.
-
-### Commands
 
 ```bash
 t # List todos in local .todo
@@ -42,3 +38,5 @@ t .<folder-name> # Shows todos in folder-name/.todo. Name is matched using a hie
 t .<folder-name> <text> # Adds a new todo to folder-name/.todo
 t .<folder-name> (1...5|:1|+1|-1|c1|c:1|@) # Executes any of the above commands in the scope of <folder-name>
 ```
+
+> By default, data persists locally in `.todo` and `.done` files relative to the current working directory.
