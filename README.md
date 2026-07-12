@@ -15,7 +15,7 @@ A minimalist CLI todo manager written in Ocaml, inspired by [Steve Losh's `t`](h
 
 ## Installation
 
-Use make to compile & move to `~/.local/bin`.
+Use make to compile & copy to `~/.local/bin`.
 
 ## Usage
 
