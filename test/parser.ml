@@ -95,7 +95,7 @@ let () = case "Project namespacing" (fun test ->
   cases
   |> List.iter (fun (desc, args, expected) ->
     test desc (fun expect ->
-      expect.equal (fmt_option fmt_command) (Some expected) (command_router "any-todo-path" ([".some-project"] @ args) effects)
+      expect.equal fmt_result_command (Ok expected) (command_router "any-todo-path" ([".some-project"] @ args) effects)
     )
   )
 )

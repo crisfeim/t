@@ -64,13 +64,14 @@ let () =
   let todo_path = Helpers.cwd ".todo" in
   let done_path = Helpers.cwd ".done" in
   match command_router todo_path args effects with
-  | Some cmd ->
-  		begin match (dispatch cmd todo_path done_path effects) with
-    	| Ok msg -> print_endline msg
-      | Error (`NoRepository) -> print_endline "No repository found";
-      | Error (`CommitError msg) -> print_endline ("Commit failed: " ^ msg);
-      | Error (`FileSystem) -> print_endline "Filesystem error";
-      | Error (`Editor) -> print_endline "Editor error";
-      | Error (`WrongLine n) -> print_endline (Printf.sprintf "No todo at line %d" n);
-      end
-  | None -> print_endline "@todo: none"
+  | Ok cmd ->
+		begin match (dispatch cmd todo_path done_path effects) with
+   	| Ok msg -> print_endline msg
+    | Error (`NoRepository) -> print_endline "No repository found";
+    | Error (`CommitError msg) -> print_endline ("Commit failed: " ^ msg);
+    | Error (`FileSystem) -> print_endline "Filesystem error";
+    | Error (`Editor) -> print_endline "Editor error";
+    | Error (`WrongLine n) -> print_endline (Printf.sprintf "No todo at line %d" n);
+    end
+  | Error (`FileSystem) -> print_endline "Filesystem error"
+  | Error (`ProjectNotFound project) -> print_endline ("Project not found: " ^ project)

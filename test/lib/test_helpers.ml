@@ -28,6 +28,7 @@ let string_of_result ok_formatter = function
   | Error `NoRepository -> "Error `NoRepository"
   | Error (`CommitError msg) -> "Error `CommitError: " ^ msg
   | Error (`WrongLine line) -> "Error `WrongLine: " ^ string_of_int line
+  | Error (`ProjectNotFound proj) -> "Error `ProjectNotFound: " ^ proj
 
 let case_id i = Printf.sprintf "Matrix Case %d" (i + 1)
 
@@ -81,3 +82,9 @@ let fmt_result_projects_doing result =
          Printf.sprintf "%s:\n%s" path
            (doings |> List.map (fun d -> "  " ^ d) |> String.concat "\n"))
     |> String.concat "\n"
+
+let fmt_result_command result =
+  match result with
+  | Ok cmd -> "Ok (" ^ fmt_command cmd ^ ")"
+  | Error `FileSystem -> "Error FileSystem"
+  | Error (`ProjectNotFound name) -> Printf.sprintf "Error (ProjectNotFound %S)" name

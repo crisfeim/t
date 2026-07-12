@@ -78,34 +78,45 @@ let first = function
 	| first :: _ -> Some first
 	| [] -> None
 
+type router_error = [ `FileSystem | `ProjectNotFound of string ]
+
+let ( let* )
+	(x : ('a, [< router_error]) result)
+	(f : 'a -> ('b, [> router_error]) result) : ('b, router_error) result =
+  match x with
+  | Ok v -> f v
+  | Error e -> Error (e :> router_error)
+
 let command_router todo_path args effects =
 	let is_project project =
 		String.length project > 1 && String.get project 0 = '.' && String.get project 1 <> '@'
 	in
 
 	let project_path name all_projects =
-		all_projects
+		match (all_projects
 			|> List.filter (fun path ->
 			     String.split_on_char '/' path |>
 			     List.exists (fun part -> part = name))
 			|> sort_matches
-			|> first
+			|> first) with
+		| Some all -> Ok all
+		| None -> Error (`ProjectNotFound name)
 	in
 
 	match args with
 		| [project] when is_project project ->
-		  let*? all_projects = effects.projects() |> to_option in
-			let*? path = project_path (drop 1 project) all_projects in
-			Some (List path)
+		  let* all_projects = effects.projects() in
+			let* path = project_path (drop 1 project) all_projects in
+			Ok (List path)
 		| [project; args] when is_project project ->
-			let*? all_projects = effects.projects() |> to_option in
-			let*? path = project_path (drop 1 project) all_projects in
-			Some (parser path [args])
+			let* all_projects = effects.projects() in
+			let* path = project_path (drop 1 project) all_projects in
+			Ok (parser path [args])
 		| args ->
 			match (args |> first) with
 				| Some first when is_project first ->
-					let*? all_projects = effects.projects() |> to_option in
-					let*? path = project_path (drop 1 first) all_projects in
+					let* all_projects = effects.projects() in
+					let* path = project_path (drop 1 first) all_projects in
 					let todo = (List.tl args) |> String.concat " " in
-					Some (Add (path, todo))
-				| _ -> Some (parser todo_path args)
+					Ok (Add (path, todo))
+				| _ -> Ok (parser todo_path args)
