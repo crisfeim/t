@@ -157,7 +157,7 @@ let now () =
     tm.Unix.tm_hour
     tm.Unix.tm_min
 
-let fx () = {
+let init () = {
   projects = projects;
   read = read_lines;
   write = write_lines;

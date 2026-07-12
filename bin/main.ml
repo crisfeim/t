@@ -1,6 +1,5 @@
 open T.Parser
 open T.Logic
-open Effects
 
 let dispatch cmd todo_path done_path effects = match cmd with
 	| Count path ->
@@ -60,7 +59,7 @@ let dispatch cmd todo_path done_path effects = match cmd with
 
 let () =
 	let args = (Array.to_list Sys.argv) |> Helpers.drop_first in
-  let effects = (fx()) in
+  let effects = (Effects.init()) in
   let todo_path = Helpers.cwd ".todo" in
   let done_path = Helpers.cwd ".done" in
   match command_router todo_path args effects with
