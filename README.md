@@ -26,6 +26,7 @@ t 1  # Echoes todo in line 1
 t 1...5 # Echoes todos from 1 to 5
 t : # Opens $EDITOR for editing the local .todo file
 t :1 # Opens $EDITOR for editing todo in line 1
+t :1 "New value" # Updates content of todo in line 1
 t +1 # Completes todo in line 1 & archives it in .done
 t -1 # Removes todo in line 1
 t c1 # If repository (fossil/git), stages all changes and commits using line 1's content as the commit message
