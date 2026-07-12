@@ -346,16 +346,16 @@ let () = case "Project" (fun test ->
 let () = case "Sort matches" (fun test ->
 	test "sort_matches: prioritizes shallowest path" (fun expect ->
 	  let input = ["/User/nested/any-project"; "/User/any-project"] in
-	  expect.equal fmt_string_list ["/User/any-project"; "/User/nested/any-project"] (sort_matches input)
+	  expect.equal fmt_string_list ["/User/any-project"; "/User/nested/any-project"] (T.Helpers.sort_matches input)
 	);
 
 	test "sort_matches: prioritizes shortest path on equal depth" (fun expect ->
 	  let input = ["/User/nested_longest/any-project"; "/User/short/any-project"] in
-	  expect.equal fmt_string_list ["/User/short/any-project"; "/User/nested_longest/any-project"] (sort_matches input)
+	  expect.equal fmt_string_list ["/User/short/any-project"; "/User/nested_longest/any-project"] (T.Helpers.sort_matches input)
 	);
 
 	test "sort_matches: falls back to alphabetical order on equal depth and length" (fun expect ->
 	  let input = ["/User/t/any-project"; "/User/a/any-project"] in
-	  expect.equal fmt_string_list ["/User/a/any-project"; "/User/t/any-project"] (sort_matches input)
+	  expect.equal fmt_string_list ["/User/a/any-project"; "/User/t/any-project"] (T.Helpers.sort_matches input)
 	)
 )

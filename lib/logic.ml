@@ -1,3 +1,4 @@
+open Helpers
 
 type error =
 	[
@@ -40,24 +41,6 @@ let list todo_path effects =
 	let formatted = todos |> List.mapi (fun idx content -> string_of_int (idx + 1) ^ " " ^ content) in
 	Ok formatted
 
-
-let replace_word ~target ~replacement str =
-  str
-  |> String.split_on_char ' '
-  |> List.map (fun word -> if word = target then replacement else word)
-  |> List.filter (fun word -> word <> "")
-  |> String.concat " "
-
-let string_contains ~needle haystack =
-  let nlen = String.length needle in
-  let hlen = String.length haystack in
-  let rec loop i =
-    if i + nlen > hlen then false
-    else if String.sub haystack i nlen = needle then true
-    else loop (i + 1)
-  in
-  if nlen = 0 then true else loop 0
-
 let list_doing todo_path effects =
 	let* todos = effects.read todo_path in
 	let formatted = todos
@@ -98,9 +81,7 @@ let update todo_path line new_content effects =
   let* _ = effects.write updated todo_path in
 	Ok new_content
 
-
 let toggle_doing line todo_path effects =
-
 	let toggle_tag str =
 		if string_contains ~needle:"@doing" str then
 			replace_word ~target:"@doing" ~replacement:"" str
@@ -167,23 +148,6 @@ let edit_file path effects =
 	let updated = String.split_on_char '\n' edited in
 	let* _ = effects.write updated path in
 	Ok edited
-
-let sort_matches projects =
-	List.sort (fun path1 path2 ->
-		let count1 = List.length (String.split_on_char '/' path1) in
-    let count2 = List.length (String.split_on_char '/' path2) in
-
-    if count1 <> count2 then
-      compare count1 count2
-    else
-    	let len1 = String.length path1 in
-     	let len2 = String.length path2 in
-
-      if len1 <> len2 then
-     		compare len1 len2
-      else
-     		String.compare path1  path2
-	) projects
 
 let project name effects =
   let* projects = projects effects in

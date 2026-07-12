@@ -1,9 +1,5 @@
 open Logic
 
-let to_option = function
-  | Ok x -> Some x
-  | Error _ -> None
-
 type command =
 | Count
 | List of path
@@ -26,26 +22,18 @@ let is_cmd operator str =
   && String.get str 0 = operator
   && Option.is_some (int_of_string_opt (String.sub str 1 (String.length str - 1)))
 
-let drop n str =
-	if n >=String.length str then ""
-	else String.sub str n (String.length str - n)
-
-let is_numeric str = Option.is_some (int_of_string_opt str)
-
 let is_batch_cmd operator str =
 	String.length str > 1
   && String.get str 0 = operator
-	&& (drop 1 str
+	&& (Helpers.drop 1 str
 		|> String.split_on_char ','
-		|> List.for_all is_numeric)
+		|> List.for_all Helpers.is_numeric)
 
 let is_commit_editing str =
 	String.length str > 2
 	&& String.get str 0 = 'c'
 	&& String.get str 1 = ':'
-	&& Option.is_some (int_of_string_opt (drop 2 str))
-
-let list_from string = String.split_on_char ',' string
+	&& Option.is_some (int_of_string_opt (Helpers.drop 2 str))
 
 let parse_range str =
   match String.split_on_char '.' str with
@@ -55,7 +43,9 @@ let parse_range str =
        | _ -> [])
   | _ -> []
 
-let parser path args = match args with
+let parser path args =
+	let open Helpers in
+	match args with
   | [] -> List path
   | [arg] when is_batch_cmd '+' arg -> Complete (path, ((list_from (drop 1 arg)) |> List.map int_of_string))
   | [arg] when is_batch_cmd '-' arg -> Remove (path, ((list_from (drop 1 arg)) |> List.map int_of_string))
@@ -72,11 +62,6 @@ let parser path args = match args with
   | [arg] when (parse_range arg <> [])  -> ListRange (path, parse_range arg)
   | [arg1; arg2] when is_cmd ':' arg1 -> Update (path, int_of_string (drop 1 arg1), arg2)
   | args -> Add (path, String.concat " " args)
-
-
-let first = function
-	| first :: _ -> Some first
-	| [] -> None
 
 type router_error = [ `FileSystem | `ProjectNotFound of string ]
 
@@ -97,8 +82,8 @@ let command_router todo_path args effects =
 			|> List.filter (fun path ->
 			     String.split_on_char '/' path |>
 			     List.exists (fun part -> part = name))
-			|> sort_matches
-			|> first) with
+			|> Helpers.sort_matches
+			|> Helpers.first) with
 		| Some all -> Ok all
 		| None -> Error (`ProjectNotFound name)
 	in
@@ -106,17 +91,17 @@ let command_router todo_path args effects =
 	match args with
 		| [project] when is_project project ->
 		  let* all_projects = effects.projects() in
-			let* path = project_path (drop 1 project) all_projects in
+			let* path = project_path (Helpers.drop 1 project) all_projects in
 			Ok (List path)
 		| [project; args] when is_project project ->
 			let* all_projects = effects.projects() in
-			let* path = project_path (drop 1 project) all_projects in
+			let* path = project_path (Helpers.drop 1 project) all_projects in
 			Ok (parser path [args])
 		| args ->
-			match (args |> first) with
+			match (args |> Helpers.first) with
 				| Some first when is_project first ->
 					let* all_projects = effects.projects() in
-					let* path = project_path (drop 1 first) all_projects in
+					let* path = project_path (Helpers.drop 1 first) all_projects in
 					let todo = (List.tl args) |> String.concat " " in
 					Ok (Add (path, todo))
 				| _ -> Ok (parser todo_path args)
