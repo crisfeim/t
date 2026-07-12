@@ -59,11 +59,11 @@ let dispatch cmd todo_path done_path effects : (string, _) result = match cmd wi
 		Ok (String.concat "\n" lines)
 
 let () =
-  let cli_args = match (Array.to_list Sys.argv) with [] -> [] | _::tl -> tl in
+  let args = match (Array.to_list Sys.argv) with [] -> [] | _::tl -> tl in
   let effects = (fx()) in
   let todo_path = Helpers.cwd ".todo" in
   let done_path = Helpers.cwd ".done" in
-  match command_router todo_path cli_args effects with
+  match command_router todo_path args effects with
   | Some cmd ->
   		begin match (dispatch cmd todo_path done_path effects) with
     	| Ok msg -> print_endline msg
