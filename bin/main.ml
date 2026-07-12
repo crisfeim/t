@@ -2,7 +2,7 @@ open T.Parser
 open T.Logic
 open Effects
 
-let dispatch cmd todo_path done_path effects : (string, _) result = match cmd with
+let dispatch cmd todo_path done_path effects = match cmd with
 	| Count path ->
 		let* todos = list path effects in
 		Ok (string_of_int (List.length todos))
