@@ -43,6 +43,7 @@ let is_commit_editing str =
 	String.length str > 2
 	&& String.get str 0 = 'c'
 	&& String.get str 1 = ':'
+	&& Option.is_some (int_of_string_opt (drop 2 str))
 
 let list_from string = String.split_on_char ',' string
 
@@ -61,9 +62,7 @@ let parser path args = match args with
   | [arg] when is_cmd ':' arg -> Edit (path, int_of_string (drop 1 arg))
   | [arg] when is_cmd 'c' arg -> Commit (path, int_of_string (drop 1 arg), false)
   | [arg] when is_cmd '@' arg -> Doing (path, int_of_string (drop 1 arg))
-  | [arg] when is_commit_editing arg && Option.is_some (int_of_string_opt (drop 2 arg)) ->
-      let line = int_of_string (drop 2 arg) in
-      Commit (path, line, true)
+  | [arg] when is_commit_editing arg -> Commit (path, int_of_string (drop 2 arg), true)
   | [arg] when Option.is_some (int_of_string_opt arg) -> Echo (path, int_of_string arg)
   | [arg] when arg = ":" -> EditFile path
   | [arg] when arg = "@" -> ListDoing path
