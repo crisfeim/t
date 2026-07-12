@@ -27,6 +27,7 @@ let () = case "List doing" (fun test ->
 	  )
 	)
 )
+
 let () = case "List doing across projects" (fun test ->
    [
     Error `FileSystem       , (fun _ -> Error `FileSystem), Error `FileSystem;
@@ -51,7 +52,6 @@ let () = case "List doing across projects" (fun test ->
    )
   )
 )
-
 
 let () = case "Add" (fun test ->
   [
@@ -218,7 +218,6 @@ let () = case "EditFile" (fun test ->
     expect.is (not !did_write) "expected no write"
   )
 )
-
 
 let () = case "Commit" (fun test ->
  [
