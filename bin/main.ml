@@ -2,15 +2,6 @@ open T.Parser
 open T.Logic
 open Effects
 
-let get_todo_path () =
-  let current_dir = Sys.getcwd () in
-  Filename.concat current_dir ".todo"
-
-let get_done_path () =
-  let current_dir = Sys.getcwd () in
-  Filename.concat current_dir ".done"
-
-(* dispatch cmd -> result *)
 let dispatch cmd todo_path done_path effects : (string, _) result = match cmd with
 	| Count ->
 		let* todos = list todo_path effects in
@@ -67,12 +58,11 @@ let dispatch cmd todo_path done_path effects : (string, _) result = match cmd wi
 		in
 		Ok (String.concat "\n" lines)
 
-
 let () =
   let cli_args = match (Array.to_list Sys.argv) with [] -> [] | _::tl -> tl in
   let effects = (fx()) in
-  let todo_path = get_todo_path() in
-  let done_path = get_done_path() in
+  let todo_path = Helpers.cwd ".todo" in
+  let done_path = Helpers.cwd ".done" in
   match command_router todo_path cli_args effects with
   | Some cmd ->
   		begin match (dispatch cmd todo_path done_path effects) with
