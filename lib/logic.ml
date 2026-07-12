@@ -117,10 +117,12 @@ let commit line todo_path done_path open_editor effects =
 	in
 	let* (todos, todo, updated) = extract line todo_path effects.read in
 
-	let* msg = if open_editor then
-		let* edited = effects.editor todo in
-		if edited = "" then Error (`CommitError "Commit aborted due to empty message") else Ok edited
-		else Ok (replace_word ~target: "@doing" ~replacement: "" todo)
+	let* msg =
+		let todo = replace_word ~target:"@doing" ~replacement:"" todo in
+		if open_editor then
+			let* edited = effects.editor todo in
+			if edited = "" then Error (`CommitError "Commit aborted due to empty message") else Ok edited
+		else Ok (todo)
 	in
 
 	let* _ = effects.commit msg repo in

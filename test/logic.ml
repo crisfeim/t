@@ -112,7 +112,18 @@ let () = case "Complete" (fun test ->
     ("any done path", ["202606252301 tarea"]);
     ("any todo path", [])
     ]
-  )
+  );
+
+  test "complete archives todo without @doing" (fun expect ->
+    let write_spy = ref [] in
+    let _ = complete 1 "any todo path" "any done path" { (mock_effects ()) with
+      read = (fun path -> if path = "any done path" then Ok [] else Ok ["any doing todo @doing"]);
+      write = (fun list path -> if path ="any done path" then write_spy := list ; Ok() );
+      now = (fun () -> "<timestamp>")
+    } in
+    expect.equal fmt_string_list ["<timestamp> any doing todo"] !write_spy
+  );
+
 )
 
 let () = case "Update" (fun test ->
@@ -286,6 +297,16 @@ let () = case "Commit editing" (fun test ->
       get_repo = (fun _ -> any_repo);
     } in
     expect.equal fmt_string "edited" !commit_msg
+  );
+
+
+  test "editor receives message without @doing" (fun expect ->
+    let commit_msg = ref "" in
+    let _ = commit 1 "any todo path" "any done path" true { (mock_effects ()) with
+      read = (fun path -> if path = "any done path" then Ok [] else Ok ["any doing todo @doing"]);
+      editor = (fun recieved_msg ->  commit_msg := recieved_msg ; Ok "edited");
+    } in
+    expect.equal fmt_string "any doing todo" !commit_msg
   );
 
   test "uses todo as commit message when open_editor is false" (fun expect ->
