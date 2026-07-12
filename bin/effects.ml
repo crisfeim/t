@@ -1,19 +1,21 @@
 open T.Logic
 
 let read_lines file_path =
-  try
-    let ch = open_in file_path in
-    let rec loop acc =
-      try
-        let line = input_line ch in
-        loop (line :: acc)
-      with End_of_file ->
-        close_in ch;
-        List.rev acc
-    in
-    Ok (loop [])
-  with _ ->
-    Ok []
+  if not (Sys.file_exists file_path) then Ok []
+  else
+    try
+      let ch = open_in file_path in
+      let rec loop acc =
+        try
+          let line = input_line ch in
+          loop (line :: acc)
+        with End_of_file ->
+          close_in ch;
+          List.rev acc
+      in
+      Ok (loop [])
+    with _ ->
+      Error `FileSystem
 
 let write_lines todos file_path =
   try
