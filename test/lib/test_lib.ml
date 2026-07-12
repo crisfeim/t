@@ -50,15 +50,17 @@ let case_factory name test_fn =
 
 let case name fn = cases := (case_factory name fn) :: !cases
 
-let run_cases cases = cases |> List.iter (fun (name, passed, failed, errors) ->
-	Printf.printf "\u{001B}[1m%-20s\u{001B}[0m | \u{001B}[92mPassed: %2d\u{001B}[0m | \u{001B}[91mFailed: %2d\u{001B}[0m" name passed failed;
-  if errors <> [] then begin
-    print_newline ();
-    List.iter print_endline (List.rev errors);
-    print_newline ()
-  end else
-    print_newline ()
-)
+let run_cases cases =
+	let max_name_len = List.fold_left (fun acc (name, _, _, _) -> max acc (String.length name)) 0 cases in
+  cases |> List.iter (fun (name, passed, failed, errors) ->
+    Printf.printf "\u{001B}[1m%-*s\u{001B}[0m | \u{001B}[92mPassed: %2d\u{001B}[0m | \u{001B}[91mFailed: %2d\u{001B}[0m" max_name_len name passed failed;
+    if errors <> [] then begin
+      print_newline ();
+      List.iter print_endline (List.rev errors);
+      print_newline ()
+    end else
+      print_newline ()
+  )
 
 let on_exit () =
 	let total_passed, total_failed =
