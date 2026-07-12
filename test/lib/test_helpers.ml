@@ -53,7 +53,7 @@ let fmt_option fmt = function
 let fmt_int_list l = "[" ^ (String.concat "; " (List.map string_of_int l)) ^ "]"
 
 let fmt_command = function
-	| Count -> "Count"
+	| Count p -> Printf.sprintf "Path %S" p
   | List p -> Printf.sprintf "List %S" p
   | ListRange (p, l) -> Printf.sprintf "ListRange (%S, %s)" p (fmt_int_list l)
   | Add (p, s) -> Printf.sprintf "Add (%S, %S)" p s

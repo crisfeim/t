@@ -3,8 +3,8 @@ open T.Logic
 open Effects
 
 let dispatch cmd todo_path done_path effects : (string, _) result = match cmd with
-	| Count ->
-		let* todos = list todo_path effects in
+	| Count path ->
+		let* todos = list path effects in
 		Ok (string_of_int (List.length todos))
 	| List path ->
 		let* todos = list path effects in

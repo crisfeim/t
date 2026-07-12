@@ -5,7 +5,7 @@ open T.Parser
 let () = case "Parser" (fun test ->
 
 	test "count" (fun expect ->
-		expect.equal (fmt_command) Count (parser "any-todo-path" ["count"])
+		expect.equal (fmt_command) (Count "any-todo-path") (parser "any-todo-path" ["count"])
 	);
 
 	test "Echo" (fun expect ->

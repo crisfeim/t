@@ -1,7 +1,7 @@
 open Logic
 
 type command =
-| Count
+| Count of path
 | List of path
 | ListRange of path * int list
 | Add of path * string
@@ -58,7 +58,7 @@ let parser path args =
   | [arg] when arg = "@" -> ListDoing path
   | [arg] when arg = "." -> ListProjects
   | [arg] when arg = ".@" -> ListDoingAcrossProjects
-  | [arg] when arg = "count" -> Count
+  | [arg] when arg = "count" -> Count path
   | [arg] when (parse_range arg <> [])  -> ListRange (path, parse_range arg)
   | [arg1; arg2] when is_cmd ':' arg1 -> Update (path, int_of_string (drop 1 arg1), arg2)
   | args -> Add (path, String.concat " " args)
