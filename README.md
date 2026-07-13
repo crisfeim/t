@@ -25,9 +25,9 @@ t @1       # Toggles @doing tag in todo 1
 t @        # Shows all todos tagged as @doing in local .todo
 t .        # Shows all folders holding a .todo file within user's folder
 t .@       # Shows all todos tagged as @doing across every project folder
-t .<folder-name>        # Shows todos in folder-name/.todo. Name is matched using a disambiguation algorithm based on folders containing a .todo file.
+t .<folder-name>        # Shows todos in /<some>/folder-name/.todo. Name is matched using a disambiguation algorithm based on folders containing a .todo file.
 t .<folder-name> <text> # Adds a new todo to folder-name/.todo
-t .<folder-name> (1...5|:1|+1|-1|c1|c:1|@) # Executes any of the above commands in the scope of <folder-name>
+t .<folder-name> <cmd>  # Executes any of the above commands in the scope of <folder-name>
 ```
 
 ## Requirements
