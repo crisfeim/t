@@ -7,16 +7,6 @@ A minimalist CLI todo manager written in Ocaml, inspired by [Steve Losh's `t`](h
 
 > ! This is a mirror of a fossil repo. Original code lives in https://chiselapp.com/user/crisfeim/repository/t/timeline
 
-## Requirements
-
-- macOS / Linux
-- `find`, `vi`
-- Git or Fossil (optional, for VCS tracking)
-
-## Installation
-
-Use make to compile & copy to `~/.local/bin`.
-
 ## Usage
 
 ```bash
@@ -27,7 +17,7 @@ t 1...5 # Echoes todos from 1 to 5
 t : # Opens $EDITOR for editing the local .todo file
 t :1 # Opens $EDITOR for editing todo in line 1
 t :1 "New value" # Updates content of todo in line 1
-t +1 # Completes todo in line 1 & archives it in .done
+t +1 # Completes todo in line 1 & archives it in local .done
 t -1 # Removes todo in line 1
 t c1 # If repository (fossil/git), stages all changes and commits using line 1's content as the commit message
 t c:1 # Opens editor before committing contents of line 1
@@ -40,4 +30,12 @@ t .<folder-name> <text> # Adds a new todo to folder-name/.todo
 t .<folder-name> (1...5|:1|+1|-1|c1|c:1|@) # Executes any of the above commands in the scope of <folder-name>
 ```
 
-> By default, data persists locally in `.todo` and `.done` files relative to the current working directory.
+## Requirements
+
+- macOS / Linux
+- `find`, `vi`
+- Git or Fossil (optional, for VCS tracking)
+
+## Installation
+
+Use make to compile & copy to `~/.local/bin`.
